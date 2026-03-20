@@ -35,12 +35,11 @@ class LedgerCorrectionHandler(BaseHandler):
             date_val = dt_date.today().isoformat()
         body: dict[str, Any] = {"date": date_val}
 
-        for field in ("description", "number", "tempNumber"):
-            if field in params:
-                body[field] = params[field]
+        if params.get("description"):
+            body["description"] = params["description"]
 
         if "voucherType" in params:
-            body["typeId"] = int(params["voucherType"])
+            body["voucherType"] = {"id": int(params["voucherType"])}
 
         # Build correction postings
         postings = params.get("postings", [])
@@ -105,7 +104,7 @@ class YearEndClosingHandler(BaseHandler):
         }
 
         if "voucherType" in params:
-            body["typeId"] = int(params["voucherType"])
+            body["voucherType"] = {"id": int(params["voucherType"])}
 
         # Build closing postings if provided by LLM
         postings = params.get("postings", [])

@@ -25,19 +25,21 @@ class CreateAssetHandler(BaseHandler):
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         body: dict[str, Any] = {"name": params["name"]}
 
-        for field in (
-            "description",
-            "acquisitionDate",
-            "acquisitionCost",
-            "depreciationPercentage",
-            "depreciationMonths",
-            "lifetime",
-            "assetNumber",
-        ):
-            if field in params:
-                body[field] = params[field]
+        # Map common names to correct OpenAPI field names
+        field_map = {
+            "description": "description",
+            "acquisitionDate": "dateOfAcquisition",
+            "dateOfAcquisition": "dateOfAcquisition",
+            "acquisitionCost": "acquisitionCost",
+            "depreciationPercentage": "depreciationRate",
+            "depreciationRate": "depreciationRate",
+            "lifetime": "lifetime",
+        }
+        for param_name, api_name in field_map.items():
+            if param_name in params:
+                body[api_name] = params[param_name]
 
-        for ref_field in ("account", "depreciationAccount", "department", "type"):
+        for ref_field in ("account", "depreciationAccount", "department"):
             if ref_field in params:
                 body[ref_field] = self.ensure_ref(params[ref_field], ref_field)
 

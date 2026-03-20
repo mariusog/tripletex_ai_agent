@@ -160,8 +160,7 @@ class CreateActivityHandler(BaseHandler):
             if field in params and params[field] is not None:
                 body[field] = params[field]
 
-        if "isProjectActivity" in params:
-            body["isProjectActivity"] = params["isProjectActivity"]
+        # isProjectActivity is readOnly — controlled via activityType
 
         body = self.strip_none_values(body)
         result = api_client.post("/activity", data=body)

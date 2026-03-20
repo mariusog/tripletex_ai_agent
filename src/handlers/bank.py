@@ -61,11 +61,6 @@ class BankReconciliationHandler(BaseHandler):
         if "accountingPeriodId" in params:
             body["accountingPeriod"] = {"id": int(params["accountingPeriodId"])}
 
-        if "reconciliationDate" in params:
-            date_val = self.validate_date(params["reconciliationDate"], "reconciliationDate")
-            if date_val:
-                body["reconciliationDate"] = date_val
-
         for field in ("type", "isClosed"):
             if field in params and params[field] is not None:
                 body[field] = params[field]

@@ -84,16 +84,13 @@ class AssignRoleHandler(BaseHandler):
         if not emp_id:
             return {"error": "employee_not_found"}
 
-        # Set role/entitlements
+        # Set role via userType (roles/entitlements/allowInformationRegistration
+        # are not writable fields per OpenAPI spec)
         role = params.get("role", "")
-        if "roles" in params:
-            employee["roles"] = params["roles"]
-        if "entitlements" in params:
-            employee["entitlements"] = params["entitlements"]
-
-        # Common role assignments via allowLogin
-        if role:
-            employee["allowInformationRegistration"] = True
+        if role.upper() in ("ADMIN", "ADMINISTRATOR", "EXTENDED"):
+            employee["userType"] = "EXTENDED"
+        elif role.upper() in ("STANDARD", "USER"):
+            employee["userType"] = "STANDARD"
 
         result = api_client.put(f"/employee/{emp_id}", data=employee)
         value = result.get("value", {}) if result else {}

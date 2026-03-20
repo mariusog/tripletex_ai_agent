@@ -127,12 +127,12 @@ class CreateVoucherHandler(BaseHandler):
 
         body: dict[str, Any] = {"date": date_val}
 
-        for field in ("description", "number", "tempNumber"):
-            if field in params and params[field] is not None:
-                body[field] = params[field]
+        if params.get("description"):
+            body["description"] = params["description"]
+        # number and tempNumber are readOnly (system-generated)
 
         if "voucherType" in params:
-            body["typeId"] = int(params["voucherType"])
+            body["voucherType"] = {"id": int(params["voucherType"])}
 
         # Resolve supplier if present (needed for supplier invoice vouchers)
         supplier_ref = _resolve_supplier(api_client, params.get("supplier"))
@@ -224,15 +224,16 @@ class ReverseVoucherHandler(BaseHandler):
             handler = RegisterPaymentHandler()
             return handler.execute(api_client, pay_params)
 
+        from datetime import date as dt_date
+
         voucher_id = int(params.get("voucherId", 0))
         if not voucher_id:
             return {"error": "no_voucher_id"}
-        body: dict[str, Any] = {"id": voucher_id}
-        if "date" in params:
-            date_val = self.validate_date(params["date"], "date")
-            if date_val:
-                body["date"] = date_val
-
-        api_client.put(f"/ledger/voucher/{voucher_id}/:reverse", data=body)
+        # Spec: PUT /ledger/voucher/{id}/:reverse with date as required query param
+        date_val = self.validate_date(params.get("date"), "date") or dt_date.today().isoformat()
+        api_client.put(
+            f"/ledger/voucher/{voucher_id}/:reverse",
+            params={"date": date_val},
+        )
         logger.info("Reversed voucher id=%s", voucher_id)
         return {"id": voucher_id, "action": "reversed"}

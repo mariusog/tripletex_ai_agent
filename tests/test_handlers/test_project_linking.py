@@ -78,7 +78,7 @@ class TestCreateActivity:
         body = client.post.call_args[1]["data"]
         assert body["name"] == "Development"
         assert body["number"] == "A01"
-        assert body["isProjectActivity"] is True
+        # isProjectActivity is readOnly per OpenAPI spec
 
     def test_minimal_params(self):
         client = _mock_client(post_response=sample_api_response(value={"id": 21}))

@@ -46,7 +46,7 @@ class TestBankReconciliation:
         body = client.post.call_args[1]["data"]
         assert body["account"] == {"id": 1920}
         assert body["accountingPeriod"] == {"id": 12}
-        assert body["reconciliationDate"] == "2026-03-31"
+        # reconciliationDate removed (not in OpenAPI spec)
 
     def test_with_adjustments(self):
         client = _mock_client(post_response=sample_api_response(value={"id": 51}))

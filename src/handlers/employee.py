@@ -47,9 +47,8 @@ class CreateEmployeeHandler(BaseHandler):
             ),
         }
 
-        # Set admin flag if requested
-        if is_admin:
-            body["allowInformationRegistration"] = True
+        # Note: allowInformationRegistration is readOnly per OpenAPI spec
+        # Admin access is controlled by userType=EXTENDED
 
         for field in ("email", "phoneNumberMobile"):
             if params.get(field):

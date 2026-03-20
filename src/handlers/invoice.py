@@ -116,7 +116,7 @@ def _resolve_product(
     # Price is set on the order line instead, which always works.
     prod_body: dict[str, Any] = {"name": name or f"Product {number}"}
     if number:
-        prod_body["number"] = int(number)
+        prod_body["number"] = str(number)
     result = api_client.post("/product", data=prod_body)
     prod_id = result.get("value", {}).get("id")
     logger.info("Auto-created product '%s' id=%s", name, prod_id)
@@ -290,13 +290,14 @@ class SendInvoiceHandler(BaseHandler):
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         invoice_id = int(params["invoiceId"])
-        send_body: dict[str, Any] = {"id": invoice_id}
-        if params.get("sendType"):
-            send_body["sendType"] = params["sendType"]
+        # Spec: PUT /invoice/{id}/:send with sendType + overrideEmailAddress as query params
+        send_params: dict[str, Any] = {
+            "sendType": params.get("sendType", "EMAIL"),
+        }
         if params.get("overrideEmailAddress"):
-            send_body["overrideEmailAddress"] = params["overrideEmailAddress"]
+            send_params["overrideEmailAddress"] = params["overrideEmailAddress"]
 
-        api_client.post(f"/invoice/{invoice_id}/:send", data=send_body)
+        api_client.put(f"/invoice/{invoice_id}/:send", params=send_params)
         logger.info("Sent invoice id=%s", invoice_id)
         return {"id": invoice_id, "action": "sent"}
 
@@ -401,16 +402,21 @@ class CreateCreditNoteHandler(BaseHandler):
         if not invoice_id:
             return {"error": "invoice_not_found"}
 
-        cn_body: dict[str, Any] = {}
-        if params.get("comment"):
-            cn_body["comment"] = params["comment"]
+        # Spec: PUT /invoice/{id}/:createCreditNote with date, comment as query params
+        from datetime import date as dt_date
+
+        cn_params: dict[str, Any] = {
+            "date": dt_date.today().isoformat(),
+        }
         if "creditNoteDate" in params:
             date_val = self.validate_date(params["creditNoteDate"], "creditNoteDate")
             if date_val:
-                cn_body["date"] = date_val
+                cn_params["date"] = date_val
+        if params.get("comment"):
+            cn_params["comment"] = params["comment"]
 
         try:
-            result = api_client.post(f"/invoice/{invoice_id}/:createCreditNote", data=cn_body)
+            result = api_client.put(f"/invoice/{invoice_id}/:createCreditNote", params=cn_params)
             credit_note = result.get("value", {}) if result else {}
             cn_id = credit_note.get("id")
             logger.info("Created credit note id=%s for invoice id=%s", cn_id, invoice_id)

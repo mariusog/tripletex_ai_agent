@@ -317,7 +317,8 @@ class DeliverTravelExpenseHandler(BaseHandler):
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         te_id = int(params["travelExpenseId"])
-        api_client.put(f"/travelExpense/{te_id}/:deliver", data={"id": te_id})
+        # Spec: PUT /travelExpense/:deliver with id as query param
+        api_client.put("/travelExpense/:deliver", params={"id": str(te_id)})
         logger.info("Delivered travel expense id=%s", te_id)
         return {"id": te_id, "action": "delivered"}
 
@@ -335,6 +336,7 @@ class ApproveTravelExpenseHandler(BaseHandler):
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         te_id = int(params["travelExpenseId"])
-        api_client.put(f"/travelExpense/{te_id}/:approve", data={"id": te_id})
+        # Spec: PUT /travelExpense/:approve with id as query param
+        api_client.put("/travelExpense/:approve", params={"id": str(te_id)})
         logger.info("Approved travel expense id=%s", te_id)
         return {"id": te_id, "action": "approved"}
