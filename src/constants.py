@@ -94,9 +94,14 @@ TIER_1_TASKS = [
     "update_customer",
     "create_product",
     "create_department",
+    "update_department",
     "create_project",
     "assign_role",
     "enable_module",
+    "delete_customer",
+    "delete_product",
+    "delete_department",
+    "delete_project",
 ]
 
 # Tier 2 task types (x2 multiplier, multi-step)
@@ -109,11 +114,15 @@ TIER_2_TASKS = [
     "create_travel_expense",
     "deliver_travel_expense",
     "approve_travel_expense",
+    "delete_travel_expense",
+    "delete_order",
     "link_project_customer",
     "create_activity",
     "update_project",
     "create_asset",
     "update_asset",
+    "create_supplier",
+    "delete_supplier",
 ]
 
 # Tier 3 task types (x3 multiplier, complex workflows, opens Saturday)

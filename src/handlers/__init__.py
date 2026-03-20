@@ -9,6 +9,7 @@ from src.handlers import (  # noqa: F401
     asset,
     bank,
     customer,
+    delete,
     department,
     employee,
     invoice,

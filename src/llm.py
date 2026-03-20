@@ -76,12 +76,21 @@ orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency}}
 - create_activity: {{name, ...}}
 - create_asset: {{name, ...}}
 - update_asset: {{id/name (to find), fields to update...}}
-- create_voucher: {{date, description, postings (debit/credit accounts, amounts), ...}}
+- create_supplier: {{name, organizationNumber, email, phoneNumber, postalAddress, ...}}
+- create_voucher: {{date, description, postings (debit/credit accounts, amounts), supplier, ...}}
 - reverse_voucher: {{voucherId or search criteria...}}
 - bank_reconciliation: {{account, date, ...}}
 - ledger_correction: {{account, amount, date, description, ...}}
 - year_end_closing: {{year, ...}}
 - balance_sheet_report: {{dateFrom, dateTo, ...}}
+- update_department: {{name (to find), newName, departmentNumber, departmentManager, ...}}
+- delete_customer: {{name or id}}
+- delete_product: {{name, number, or id}}
+- delete_department: {{name or id}}
+- delete_project: {{name or id}}
+- delete_order: {{id}}
+- delete_travel_expense: {{id or title}}
+- delete_supplier: {{name or id}}
 
 Respond ONLY with valid JSON: {{"task_type": "<type>", "params": {{...}}}}
 Extract ALL relevant parameters from the prompt. Use field names matching the Tripletex API.
