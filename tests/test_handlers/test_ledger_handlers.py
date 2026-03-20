@@ -1,4 +1,4 @@
-"""Tests for ledger/voucher handlers: create and reverse vouchers."""
+"""Tests for ledger/voucher handlers: create, delete, and reverse vouchers."""
 
 from __future__ import annotations
 
@@ -10,12 +10,15 @@ from tests.conftest import sample_api_response
 
 
 def _mock_client(
+    get_response: dict[str, Any] | None = None,
     post_response: dict[str, Any] | None = None,
     put_response: dict[str, Any] | None = None,
 ) -> MagicMock:
     client = MagicMock()
+    client.get.return_value = get_response or sample_api_response(values=[])
     client.post.return_value = post_response or sample_api_response(value={"id": 1})
     client.put.return_value = put_response or sample_api_response(value={"id": 1})
+    client.delete.return_value = None
     return client
 
 
@@ -26,6 +29,10 @@ class TestLedgerRegistration:
     def test_create_voucher_registered(self):
         self._ensure_imported()
         assert get_handler("create_voucher") is not None
+
+    def test_delete_voucher_registered(self):
+        self._ensure_imported()
+        assert get_handler("delete_voucher") is not None
 
     def test_reverse_voucher_registered(self):
         self._ensure_imported()
@@ -64,6 +71,69 @@ class TestCreateVoucher:
         handler = get_handler("create_voucher")
         assert handler is not None
         assert handler.validate_params({}) == []
+
+
+class TestDeleteVoucher:
+    def test_happy_path_with_id(self):
+        client = _mock_client()
+        handler = get_handler("delete_voucher")
+        assert handler is not None
+        result = handler.execute(client, {"voucherId": 100})
+        assert result["id"] == 100
+        assert result["action"] == "deleted"
+        client.delete.assert_called_once_with("/ledger/voucher/100")
+
+    def test_search_by_description(self):
+        vouchers = [
+            {"id": 10, "number": 1, "description": "Office supplies"},
+            {"id": 11, "number": 2, "description": "Travel reimbursement"},
+        ]
+        client = _mock_client(get_response=sample_api_response(values=vouchers))
+        handler = get_handler("delete_voucher")
+        assert handler is not None
+        result = handler.execute(client, {"description": "Travel"})
+        assert result["id"] == 11
+        assert result["action"] == "deleted"
+
+    def test_search_by_number(self):
+        vouchers = [{"id": 20, "number": 5, "description": "Test"}]
+        client = _mock_client(get_response=sample_api_response(values=vouchers))
+        handler = get_handler("delete_voucher")
+        assert handler is not None
+        result = handler.execute(client, {"number": 5})
+        assert result["id"] == 20
+
+    def test_fallback_to_first_result(self):
+        vouchers = [{"id": 30, "number": 1, "description": "First"}]
+        client = _mock_client(get_response=sample_api_response(values=vouchers))
+        handler = get_handler("delete_voucher")
+        assert handler is not None
+        result = handler.execute(client, {})
+        assert result["id"] == 30
+
+    def test_not_found(self):
+        client = _mock_client(get_response=sample_api_response(values=[]))
+        handler = get_handler("delete_voucher")
+        assert handler is not None
+        result = handler.execute(client, {})
+        assert result["error"] == "not_found"
+
+    def test_required_params_empty(self):
+        handler = get_handler("delete_voucher")
+        assert handler is not None
+        assert handler.validate_params({}) == []
+
+    def test_search_by_date(self):
+        vouchers = [{"id": 40, "number": 1, "description": "Dated"}]
+        client = _mock_client(get_response=sample_api_response(values=vouchers))
+        handler = get_handler("delete_voucher")
+        assert handler is not None
+        result = handler.execute(client, {"date": "2026-03-20"})
+        assert result["id"] == 40
+        # Verify date search params were passed
+        get_call = client.get.call_args
+        assert get_call[1]["params"]["dateFrom"] == "2026-03-20"
+        assert get_call[1]["params"]["dateTo"] == "2026-03-20"
 
 
 class TestReverseVoucher:

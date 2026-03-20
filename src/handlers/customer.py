@@ -33,8 +33,9 @@ class CreateCustomerHandler(BaseHandler):
             if flag in params:
                 body[flag] = bool(params[flag])
 
-        if params.get("deliveryAddress"):
-            body["deliveryAddress"] = params["deliveryAddress"]
+        for addr_field in ("postalAddress", "physicalAddress", "deliveryAddress"):
+            if params.get(addr_field):
+                body[addr_field] = params[addr_field]
 
         body = self.strip_none_values(body)
         result = api_client.post("/customer", data=body)

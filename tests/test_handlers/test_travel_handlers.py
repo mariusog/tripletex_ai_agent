@@ -1,4 +1,4 @@
-"""Tests for travel expense handlers: create, deliver, approve."""
+"""Tests for travel expense handlers: create, delete, deliver, approve."""
 
 from __future__ import annotations
 
@@ -18,6 +18,7 @@ def _mock_client(
     client.get.return_value = get_response or sample_api_response(values=[])
     client.post.return_value = post_response or sample_api_response(value={"id": 1})
     client.put.return_value = put_response or sample_api_response(value={"id": 1})
+    client.delete.return_value = None
     return client
 
 
@@ -28,6 +29,10 @@ class TestTravelRegistration:
     def test_create_travel_expense_registered(self):
         self._ensure_imported()
         assert get_handler("create_travel_expense") is not None
+
+    def test_delete_travel_expense_registered(self):
+        self._ensure_imported()
+        assert get_handler("delete_travel_expense") is not None
 
     def test_deliver_travel_expense_registered(self):
         self._ensure_imported()
@@ -87,6 +92,49 @@ class TestDeliverTravelExpense:
         assert result["id"] == 10
         assert result["action"] == "delivered"
         client.put.assert_called_once()
+
+
+class TestDeleteTravelExpense:
+    def test_happy_path_with_id(self):
+        client = _mock_client()
+        handler = get_handler("delete_travel_expense")
+        assert handler is not None
+        result = handler.execute(client, {"travelExpenseId": 10})
+        assert result["id"] == 10
+        assert result["action"] == "deleted"
+        client.delete.assert_called_once_with("/travelExpense/10")
+
+    def test_search_by_title(self):
+        expenses = [
+            {"id": 1, "title": "Oslo trip"},
+            {"id": 2, "title": "Bergen conference"},
+        ]
+        client = _mock_client(get_response=sample_api_response(values=expenses))
+        handler = get_handler("delete_travel_expense")
+        assert handler is not None
+        result = handler.execute(client, {"title": "Bergen"})
+        assert result["id"] == 2
+        assert result["action"] == "deleted"
+
+    def test_fallback_to_first_result(self):
+        expenses = [{"id": 99, "title": "Some trip"}]
+        client = _mock_client(get_response=sample_api_response(values=expenses))
+        handler = get_handler("delete_travel_expense")
+        assert handler is not None
+        result = handler.execute(client, {})
+        assert result["id"] == 99
+
+    def test_not_found(self):
+        client = _mock_client(get_response=sample_api_response(values=[]))
+        handler = get_handler("delete_travel_expense")
+        assert handler is not None
+        result = handler.execute(client, {})
+        assert result["error"] == "not_found"
+
+    def test_required_params_empty(self):
+        handler = get_handler("delete_travel_expense")
+        assert handler is not None
+        assert handler.validate_params({}) == []
 
 
 class TestApproveTravelExpense:
