@@ -66,6 +66,8 @@ Include "orderLines" with the product/service name and amount from the original 
 - If the task mentions DELETING a voucher/entry (slett bilag), classify as "delete_voucher"
 - If the task mentions creating a custom accounting DIMENSION and posting a voucher, \
 classify as "create_voucher" with customDimension params (NOT a separate task type)
+- If the task asks to create MULTIPLE entities (e.g., "three departments", "deux produits"), \
+extract ALL names into a list param (e.g., departments: ["A", "B", "C"])
 - If the task mentions a customer by name, pass the full name as "customer" \
 (string or object with "name")
 - If the task mentions products by name/number, include them in orderLines with product name/number
@@ -84,8 +86,9 @@ fields to update...}}
 - create_supplier: {{name, email, phoneNumber, organizationNumber, \
 postalAddress: {{addressLine1, postalCode, city}}, ...}}
 - create_product: {{name, number, priceExcludingVatCurrency, vatType, ...}}
-- create_department: {{name, departmentNumber, departmentManager, \
-departments: ["Name1", "Name2"] (if creating MULTIPLE departments)}}
+- create_department: {{name (first department name), departmentNumber, departmentManager, \
+departments: ["Name1", "Name2", "Name3"] (REQUIRED if prompt mentions multiple departments — \
+extract ALL department names as a list)}}
 - create_project: {{name, number, startDate, endDate, customer, ...}}
 - update_project: {{projectId or name (to find), fixedPrice, \
 invoicePercentage (if "invoice X% of fixed price" is mentioned), fields to update...}}
@@ -118,7 +121,15 @@ customDimension: {{name, values, linkedValue}} (if creating dimension), ...}}
 - delete_voucher: {{voucherId, number, date, description (to match)}}
 - balance_sheet_report: {{dateFrom, dateTo, ...}}
 
-Extract ALL relevant parameters from the prompt. Use field names matching the Tripletex API.
+EXAMPLES:
+- "Créez trois départements: X, Y et Z" → create_department with \
+departments: ["X","Y","Z"]
+- "Create order + invoice + payment" → create_invoice with \
+register_payment param
+- "Reversed/returned payment" → register_payment with reversal: true
+
+Extract ALL relevant parameters from the prompt. Use field names \
+matching the Tripletex API.
 If dates are mentioned, format as yyyy-MM-dd.
 If a date is NOT mentioned in the prompt, OMIT the field entirely. \
 Never output placeholder values like "<UNKNOWN>", "unknown", "TBD", or "N/A". \
