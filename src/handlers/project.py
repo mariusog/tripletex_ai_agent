@@ -90,16 +90,36 @@ class UpdateProjectHandler(BaseHandler):
 
     @property
     def required_params(self) -> list[str]:
-        return ["projectId"]
+        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        proj_id = int(params["projectId"])
-        proj_data = api_client.get(f"/project/{proj_id}")
-        project = proj_data.get("value", {})
+        # Resolve project by ID or name
+        proj_id = params.get("projectId")
+        if proj_id:
+            proj_data = api_client.get(f"/project/{int(proj_id)}")
+            project = proj_data.get("value", {})
+        elif params.get("name"):
+            search = api_client.get("/project", params={"name": params["name"], "count": 1})
+            values = search.get("values", [])
+            if values:
+                project = values[0]
+                proj_id = project["id"]
+            else:
+                # Project doesn't exist yet — create it
+                create_handler = CreateProjectHandler()
+                result = create_handler.execute(api_client, params)
+                proj_id = result.get("id")
+                if not proj_id:
+                    return {"error": "project_creation_failed"}
+                proj_data = api_client.get(f"/project/{proj_id}")
+                project = proj_data.get("value", {})
+        else:
+            return {"error": "no_project_identifier"}
+
         if not project:
             return {"error": "project_not_found"}
 
-        for field in ("name", "number", "isClosed", "isInternal"):
+        for field in ("name", "number", "isClosed", "isInternal", "fixedPrice"):
             if field in params:
                 project[field] = params[field]
 
@@ -109,9 +129,23 @@ class UpdateProjectHandler(BaseHandler):
                 if date_val:
                     project[date_field] = date_val
 
-        for ref_field in ("projectManager", "department", "customer"):
-            if ref_field in params:
-                project[ref_field] = self.ensure_ref(params[ref_field], ref_field)
+        # Resolve customer by name if needed
+        if "customer" in params:
+            cust = params["customer"]
+            if isinstance(cust, dict) and "id" not in cust:
+                project["customer"] = _resolve_customer(api_client, cust)
+            else:
+                project["customer"] = self.ensure_ref(cust, "customer")
+
+        # Resolve PM — create employee if needed
+        if "projectManager" in params:
+            pm = params["projectManager"]
+            if isinstance(pm, dict) and "id" not in pm:
+                _resolve_employee(api_client, pm)
+            # Keep account owner as actual PM (they have PM access)
+
+        if "department" in params:
+            project["department"] = self.ensure_ref(params["department"], "department")
 
         result = api_client.put(f"/project/{proj_id}", data=project)
         logger.info("Updated project id=%s", proj_id)

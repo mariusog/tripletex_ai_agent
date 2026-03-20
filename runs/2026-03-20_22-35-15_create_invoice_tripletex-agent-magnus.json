@@ -1,0 +1,99 @@
+{
+  "timestamp": "2026-03-20 22:35:15",
+  "prompt": "Erstellen Sie einen Auftrag für den Kunden Waldstein GmbH (Org.-Nr. 899060113) mit den Produkten Netzwerkdienst (5411) zu 29200 NOK und Schulung (7883) zu 10350 NOK. Wandeln Sie den Auftrag in eine Rechnung um und registrieren Sie die vollständige Zahlung.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.22
+    },
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "status": 201,
+      "duration_s": 0.24
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "status": 201,
+      "duration_s": 0.27
+    },
+    {
+      "method": "GET",
+      "endpoint": "/product",
+      "status": 200,
+      "duration_s": 0.21
+    },
+    {
+      "method": "GET",
+      "endpoint": "/product",
+      "status": 200,
+      "duration_s": 0.21
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order/orderline/list",
+      "status": 201,
+      "duration_s": 0.3
+    },
+    {
+      "method": "POST",
+      "endpoint": "/invoice",
+      "status": 201,
+      "duration_s": 0.45
+    },
+    {
+      "method": "GET",
+      "endpoint": "/invoice/paymentType",
+      "status": 200,
+      "duration_s": 0.21
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/invoice/2147552161/:payment",
+      "status": 200,
+      "duration_s": 0.39
+    }
+  ],
+  "errors": [],
+  "task_type": "create_invoice",
+  "params": {
+    "customer": {
+      "name": "Waldstein GmbH",
+      "organizationNumber": "899060113"
+    },
+    "orderLines": [
+      {
+        "product": {
+          "name": "Netzwerkdienst",
+          "number": "5411"
+        },
+        "count": 1,
+        "unitPriceExcludingVatCurrency": 29200
+      },
+      {
+        "product": {
+          "name": "Schulung",
+          "number": "7883"
+        },
+        "count": 1,
+        "unitPriceExcludingVatCurrency": 10350
+      }
+    ],
+    "register_payment": {
+      "amount": 39550
+    }
+  },
+  "handler": "CreateInvoiceHandler",
+  "total_api_calls": 9,
+  "total_duration_s": 7.49,
+  "result": {
+    "id": 2147552161,
+    "orderId": 401975695,
+    "action": "created"
+  },
+  "service": "tripletex-agent-magnus"
+}
