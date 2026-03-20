@@ -23,10 +23,25 @@ class CreateEmployeeHandler(BaseHandler):
         return ["firstName", "lastName"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
+        # Look up default department if none specified
+        if "department" not in params:
+            dept_search = api_client.get("/department", params={"count": 1}, fields="id")
+            dept_values = dept_search.get("values", [])
+            dept_id = dept_values[0]["id"] if dept_values else None
+        else:
+            dept_id = None
+
         body: dict[str, Any] = {
             "firstName": params["firstName"],
             "lastName": params["lastName"],
+            "userType": params.get("userType", "STANDARD"),
         }
+
+        if "department" in params:
+            body["department"] = self.ensure_ref(params["department"], "department")
+        elif dept_id:
+            body["department"] = {"id": dept_id}
+
         for field in ("email", "phoneNumberMobile"):
             if params.get(field):
                 body[field] = params[field]
@@ -35,9 +50,6 @@ class CreateEmployeeHandler(BaseHandler):
             date_val = self.validate_date(params["dateOfBirth"], "dateOfBirth")
             if date_val:
                 body["dateOfBirth"] = date_val
-
-        if "department" in params:
-            body["department"] = self.ensure_ref(params["department"], "department")
 
         body = self.strip_none_values(body)
         result = api_client.post("/employee", data=body)
