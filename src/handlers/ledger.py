@@ -125,19 +125,35 @@ def _build_posting(
     supplier: dict[str, int] | None = None,
     dimension_ref: dict[str, int] | None = None,
 ) -> dict[str, Any]:
-    """Build a single voucher posting payload."""
+    """Build a single voucher posting payload.
+
+    Handles multiple LLM output formats:
+    - {account: 5000, debit: 10000} — single account with debit/credit
+    - {debitAccount: 5000, creditAccount: 2930, amountGross: 10000} — split accounts
+    - {account: 5000, amountGross: 10000} — direct amount
+    """
     result: dict[str, Any] = {"row": row}
     vat_ref = None
-    if "account" in posting:
-        acct_ref, vat_ref = _resolve_account(api_client, posting["account"])
+
+    # Resolve account — LLM may use "account", "debitAccount", or "creditAccount"
+    account = posting.get("account") or posting.get("debitAccount") or posting.get("creditAccount")
+    if account:
+        acct_ref, vat_ref = _resolve_account(api_client, account)
         result["account"] = acct_ref
+
     for field in ("amountCurrency", "amount", "description"):
         if field in posting and posting[field] is not None:
             result[field] = posting[field]
+
     # Handle debit/credit amounts
     debit = posting.get("debit", 0) or 0
     credit = posting.get("credit", 0) or 0
-    if debit and not credit:
+    # If LLM used debitAccount/creditAccount split format, the amount is positive
+    # for debit account and we need to generate a matching credit posting separately
+    if posting.get("debitAccount") and posting.get("creditAccount"):
+        # This posting represents a debit; the caller should also generate a credit
+        amount = abs(posting.get("amountGross", 0))
+    elif debit and not credit:
         amount = abs(debit)
     elif credit and not debit:
         amount = -abs(credit)
@@ -197,8 +213,30 @@ class CreateVoucherHandler(BaseHandler):
         supplier_ref = _resolve_supplier(api_client, params.get("supplier"))
 
         # Build postings — resolve account numbers to IDs
-        postings = params.get("postings", [])
-        if postings:
+        # Handle split debit/credit format: expand into two postings
+        raw_postings = params.get("postings", [])
+        expanded: list[dict[str, Any]] = []
+        for p in raw_postings:
+            if p.get("debitAccount") and p.get("creditAccount"):
+                amt = abs(p.get("amountGross", p.get("amount", 0)))
+                expanded.append(
+                    {
+                        "account": p["debitAccount"],
+                        "amountGross": amt,
+                        "description": p.get("description", ""),
+                    }
+                )
+                expanded.append(
+                    {
+                        "account": p["creditAccount"],
+                        "amountGross": -amt,
+                        "description": p.get("description", ""),
+                    }
+                )
+            else:
+                expanded.append(p)
+
+        if expanded:
             body["postings"] = [
                 _build_posting(
                     api_client,
@@ -207,7 +245,7 @@ class CreateVoucherHandler(BaseHandler):
                     supplier=supplier_ref,
                     dimension_ref=dim_value_ref,
                 )
-                for i, p in enumerate(postings)
+                for i, p in enumerate(expanded)
             ]
 
         body = self.strip_none_values(body)
