@@ -55,7 +55,17 @@ class TaskRouter:
                     task_type,
                 )
 
-            result = handler.execute(api_client, params)
+            # Handle batch "items" for any handler that doesn't natively support it
+            items = params.get("items", [])
+            if items and not hasattr(handler, "_create_one"):
+                results = []
+                for item in items:
+                    merged = {**params, **item}
+                    merged.pop("items", None)
+                    results.append(handler.execute(api_client, merged))
+                result = {"results": results, "count": len(results)}
+            else:
+                result = handler.execute(api_client, params)
             elapsed = time.monotonic() - start
             logger.info(
                 "Handler result task_type=%s handler=%s api_calls=%d duration=%.2fs result=%s",

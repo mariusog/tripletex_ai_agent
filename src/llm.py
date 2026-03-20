@@ -49,6 +49,9 @@ Include "orderLines" with the product/service name and amount from the original 
 - For SUPPLIERS (leverandør, supplier, Lieferant, fournisseur, proveedor, fornecedor), \
 classify as "create_supplier" — NOT create_customer. \
 Suppliers provide goods/services TO us; customers buy FROM us.
+- If the task asks to create MULTIPLE entities of the same type (e.g. "create three departments"), \
+extract ALL items in an "items" array. Example: {{"task_type": "create_department", \
+"params": {{"items": [{{"name": "Dept1"}}, {{"name": "Dept2"}}]}}}}
 - For supplier invoices (leverandørfaktura/Lieferantenrechnung), classify as "create_voucher"
 - For payroll/salary tasks (lønn, paie, Gehalt, nómina, run payroll), classify as "run_payroll"
 - For custom accounting dimensions (dimensjon, dimension, Dimension) with voucher, \

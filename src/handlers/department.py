@@ -23,6 +23,21 @@ class CreateDepartmentHandler(BaseHandler):
         return ["name"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
+        # Handle batch creation via "items" array
+        items = params.get("items", [])
+        if items:
+            ids = []
+            for item in items:
+                merged = {**params, **item}
+                merged.pop("items", None)
+                result = self._create_one(api_client, merged)
+                if result.get("id"):
+                    ids.append(result["id"])
+            return {"ids": ids, "action": "created", "count": len(ids)}
+
+        return self._create_one(api_client, params)
+
+    def _create_one(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         body: dict[str, Any] = {"name": params["name"]}
 
         if "departmentNumber" in params and params["departmentNumber"] is not None:
