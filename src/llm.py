@@ -46,6 +46,9 @@ Include "orderLines" with the product/service name and amount from the original 
 - If the task mentions a customer by name, pass the full name as "customer" \
 (string or object with "name")
 - If the task mentions products by name/number, include them in orderLines with product name/number
+- For SUPPLIERS (leverandør, supplier, Lieferant, fournisseur, proveedor, fornecedor), \
+classify as "create_supplier" — NOT create_customer. \
+Suppliers provide goods/services TO us; customers buy FROM us.
 - For supplier invoices (leverandørfaktura/Lieferantenrechnung), classify as "create_voucher"
 - For payroll/salary tasks (lønn, paie, Gehalt, nómina, run payroll), classify as "run_payroll"
 - For custom accounting dimensions (dimensjon, dimension, Dimension) with voucher, \
