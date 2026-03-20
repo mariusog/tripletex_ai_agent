@@ -37,12 +37,10 @@ class CreateProductHandler(BaseHandler):
         # Resolve vatType — may be an ID, string description, or percentage
         if "vatType" in params:
             vat = params["vatType"]
-            if isinstance(vat, (int, float)) or (isinstance(vat, str) and vat.isdigit()):
-                body["vatType"] = {"id": int(vat)}
-            elif isinstance(vat, dict) and "id" in vat:
+            if isinstance(vat, dict) and "id" in vat:
                 body["vatType"] = vat
-            elif isinstance(vat, str):
-                # Search by name/description
+            else:
+                # Always search — numeric values like "25" are percentages, not IDs
                 try:
                     vat_resp = api_client.get_cached(
                         "vat_types",
@@ -51,12 +49,25 @@ class CreateProductHandler(BaseHandler):
                         fields="id,name,percentage",
                     )
                     vat_values = vat_resp.get("values", [])
-                    vat_lower = vat.lower()
-                    for v in vat_values:
-                        v_name = (v.get("name") or "").lower()
-                        if vat_lower in v_name or v_name in vat_lower:
-                            body["vatType"] = {"id": v["id"]}
-                            break
+                    vat_str = str(vat).lower().strip().rstrip("%")
+                    matched = False
+                    # Match by percentage first (e.g. "25" or "25%")
+                    try:
+                        pct = float(vat_str)
+                        for v in vat_values:
+                            if v.get("percentage") == pct:
+                                body["vatType"] = {"id": v["id"]}
+                                matched = True
+                                break
+                    except ValueError:
+                        pass
+                    # Then match by name
+                    if not matched:
+                        for v in vat_values:
+                            v_name = (v.get("name") or "").lower()
+                            if vat_str in v_name or v_name in vat_str:
+                                body["vatType"] = {"id": v["id"]}
+                                break
                 except Exception:
                     logger.warning("Could not resolve vatType '%s'", vat)
 

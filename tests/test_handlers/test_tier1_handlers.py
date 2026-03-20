@@ -184,11 +184,11 @@ class TestCreateProduct:
         result = handler.execute(client, {"name": "Widget"})
         assert result["id"] == 7
 
-    def test_vat_type_as_int(self):
+    def test_vat_type_as_dict(self):
         client = _mock_client()
         handler = get_handler("create_product")
         assert handler is not None
-        handler.execute(client, {"name": "W", "vatType": 3})
+        handler.execute(client, {"name": "W", "vatType": {"id": 3}})
         body = client.post.call_args[1]["data"]
         assert body["vatType"] == {"id": 3}
 
