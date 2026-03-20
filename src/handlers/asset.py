@@ -1,0 +1,93 @@
+"""Asset handlers: create and update assets via Tripletex API."""
+
+from __future__ import annotations
+
+import logging
+from typing import Any
+
+from src.api_client import TripletexClient
+from src.handlers.base import BaseHandler, register_handler
+
+logger = logging.getLogger(__name__)
+
+
+def _resolve_ref(value: Any) -> dict[str, Any]:
+    """Convert an int or dict to a Tripletex object reference {id: ...}."""
+    if isinstance(value, dict):
+        return value
+    return {"id": int(value)}
+
+
+@register_handler
+class CreateAssetHandler(BaseHandler):
+    """POST /asset with extracted fields."""
+
+    def get_task_type(self) -> str:
+        return "create_asset"
+
+    @property
+    def required_params(self) -> list[str]:
+        return ["name"]
+
+    def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
+        body: dict[str, Any] = {"name": params["name"]}
+
+        for field in (
+            "description",
+            "acquisitionDate",
+            "acquisitionCost",
+            "depreciationPercentage",
+            "depreciationMonths",
+            "lifetime",
+            "assetNumber",
+        ):
+            if field in params:
+                body[field] = params[field]
+
+        for ref_field in ("account", "depreciationAccount", "department", "type"):
+            if ref_field in params:
+                body[ref_field] = _resolve_ref(params[ref_field])
+
+        result = api_client.post("/asset", data=body)
+        value = result.get("value", {})
+        logger.info("Created asset id=%s", value.get("id"))
+        return {"id": value.get("id"), "action": "created"}
+
+
+@register_handler
+class UpdateAssetHandler(BaseHandler):
+    """GET /asset/{id} then PUT /asset/{id} with updated fields."""
+
+    def get_task_type(self) -> str:
+        return "update_asset"
+
+    @property
+    def required_params(self) -> list[str]:
+        return ["assetId"]
+
+    def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
+        asset_id = int(params["assetId"])
+        asset_data = api_client.get(f"/asset/{asset_id}")
+        asset = asset_data.get("value", {})
+        if not asset:
+            return {"error": "asset_not_found"}
+
+        for field in (
+            "name",
+            "description",
+            "acquisitionDate",
+            "acquisitionCost",
+            "depreciationPercentage",
+            "depreciationMonths",
+            "lifetime",
+        ):
+            if field in params:
+                asset[field] = params[field]
+
+        for ref_field in ("account", "depreciationAccount", "department", "type"):
+            if ref_field in params:
+                asset[ref_field] = _resolve_ref(params[ref_field])
+
+        result = api_client.put(f"/asset/{asset_id}", data=asset)
+        logger.info("Updated asset id=%s", asset_id)
+        return {"id": asset_id, "action": "updated", "value": result.get("value", {})}
