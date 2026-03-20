@@ -22,8 +22,15 @@ git push
 |--------|---------|---------|
 | Magnus | `tripletex-agent-magnus` | `python scripts/capture_runs.py` (default) |
 | Team shared | `tripletex-agent-2` | `python scripts/capture_runs.py --service tripletex-agent-2` |
+| Stian | `tripletex-agent-stian` | `python scripts/capture_runs.py --service tripletex-agent-stian` |
+| Original | `tripletex-agent` | `python scripts/capture_runs.py --service tripletex-agent` |
 
-**Add your service name here when you set one up!**
+### Capture from ALL services at once
+```bash
+for svc in tripletex-agent tripletex-agent-2 tripletex-agent-magnus tripletex-agent-stian; do
+  python scripts/capture_runs.py --service "$svc" --limit 500
+done
+```
 
 ## What gets captured
 
