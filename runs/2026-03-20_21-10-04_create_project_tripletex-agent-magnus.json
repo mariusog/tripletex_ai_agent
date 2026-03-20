@@ -1,0 +1,53 @@
+{
+  "timestamp": "2026-03-20 21:10:04",
+  "prompt": "Opprett prosjektet \"Migrasjon Snøhetta\" knyttet til kunden Snøhetta AS (org.nr 842796032). Prosjektleder er Eline Berg (eline.berg@example.org).",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/employee",
+      "status": 200,
+      "duration_s": 7.01
+    },
+    {
+      "method": "GET",
+      "endpoint": "/employee",
+      "status": 200,
+      "duration_s": 7.0
+    },
+    {
+      "method": "GET",
+      "endpoint": "/customer",
+      "status": 200,
+      "duration_s": 6.32
+    },
+    {
+      "method": "POST",
+      "endpoint": "/project",
+      "status": 201,
+      "duration_s": 6.87
+    }
+  ],
+  "errors": [],
+  "task_type": "create_project",
+  "params": {
+    "name": "Migrasjon Snøhetta",
+    "customer": {
+      "name": "Snøhetta AS",
+      "organizationNumber": "842796032"
+    },
+    "projectManager": {
+      "firstName": "Eline",
+      "lastName": "Berg",
+      "email": "eline.berg@example.org"
+    }
+  },
+  "handler": "CreateProjectHandler",
+  "total_api_calls": 4,
+  "total_duration_s": 30.58,
+  "result": {
+    "id": 401971672,
+    "action": "created"
+  },
+  "service": "tripletex-agent-magnus"
+}
