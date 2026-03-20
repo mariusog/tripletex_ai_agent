@@ -56,14 +56,44 @@ class BankReconciliationHandler(BaseHandler):
         if not account_id:
             return {"error": "account_not_found"}
 
-        body: dict[str, Any] = {"account": {"id": account_id}}
+        body: dict[str, Any] = {
+            "account": {"id": account_id},
+            "type": params.get("type", "MANUAL"),
+        }
 
+        # accountingPeriod is required — resolve from params or fetch current
         if "accountingPeriodId" in params:
             body["accountingPeriod"] = {"id": int(params["accountingPeriodId"])}
+        else:
+            # Fetch the current accounting period
+            try:
+                from datetime import date as dt_date
 
-        for field in ("type", "isClosed"):
-            if field in params and params[field] is not None:
-                body[field] = params[field]
+                today = dt_date.today().isoformat()
+                period_resp = api_client.get_cached(
+                    "accounting_period",
+                    "/timesheet/settings",
+                    fields="id",
+                )
+                # Try to get period from company settings
+                period_id = period_resp.get("value", {}).get("id")
+                if not period_id:
+                    # Fallback: search accounting periods
+                    period_resp = api_client.get(
+                        "/accountingPeriod",
+                        params={"count": 1, "dateTo": today},
+                        fields="id",
+                    )
+                    periods = period_resp.get("values", [])
+                    if periods:
+                        period_id = periods[0]["id"]
+                if period_id:
+                    body["accountingPeriod"] = {"id": period_id}
+            except Exception:
+                logger.warning("Could not resolve accounting period")
+
+        if "isClosed" in params and params["isClosed"] is not None:
+            body["isClosed"] = params["isClosed"]
 
         body = self.strip_none_values(body)
         result = api_client.post("/bank/reconciliation", data=body)

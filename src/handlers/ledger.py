@@ -171,8 +171,15 @@ class DeleteVoucherHandler(BaseHandler):
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         voucher_id = params.get("voucherId") or params.get("id")
         if not voucher_id:
-            # Search for voucher
-            search_params: dict[str, Any] = {"count": 10}
+            # Search for voucher — dateFrom/dateTo are required by API
+            from datetime import date as dt_date
+
+            today = dt_date.today().isoformat()
+            search_params: dict[str, Any] = {
+                "count": 10,
+                "dateFrom": params.get("dateFrom", "2020-01-01"),
+                "dateTo": params.get("dateTo", today),
+            }
             if params.get("date"):
                 date_val = self.validate_date(params["date"], "date")
                 if date_val:

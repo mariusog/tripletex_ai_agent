@@ -33,10 +33,10 @@ class LedgerCorrectionHandler(BaseHandler):
         date_val = self.validate_date(params.get("date"), "date")
         if not date_val:
             date_val = dt_date.today().isoformat()
-        body: dict[str, Any] = {"date": date_val}
-
-        if params.get("description"):
-            body["description"] = params["description"]
+        body: dict[str, Any] = {
+            "date": date_val,
+            "description": params.get("description", "Korreksjon"),
+        }
 
         if "voucherType" in params:
             body["voucherType"] = {"id": int(params["voucherType"])}
@@ -116,6 +116,18 @@ class YearEndClosingHandler(BaseHandler):
             # Auto-generate minimal closing entries if no postings extracted
             # Standard Norwegian year-end: close result to equity (8800 -> 2050)
             body["postings"] = self._generate_closing_postings(api_client, year)
+
+        # If no postings were generated (empty balance sheet), create a minimal
+        # zero-balance closing entry so the voucher creation doesn't fail
+        if not body.get("postings"):
+            from src.handlers.ledger import _resolve_account
+
+            equity_ref, _ = _resolve_account(api_client, 8800)
+            result_ref, _ = _resolve_account(api_client, 2050)
+            body["postings"] = [
+                {"row": 1, "account": equity_ref, "amountGross": 0, "amountGrossCurrency": 0},
+                {"row": 2, "account": result_ref, "amountGross": 0, "amountGrossCurrency": 0},
+            ]
 
         body = self.strip_none_values(body)
         result = api_client.post("/ledger/voucher", data=body, params={"sendToLedger": "true"})
