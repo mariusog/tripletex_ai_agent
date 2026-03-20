@@ -16,13 +16,16 @@ def _build_posting(posting: dict[str, Any]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     if "account" in posting:
         result["account"] = BaseHandler.ensure_ref(posting["account"], "account")
-    for field in ("amountGross", "amountCurrency", "amount", "description"):
+    for field in ("amountCurrency", "amount", "description"):
         if field in posting and posting[field] is not None:
             result[field] = posting[field]
+    # debit/credit override amountGross; only fall back to explicit amountGross
     if "debit" in posting:
         result["amountGross"] = abs(posting.get("amount", 0))
-    if "credit" in posting:
+    elif "credit" in posting:
         result["amountGross"] = -abs(posting.get("amount", 0))
+    elif "amountGross" in posting and posting["amountGross"] is not None:
+        result["amountGross"] = posting["amountGross"]
     return {k: v for k, v in result.items() if v is not None}
 
 
