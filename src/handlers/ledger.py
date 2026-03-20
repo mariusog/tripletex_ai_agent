@@ -69,11 +69,61 @@ def _resolve_account(
     return {"id": 0}, None
 
 
+def _create_custom_dimension(
+    api_client: TripletexClient, dim_params: dict[str, Any]
+) -> dict[str, int] | None:
+    """Create a custom accounting dimension with values. Returns the linked value ref."""
+    dim_name = dim_params.get("name", "")
+    values = dim_params.get("values", [])
+    linked_value = dim_params.get("linkedValue", "")
+
+    if not dim_name:
+        return None
+
+    # Create the dimension name
+    try:
+        dim_result = api_client.post(
+            "/ledger/accountingDimensionName",
+            data={"dimensionName": dim_name, "active": True},
+        )
+        dim_index = dim_result.get("value", {}).get("dimensionIndex")
+        logger.info("Created dimension '%s' index=%s", dim_name, dim_index)
+    except TripletexApiError:
+        logger.warning("Failed to create dimension '%s', may already exist", dim_name)
+        dim_index = None
+
+    # Create dimension values
+    linked_ref = None
+    for val in values:
+        val_name = val if isinstance(val, str) else val.get("name", "")
+        if not val_name:
+            continue
+        try:
+            val_body: dict[str, Any] = {
+                "displayName": val_name,
+                "number": val_name[:10],
+                "active": True,
+                "showInVoucherRegistration": True,
+            }
+            if dim_index is not None:
+                val_body["dimensionIndex"] = dim_index
+            val_result = api_client.post("/ledger/accountingDimensionValue", data=val_body)
+            val_id = val_result.get("value", {}).get("id")
+            logger.info("Created dimension value '%s' id=%s", val_name, val_id)
+            if val_name == linked_value and val_id:
+                linked_ref = {"id": val_id}
+        except TripletexApiError as e:
+            logger.warning("Failed to create dimension value '%s': %s", val_name, e)
+
+    return linked_ref
+
+
 def _build_posting(
     api_client: TripletexClient,
     posting: dict[str, Any],
     row: int = 0,
     supplier: dict[str, int] | None = None,
+    dimension_ref: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     """Build a single voucher posting payload."""
     result: dict[str, Any] = {"row": row}
@@ -105,6 +155,9 @@ def _build_posting(
     # Add supplier ref if provided (required for AP/supplier invoice postings)
     if supplier:
         result["supplier"] = supplier
+    # Add custom dimension ref if provided
+    if dimension_ref:
+        result["freeAccountingDimension1"] = dimension_ref
     return {k: v for k, v in result.items() if v is not None}
 
 
@@ -135,6 +188,11 @@ class CreateVoucherHandler(BaseHandler):
         if "voucherType" in params:
             body["voucherType"] = {"id": int(params["voucherType"])}
 
+        # Create custom accounting dimensions if requested
+        dim_value_ref = None
+        if params.get("customDimension"):
+            dim_value_ref = _create_custom_dimension(api_client, params["customDimension"])
+
         # Resolve supplier if present (needed for supplier invoice vouchers)
         supplier_ref = _resolve_supplier(api_client, params.get("supplier"))
 
@@ -142,7 +200,13 @@ class CreateVoucherHandler(BaseHandler):
         postings = params.get("postings", [])
         if postings:
             body["postings"] = [
-                _build_posting(api_client, p, row=i + 1, supplier=supplier_ref)
+                _build_posting(
+                    api_client,
+                    p,
+                    row=i + 1,
+                    supplier=supplier_ref,
+                    dimension_ref=dim_value_ref,
+                )
                 for i, p in enumerate(postings)
             ]
 
