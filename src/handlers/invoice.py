@@ -305,10 +305,15 @@ class SendInvoiceHandler(BaseHandler):
 
     @property
     def required_params(self) -> list[str]:
-        return ["invoiceId"]
+        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        invoice_id = int(params["invoiceId"])
+        invoice_id = params.get("invoiceId")
+        if not invoice_id:
+            invoice_id = _find_invoice_id(api_client, params)
+        if not invoice_id:
+            return {"error": "invoice_not_found"}
+        invoice_id = int(invoice_id)
         # Spec: PUT /invoice/{id}/:send with sendType + overrideEmailAddress as query params
         send_params: dict[str, Any] = {
             "sendType": params.get("sendType", "EMAIL"),

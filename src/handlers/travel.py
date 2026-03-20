@@ -141,6 +141,27 @@ def _get_payment_type(api_client: TripletexClient) -> dict[str, int] | None:
     return None
 
 
+def _search_travel_expense(
+    api_client: TripletexClient, params: dict[str, Any]
+) -> int | None:
+    """Search for a travel expense by employee name or title."""
+    search_params: dict[str, Any] = {"count": 10}
+    if params.get("employee"):
+        emp_ref = _resolve_employee(api_client, params["employee"])
+        if emp_ref["id"]:
+            search_params["employeeId"] = str(emp_ref["id"])
+    resp = api_client.get("/travelExpense", params=search_params, fields="id,title")
+    values = resp.get("values", [])
+    if not values:
+        return None
+    title = params.get("title", "")
+    if title:
+        for v in values:
+            if title.lower() in (v.get("title") or "").lower():
+                return v["id"]
+    return values[0]["id"]
+
+
 @register_handler
 class CreateTravelExpenseHandler(BaseHandler):
     """Create travel expense, add costs and per diem compensations."""
@@ -306,37 +327,43 @@ class DeleteTravelExpenseHandler(BaseHandler):
 
 @register_handler
 class DeliverTravelExpenseHandler(BaseHandler):
-    """POST /travelExpense/:deliver."""
+    """PUT /travelExpense/:deliver with id as query param."""
 
     def get_task_type(self) -> str:
         return "deliver_travel_expense"
 
     @property
     def required_params(self) -> list[str]:
-        return ["travelExpenseId"]
+        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        te_id = int(params["travelExpenseId"])
-        # Spec: PUT /travelExpense/:deliver with id as query param
-        api_client.put("/travelExpense/:deliver", params={"id": str(te_id)})
+        te_id = params.get("travelExpenseId") or params.get("id")
+        if not te_id:
+            te_id = _search_travel_expense(api_client, params)
+        if not te_id:
+            return {"error": "travel_expense_not_found"}
+        api_client.put("/travelExpense/:deliver", params={"id": str(int(te_id))})
         logger.info("Delivered travel expense id=%s", te_id)
-        return {"id": te_id, "action": "delivered"}
+        return {"id": int(te_id), "action": "delivered"}
 
 
 @register_handler
 class ApproveTravelExpenseHandler(BaseHandler):
-    """POST /travelExpense/:approve."""
+    """PUT /travelExpense/:approve with id as query param."""
 
     def get_task_type(self) -> str:
         return "approve_travel_expense"
 
     @property
     def required_params(self) -> list[str]:
-        return ["travelExpenseId"]
+        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        te_id = int(params["travelExpenseId"])
-        # Spec: PUT /travelExpense/:approve with id as query param
-        api_client.put("/travelExpense/:approve", params={"id": str(te_id)})
+        te_id = params.get("travelExpenseId") or params.get("id")
+        if not te_id:
+            te_id = _search_travel_expense(api_client, params)
+        if not te_id:
+            return {"error": "travel_expense_not_found"}
+        api_client.put("/travelExpense/:approve", params={"id": str(int(te_id))})
         logger.info("Approved travel expense id=%s", te_id)
-        return {"id": te_id, "action": "approved"}
+        return {"id": int(te_id), "action": "approved"}

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from src.api_client import TripletexClient
+from src.api_client import TripletexApiError, TripletexClient
 from src.handlers.base import BaseHandler, register_handler
 
 logger = logging.getLogger(__name__)
@@ -76,7 +76,15 @@ class CreateProductHandler(BaseHandler):
                 body[ref_field] = self.ensure_ref(params[ref_field], ref_field)
 
         body = self.strip_none_values(body)
-        result = api_client.post("/product", data=body)
+        try:
+            result = api_client.post("/product", data=body)
+        except TripletexApiError as e:
+            # Retry without vatType if it caused the error
+            if "vatType" in str(e) and "vatType" in body:
+                del body["vatType"]
+                result = api_client.post("/product", data=body)
+            else:
+                raise
         value = result.get("value", {})
         logger.info("Created product id=%s", value.get("id"))
         return {"id": value.get("id"), "action": "created"}

@@ -64,6 +64,8 @@ Include "orderLines" with the product/service name and amount from the original 
 - If the task mentions DELETING a travel expense (slett reiseregning), classify as \
 "delete_travel_expense"
 - If the task mentions DELETING a voucher/entry (slett bilag), classify as "delete_voucher"
+- If the task mentions creating a custom accounting DIMENSION and posting a voucher, \
+classify as "create_voucher" with customDimension params (NOT a separate task type)
 - If the task mentions a customer by name, pass the full name as "customer" \
 (string or object with "name")
 - If the task mentions products by name/number, include them in orderLines with product name/number
@@ -82,7 +84,8 @@ fields to update...}}
 - create_supplier: {{name, email, phoneNumber, organizationNumber, \
 postalAddress: {{addressLine1, postalCode, city}}, ...}}
 - create_product: {{name, number, priceExcludingVatCurrency, vatType, ...}}
-- create_department: {{name, departmentNumber, departmentManager, ...}}
+- create_department: {{name, departmentNumber, departmentManager, \
+departments: ["Name1", "Name2"] (if creating MULTIPLE departments)}}
 - create_project: {{name, number, startDate, endDate, customer, ...}}
 - update_project: {{projectId or name (to find), fields to update...}}
 - assign_role: {{firstName, lastName, role, ...}}
@@ -104,7 +107,8 @@ orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency}}
 - create_activity: {{name, ...}}
 - create_asset: {{name, ...}}
 - update_asset: {{id/name (to find), fields to update...}}
-- create_voucher: {{date, description, postings (debit/credit accounts, amounts), ...}}
+- create_voucher: {{date, description, postings (debit/credit accounts, amounts), \
+customDimension: {{name, values, linkedValue}} (if creating dimension), ...}}
 - reverse_voucher: {{voucherId or search criteria...}}
 - bank_reconciliation: {{account, date, ...}}
 - ledger_correction: {{account, amount, date, description, ...}}

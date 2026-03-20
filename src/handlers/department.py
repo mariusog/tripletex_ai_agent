@@ -23,22 +23,40 @@ class CreateDepartmentHandler(BaseHandler):
         return ["name"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        body: dict[str, Any] = {"name": params["name"]}
+        # Handle multi-department creation: "create departments X, Y, Z"
+        departments = params.get("departments", [])
+        if not departments:
+            departments = [params]
 
-        if "departmentNumber" in params and params["departmentNumber"] is not None:
-            body["departmentNumber"] = str(params["departmentNumber"])
+        created_ids = []
+        for dept in departments:
+            if isinstance(dept, str):
+                dept = {"name": dept}
+            name = dept.get("name", params.get("name", ""))
+            if not name:
+                continue
 
-        if "departmentManager" in params:
-            mgr = params["departmentManager"]
-            if isinstance(mgr, dict) and "id" not in mgr:
-                from src.handlers.travel import _resolve_employee
+            body: dict[str, Any] = {"name": name}
 
-                body["departmentManager"] = _resolve_employee(api_client, mgr)
-            else:
-                body["departmentManager"] = self.ensure_ref(mgr, "departmentManager")
+            dept_num = dept.get("departmentNumber", params.get("departmentNumber"))
+            if dept_num is not None:
+                body["departmentNumber"] = str(dept_num)
 
-        body = self.strip_none_values(body)
-        result = api_client.post("/department", data=body)
-        value = result.get("value", {})
-        logger.info("Created department id=%s", value.get("id"))
-        return {"id": value.get("id"), "action": "created"}
+            mgr = dept.get("departmentManager", params.get("departmentManager"))
+            if mgr:
+                if isinstance(mgr, dict) and "id" not in mgr:
+                    from src.handlers.travel import _resolve_employee
+
+                    body["departmentManager"] = _resolve_employee(api_client, mgr)
+                else:
+                    body["departmentManager"] = self.ensure_ref(mgr, "departmentManager")
+
+            body = self.strip_none_values(body)
+            result = api_client.post("/department", data=body)
+            value = result.get("value", {})
+            dept_id = value.get("id")
+            logger.info("Created department '%s' id=%s", name, dept_id)
+            created_ids.append(dept_id)
+
+        first_id = created_ids[0] if created_ids else None
+        return {"id": first_id, "ids": created_ids, "action": "created"}
