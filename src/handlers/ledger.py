@@ -11,6 +11,35 @@ from src.handlers.base import BaseHandler, register_handler
 logger = logging.getLogger(__name__)
 
 
+def _resolve_supplier(
+    api_client: TripletexClient, supplier: Any
+) -> dict[str, int] | None:
+    """Resolve supplier to {"id": N}. Creates if not found."""
+    if supplier is None:
+        return None
+    if isinstance(supplier, dict) and "id" in supplier:
+        return {"id": int(supplier["id"])}
+    if isinstance(supplier, (int, float)):
+        return {"id": int(supplier)}
+    name = str(supplier) if not isinstance(supplier, dict) else supplier.get("name", "")
+    org_nr = supplier.get("organizationNumber") if isinstance(supplier, dict) else None
+    if not name:
+        return None
+    # Search by name
+    resp = api_client.get("/supplier", params={"name": name, "count": 1}, fields="id")
+    values = resp.get("values", [])
+    if values:
+        return {"id": values[0]["id"]}
+    # Create
+    sup_body: dict[str, Any] = {"name": name}
+    if org_nr:
+        sup_body["organizationNumber"] = str(org_nr)
+    result = api_client.post("/supplier", data=sup_body)
+    sup_id = result.get("value", {}).get("id")
+    logger.info("Auto-created supplier '%s' id=%s", name, sup_id)
+    return {"id": sup_id}
+
+
 def _resolve_account(
     api_client: TripletexClient, account: Any
 ) -> tuple[dict[str, int], dict[str, int] | None]:
@@ -36,7 +65,10 @@ def _resolve_account(
 
 
 def _build_posting(
-    api_client: TripletexClient, posting: dict[str, Any], row: int = 0
+    api_client: TripletexClient,
+    posting: dict[str, Any],
+    row: int = 0,
+    supplier: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     """Build a single voucher posting payload."""
     result: dict[str, Any] = {"row": row}
@@ -65,6 +97,9 @@ def _build_posting(
         result["vatType"] = BaseHandler.ensure_ref(posting["vatType"], "vatType")
     elif vat_ref:
         result["vatType"] = vat_ref
+    # Add supplier ref if provided (required for AP/supplier invoice postings)
+    if supplier:
+        result["supplier"] = supplier
     return {k: v for k, v in result.items() if v is not None}
 
 
@@ -95,11 +130,14 @@ class CreateVoucherHandler(BaseHandler):
         if "voucherType" in params:
             body["typeId"] = int(params["voucherType"])
 
+        # Resolve supplier if present (needed for supplier invoice vouchers)
+        supplier_ref = _resolve_supplier(api_client, params.get("supplier"))
+
         # Build postings — resolve account numbers to IDs
         postings = params.get("postings", [])
         if postings:
             body["postings"] = [
-                _build_posting(api_client, p, row=i + 1)
+                _build_posting(api_client, p, row=i + 1, supplier=supplier_ref)
                 for i, p in enumerate(postings)
             ]
 
