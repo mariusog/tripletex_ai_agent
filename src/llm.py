@@ -171,7 +171,11 @@ class LLMClient:
             lines = text.split("\n")
             text = "\n".join(lines[1:-1]) if len(lines) > 2 else text
 
-        parsed = json.loads(text)
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError:
+            logger.warning("LLM returned non-JSON response: %.200s", text)
+            return TaskClassification(task_type="unknown", params={})
         return TaskClassification(
             task_type=parsed.get("task_type", "unknown"),
             params=parsed.get("params", {}),
