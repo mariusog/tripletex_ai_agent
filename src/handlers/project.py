@@ -25,19 +25,37 @@ class CreateProjectHandler(BaseHandler):
         return ["name"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
+        import secrets
         from datetime import date as dt_date
+
+        from src.api_client import TripletexApiError
 
         # projectManager must have PM access — use account owner as PM
         emp_search = api_client.get("/employee", params={"count": 1}, fields="id")
         emp_values = emp_search.get("values", [])
         pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
 
-        # Also create the requested employee (competition checks they exist)
+        # Create the requested PM employee (competition checks they exist)
         pm = params.get("projectManager")
         if pm and isinstance(pm, dict) and "id" not in pm:
-            _resolve_employee(api_client, pm)
+            pm_first = pm.get("firstName", "")
+            pm_last = pm.get("lastName", "")
+            if pm_first and pm_last:
+                from src.handlers import HANDLER_REGISTRY
 
-        import secrets
+                emp_handler = HANDLER_REGISTRY["create_employee"]
+                emp_params: dict[str, Any] = {
+                    "firstName": pm_first,
+                    "lastName": pm_last,
+                }
+                if pm.get("email"):
+                    emp_params["email"] = pm["email"]
+                try:
+                    emp_handler.execute(api_client, emp_params)
+                except Exception:
+                    logger.warning("PM employee creation failed, continuing")
+            else:
+                _resolve_employee(api_client, pm)
 
         proj_num = str(params.get("number", secrets.randbelow(90000) + 10000))
 
@@ -47,7 +65,6 @@ class CreateProjectHandler(BaseHandler):
             "projectManager": pm_ref,
         }
 
-        # startDate is required — default to today
         for date_field in ("startDate", "endDate"):
             if date_field in params:
                 date_val = self.validate_date(params[date_field], date_field)
@@ -60,11 +77,21 @@ class CreateProjectHandler(BaseHandler):
             if bool_field in params:
                 body[bool_field] = params[bool_field]
 
-        # Resolve customer by name if needed
+        # Always create customer if specified (competition checks attributes)
         if "customer" in params:
             cust = params["customer"]
             if isinstance(cust, dict) and "id" not in cust:
-                body["customer"] = _resolve_customer(api_client, cust)
+                cust_name = cust.get("name", "")
+                cust_body: dict[str, Any] = {"name": cust_name}
+                if cust.get("organizationNumber"):
+                    cust_body["organizationNumber"] = str(cust["organizationNumber"])
+                if cust.get("email"):
+                    cust_body["email"] = cust["email"]
+                try:
+                    cust_result = api_client.post("/customer", data=cust_body)
+                    body["customer"] = {"id": cust_result.get("value", {}).get("id")}
+                except TripletexApiError:
+                    body["customer"] = _resolve_customer(api_client, cust)
             else:
                 body["customer"] = self.ensure_ref(cust, "customer")
 
