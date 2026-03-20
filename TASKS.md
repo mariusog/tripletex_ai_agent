@@ -122,10 +122,44 @@ tests/
 
 | ID | Agent | Title | Status | Notes |
 |----|-------|-------|--------|-------|
-| - | - | - | - | - |
+| T60 | lead-agent | Efficiency optimization | in-progress | register_payment 9→5-6 calls done, create_project 4→2-3 pending |
+| T72 | lead-agent | Task type coverage | in-progress | 6/30 task types seen in competition, need more submissions |
+| T80 | lead-agent | Competition scoring fixes | in-progress | Fixing field mapping issues (address, dimensions) as discovered |
+
+## New Tasks (discovered during competition)
+
+| ID | Agent | Title | Details | Status |
+|----|-------|-------|---------|--------|
+| T81 | lead-agent | Reduce create_project calls | 4 calls → 2 (cache account owner, skip employee search) | open |
+| T82 | lead-agent | Reduce create_invoice calls | 8 calls → 5 (bank acct cached, customer create-first done) | partially done |
+| T83 | lead-agent | Few-shot classification examples | Add examples for confusing task pairs in LLM prompt | open |
+| T84 | lead-agent | Verify all scoring fields | Compare our handler output fields vs what scoring checks | open |
 
 ## Done
 
 | ID | Agent | Title | Result |
 |----|-------|-------|--------|
-| - | - | - | - |
+| T10 | lead-agent | Server + models | FastAPI /solve + POST / endpoints, Pydantic models, Dockerfile, Cloud Run deploy |
+| T11 | core-agent | Tripletex API client | HTTP client with auth, retry, caching layer (get_cached + global cache) |
+| T12 | core-agent | LLM integration | Claude Opus 4.6 via Vertex AI, tool_use structured output, multilingual keywords |
+| T13 | core-agent | Task router | Classify → dispatch with placeholder stripping, retry on failure |
+| T14 | feature-agent | Handler base + registry | 30 handlers registered via @register_handler decorator |
+| T15 | qa-agent | Test infrastructure | 254 tests, mock fixtures, prompt fixtures for all 30 task types |
+| T20 | feature-agent | Employee handlers | Create (EXTENDED userType for admin), update. Pre-fetch dept. |
+| T21 | feature-agent | Customer handlers | Create/update with postalAddress+physicalAddress, isSupplier flag |
+| T22 | feature-agent | Product handlers | Create without price (avoids VAT conflict), number as string |
+| T23 | feature-agent | Department handlers | Create department |
+| T24 | feature-agent | Project handlers | Create project with customer + PM resolution, cached account owner |
+| T30 | feature-agent | Order + invoice handlers | Full flow: order→lines→invoice→send. Auto-send when prompted. |
+| T31 | feature-agent | Payment handlers | Register payment via CreateInvoiceHandler delegation (saves 2 calls) |
+| T32 | feature-agent | Travel expense handlers | Create/deliver/approve/delete travel expenses with costs + per diem |
+| T33 | feature-agent | Project linking handlers | Link project to customer, create activities |
+| T40 | feature-agent | Ledger/voucher handlers | Create/delete vouchers, custom dimensions, split debit/credit format |
+| T41 | feature-agent | Bank reconciliation | Account number resolution, type=MANUAL default, accountingPeriod |
+| T42 | feature-agent | Advanced workflows | Year-end closing (auto-generate postings), balance sheet, ledger correction |
+| T50 | qa-agent | Unit tests | 254 tests covering all 30 handlers |
+| T53 | qa-agent | Integration harness | sim_all_tasks.py — 30/30 pass against sandbox |
+| T61 | core-agent | Error elimination | 13 OpenAPI bugs fixed (wrong HTTP methods, readOnly fields, invalid names) |
+| T70 | core-agent | API spec audit | OpenAPI spec downloaded, schemas extracted, all handlers validated |
+| T75 | lead-agent | Competition run capture | capture_runs.py + summarize_runs.py + teammate service polling |
+| T76 | lead-agent | Isolated deployment | deploy-magnus.sh — separate Cloud Run service from teammates |
