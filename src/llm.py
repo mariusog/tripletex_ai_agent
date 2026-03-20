@@ -67,7 +67,7 @@ orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency o
 register_payment: {{amount, paymentDate}} (if payment mentioned)}}
 - send_invoice: {{invoiceId or search criteria...}}
 - register_payment: {{customer, amount, paymentDate, description, reversal (bool), \
-orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency}}] (for creating the invoice)}}
+orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency}}]}}
 - create_credit_note: {{invoiceId or search criteria, ...}}
 - create_travel_expense: {{employee, project, travelDetails, costs, ...}}
 - deliver_travel_expense: {{travelExpenseId or search criteria...}}

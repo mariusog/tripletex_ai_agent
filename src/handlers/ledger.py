@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from src.api_client import TripletexClient
+from src.api_client import TripletexApiError, TripletexClient
 from src.handlers.base import BaseHandler, register_handler
 
 logger = logging.getLogger(__name__)

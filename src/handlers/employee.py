@@ -34,7 +34,10 @@ class CreateEmployeeHandler(BaseHandler):
             "firstName": params["firstName"],
             "lastName": params["lastName"],
             "userType": user_type,
-            "dateOfBirth": self.validate_date(params.get("dateOfBirth"), "dateOfBirth") or "1990-01-01",
+            "dateOfBirth": (
+                self.validate_date(params.get("dateOfBirth"), "dateOfBirth")
+                or "1990-01-01"
+            ),
         }
 
         for field in ("email", "phoneNumberMobile"):
