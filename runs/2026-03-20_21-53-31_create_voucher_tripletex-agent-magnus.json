@@ -1,0 +1,69 @@
+{
+  "timestamp": "2026-03-20 21:53:31",
+  "prompt": "Führen Sie die Gehaltsabrechnung für Marie Becker (marie.becker@example.org) für diesen Monat durch. Das Grundgehalt beträgt 44150 NOK. Fügen Sie einen einmaligen Bonus von 16200 NOK zum Grundgehalt hinzu.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.28
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.19
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.2
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 201,
+      "duration_s": 0.46
+    }
+  ],
+  "errors": [],
+  "task_type": "create_voucher",
+  "params": {
+    "description": "Gehaltsabrechnung Marie Becker - Grundgehalt + Bonus",
+    "employee": {
+      "firstName": "Marie",
+      "lastName": "Becker",
+      "email": "marie.becker@example.org"
+    },
+    "postings": [
+      {
+        "description": "Grundgehalt Marie Becker",
+        "account": 5000,
+        "amount": 44150,
+        "currency": "NOK"
+      },
+      {
+        "description": "Einmaliger Bonus Marie Becker",
+        "account": 5000,
+        "amount": 16200,
+        "currency": "NOK"
+      },
+      {
+        "description": "Gehaltsverbindlichkeit Marie Becker",
+        "account": 2920,
+        "amount": -60350,
+        "currency": "NOK"
+      }
+    ]
+  },
+  "handler": "CreateVoucherHandler",
+  "total_api_calls": 4,
+  "total_duration_s": 5.29,
+  "result": {
+    "id": 608860565,
+    "action": "created"
+  },
+  "service": "tripletex-agent-magnus"
+}
