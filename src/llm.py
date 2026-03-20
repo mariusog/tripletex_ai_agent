@@ -56,6 +56,9 @@ extract ALL items in an "items" array. Example: {{"task_type": "create_departmen
 - For payroll/salary tasks (lønn, paie, Gehalt, nómina, run payroll), classify as "run_payroll"
 - For custom accounting dimensions (dimensjon, dimension, Dimension) with voucher, \
 classify as "create_dimension_voucher"
+- For logging hours/timesheet (timer, timeregistrering, log hours, Stunden erfassen, \
+registrar horas), classify as "log_timesheet". If the task also asks to generate an \
+invoice from the hours, still classify as "log_timesheet" with generateInvoice: true
 
 PARAMETER SCHEMAS per task type:
 - create_employee: {{firstName, lastName, email, phoneNumberMobile, \
@@ -111,6 +114,10 @@ bonusDescription, month, year, extras: [{{amount, description}}]}}
 - create_dimension_voucher: {{dimensionName, dimensionValues: ["val1", "val2"], \
 linkedValue (which value to link the voucher to), \
 postings: [{{account (number), amount}}], date, description}}
+- log_timesheet: {{employee (name or {{firstName, lastName, email}}), \
+hours (number), activity (name string), project (name string), \
+customer ({{name, organizationNumber}}), hourlyRate, date, \
+generateInvoice (bool, if task asks to invoice the hours)}}
 
 Respond ONLY with valid JSON: {{"task_type": "<type>", "params": {{...}}}}
 Extract ALL relevant parameters from the prompt. Use field names matching the Tripletex API.

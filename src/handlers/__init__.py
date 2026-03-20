@@ -21,6 +21,7 @@ from src.handlers import (  # noqa: F401
     project,
     reporting,
     salary,
+    timesheet,
     travel,
 )
 from src.handlers.base import HANDLER_REGISTRY, BaseHandler, get_handler, register_handler

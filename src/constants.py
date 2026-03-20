@@ -132,6 +132,7 @@ TIER_3_TASKS = [
     "delete_voucher",
     "run_payroll",
     "create_dimension_voucher",
+    "log_timesheet",
     "bank_reconciliation",
     "ledger_correction",
     "year_end_closing",
