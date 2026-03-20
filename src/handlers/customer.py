@@ -29,13 +29,11 @@ class CreateCustomerHandler(BaseHandler):
                 body[field] = params[field]
 
         # Boolean flags
-        for flag in ("isSupplier", "isPrivateIndividual"):
+        for flag in ("isPrivateIndividual",):
             if flag in params:
                 body[flag] = bool(params[flag])
 
-        # Resolve address — LLM may extract as postalAddress, physicalAddress,
-        # address, or deliveryAddress. Send to both postalAddress and physicalAddress
-        # since scoring may check either.
+        # Resolve address — send to both postalAddress and physicalAddress
         address = (
             params.get("postalAddress") or params.get("physicalAddress") or params.get("address")
         )
@@ -46,9 +44,15 @@ class CreateCustomerHandler(BaseHandler):
             body["deliveryAddress"] = params["deliveryAddress"]
 
         body = self.strip_none_values(body)
-        result = api_client.post("/customer", data=body)
-        value = result.get("value", {})
-        logger.info("Created customer id=%s", value.get("id"))
+
+        # If marked as supplier, create via /supplier endpoint (scoring checks supplier entity)
+        if params.get("isSupplier"):
+            result = api_client.post("/supplier", data=body)
+            value = result.get("value", {})
+            logger.info("Created supplier id=%s", value.get("id"))
+        else:
+            result = api_client.post("/customer", data=body)
+            value = result.get("value", {})
         return {"id": value.get("id"), "action": "created"}
 
 

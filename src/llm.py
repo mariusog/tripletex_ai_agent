@@ -68,6 +68,8 @@ Include "orderLines" with the product/service name and amount from the original 
 (string or object with "name")
 - If the task mentions products by name/number, include them in orderLines with product name/number
 - For supplier invoices (leverandørfaktura/Lieferantenrechnung), classify as "create_voucher"
+- If the task says "register/create supplier" (leverandør/fornecedor/proveedor/Lieferant), \
+classify as "create_customer" with isSupplier=true
 
 PARAMETER SCHEMAS per task type:
 - create_employee: {{firstName, lastName, email, phoneNumberMobile, \
