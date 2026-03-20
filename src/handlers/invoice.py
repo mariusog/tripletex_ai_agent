@@ -151,6 +151,13 @@ class CreateInvoiceHandler(BaseHandler):
                 )
                 emp_values = emp_search.get("values", [])
                 pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
+
+                # Also create the requested PM employee (competition checks they exist)
+                pm_info = proj.get("projectManager") if isinstance(proj, dict) else None
+                if pm_info and isinstance(pm_info, dict) and "id" not in pm_info:
+                    from src.handlers.travel import _resolve_employee
+
+                    _resolve_employee(api_client, pm_info)
                 import secrets
 
                 proj_num = (
