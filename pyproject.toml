@@ -1,17 +1,26 @@
 [project]
-name = "your-project"
+name = "tripletex-ai-agent"
 version = "0.1.0"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "httpx>=0.28.0",
+    "pydantic>=2.10.0",
+    "anthropic>=0.42.0",
+    "google-cloud-aiplatform>=1.75.0",
+]
 
 [project.optional-dependencies]
 dev = [
     "pytest",
     "pytest-cov",
+    "pytest-asyncio",
     "ruff",
     "mypy",
     "bandit",
     "pip-audit",
+    "respx",
 ]
 
 # ---------------------------------------------------------------------------
@@ -34,6 +43,9 @@ select = [
     "RUF",  # Ruff-specific rules
     "S",    # flake8-bandit: security checks
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["src"]
