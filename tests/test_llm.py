@@ -20,8 +20,25 @@ def llm_client() -> LLMClient:
 
 
 def _make_response(text: str) -> MagicMock:
-    """Build a mock Claude API response with the given text content."""
+    """Build a mock Claude API response with tool_use content.
+
+    Accepts a JSON string, parses it, and returns a mock response
+    with a tool_use block (matching the tool_use structured output flow).
+    """
+    parsed = json.loads(text)
     block = MagicMock()
+    block.type = "tool_use"
+    block.name = "classify_task"
+    block.input = parsed
+    response = MagicMock()
+    response.content = [block]
+    return response
+
+
+def _make_text_response(text: str) -> MagicMock:
+    """Build a mock Claude API response with text content (fallback path)."""
+    block = MagicMock()
+    block.type = "text"
     block.text = text
     response = MagicMock()
     response.content = [block]
@@ -47,9 +64,10 @@ class TestClassifyAndExtract:
         assert result.params["firstName"] == "John"
 
     def test_handles_markdown_code_fences(self, llm_client: LLMClient) -> None:
+        """Test fallback text parsing when tool_use is not returned."""
         inner = json.dumps({"task_type": "create_customer", "params": {}})
         response_text = f"```json\n{inner}\n```"
-        mock_resp = _make_response(response_text)
+        mock_resp = _make_text_response(response_text)
         llm_client._client.messages.create = MagicMock(return_value=mock_resp)
 
         result = llm_client.classify_and_extract("Create a new customer")

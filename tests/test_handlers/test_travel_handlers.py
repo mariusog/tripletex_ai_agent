@@ -57,9 +57,7 @@ class TestCreateTravelExpense:
     def test_with_costs_and_per_diem(self):
         client = _mock_client(post_response=sample_api_response(value={"id": 11}))
         # Mock GET for payment type and cost categories
-        client.get.return_value = sample_api_response(
-            values=[{"id": 100}]
-        )
+        client.get.return_value = sample_api_response(values=[{"id": 100}])
         handler = get_handler("create_travel_expense")
         assert handler is not None
         result = handler.execute(

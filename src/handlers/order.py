@@ -61,9 +61,7 @@ class CreateOrderHandler(BaseHandler):
                     ol["description"] = line["description"]
                 ol["count"] = line.get("count", line.get("quantity", 1))
                 if "unitPriceExcludingVatCurrency" in line:
-                    ol["unitPriceExcludingVatCurrency"] = line[
-                        "unitPriceExcludingVatCurrency"
-                    ]
+                    ol["unitPriceExcludingVatCurrency"] = line["unitPriceExcludingVatCurrency"]
                 elif "amount" in line:
                     ol["unitPriceExcludingVatCurrency"] = line["amount"]
                 elif "price" in line:

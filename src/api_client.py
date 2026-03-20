@@ -42,6 +42,7 @@ class TripletexClient:
     def __init__(self, base_url: str, session_token: str) -> None:
         self.base_url = base_url.rstrip("/")
         self._api_call_count = 0
+        self._cache: dict[str, Any] = {}
         self._client = httpx.Client(
             auth=(API_AUTH_USERNAME, session_token),
             headers={"Content-Type": API_CONTENT_TYPE},
@@ -68,6 +69,18 @@ class TripletexClient:
         if fields:
             params["fields"] = fields
         return self._request("GET", endpoint, params=params)
+
+    def get_cached(
+        self,
+        cache_key: str,
+        endpoint: str,
+        params: dict[str, Any] | None = None,
+        fields: str | None = None,
+    ) -> Any:
+        """GET with per-session caching. Saves API calls for repeated lookups."""
+        if cache_key not in self._cache:
+            self._cache[cache_key] = self.get(endpoint, params=params, fields=fields)
+        return self._cache[cache_key]
 
     def post(
         self,

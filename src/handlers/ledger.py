@@ -11,9 +11,7 @@ from src.handlers.base import BaseHandler, register_handler
 logger = logging.getLogger(__name__)
 
 
-def _resolve_supplier(
-    api_client: TripletexClient, supplier: Any
-) -> dict[str, int] | None:
+def _resolve_supplier(api_client: TripletexClient, supplier: Any) -> dict[str, int] | None:
     """Resolve supplier to {"id": N}. Creates if not found."""
     if supplier is None:
         return None

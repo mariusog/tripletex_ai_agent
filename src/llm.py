@@ -106,10 +106,30 @@ orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency}}
 - delete_voucher: {{voucherId, number, date, description (to match)}}
 - balance_sheet_report: {{dateFrom, dateTo, ...}}
 
-Respond ONLY with valid JSON: {{"task_type": "<type>", "params": {{...}}}}
 Extract ALL relevant parameters from the prompt. Use field names matching the Tripletex API.
 If dates are mentioned, format as yyyy-MM-dd.
 If the prompt references attached files, note that in params as "has_attachments": true."""
+
+# Tool definition for structured output — forces valid JSON with constrained task_type
+CLASSIFY_TOOL = {
+    "name": "classify_task",
+    "description": "Classify the accounting task and extract all parameters from the prompt.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "task_type": {
+                "type": "string",
+                "enum": ALL_TASK_TYPES,
+                "description": "The task type to execute",
+            },
+            "params": {
+                "type": "object",
+                "description": "Extracted parameters for the task handler",
+            },
+        },
+        "required": ["task_type", "params"],
+    },
+}
 
 
 class LLMClient:
@@ -117,6 +137,7 @@ class LLMClient:
 
     Uses Vertex AI by default (set ANTHROPIC_VERTEX_PROJECT_ID env var).
     Falls back to direct Anthropic API if ANTHROPIC_API_KEY is set instead.
+    Uses tool_use for guaranteed structured output.
     """
 
     def __init__(self, api_key: str | None = None) -> None:
@@ -146,8 +167,9 @@ class LLMClient:
     ) -> TaskClassification:
         """Classify a prompt into a task type and extract parameters.
 
-        Sends the prompt (and any file attachments) to Claude,
-        then parses the structured JSON response.
+        Uses tool_use for guaranteed structured output — task_type is
+        constrained to the enum of known types, eliminating JSON parse
+        failures and invalid task types entirely.
         """
         messages = self._build_messages(prompt, files)
 
@@ -159,6 +181,8 @@ class LLMClient:
                     temperature=LLM_TEMPERATURE,
                     system=SYSTEM_PROMPT,
                     messages=messages,  # type: ignore[arg-type]
+                    tools=[CLASSIFY_TOOL],  # type: ignore[list-item]
+                    tool_choice={"type": "tool", "name": "classify_task"},
                 )
                 return self._parse_response(response)
             except anthropic.APIStatusError as exc:
@@ -227,26 +251,38 @@ class LLMClient:
 
     @staticmethod
     def _parse_response(response: Any) -> TaskClassification:
-        """Extract TaskClassification from the LLM response text."""
-        text = response.content[0].text.strip()
+        """Extract TaskClassification from tool_use response.
 
-        # Strip markdown code fences if present
-        if text.startswith("```"):
-            lines = text.split("\n")
-            text = "\n".join(lines[1:-1]) if len(lines) > 2 else text
+        With tool_use, Claude returns structured input directly —
+        no JSON parsing needed. Falls back to text parsing if
+        the response unexpectedly contains text instead.
+        """
+        for block in response.content:
+            if block.type == "tool_use" and block.name == "classify_task":
+                parsed = block.input
+                return TaskClassification(
+                    task_type=parsed.get("task_type", "unknown"),
+                    params=parsed.get("params", {}),
+                )
 
-        try:
-            parsed = json.loads(text)
-        except json.JSONDecodeError:
-            logger.warning("LLM returned non-JSON response: %.200s", text)
-            return TaskClassification(task_type="unknown", params={})
-        # Handle array responses — take the first element
-        if isinstance(parsed, list):
-            parsed = parsed[0] if parsed else {}
-        if not isinstance(parsed, dict):
-            logger.warning("LLM returned unexpected type: %s", type(parsed))
-            return TaskClassification(task_type="unknown", params={})
-        return TaskClassification(
-            task_type=parsed.get("task_type", "unknown"),
-            params=parsed.get("params", {}),
-        )
+        # Fallback: parse text response (shouldn't happen with tool_choice)
+        for block in response.content:
+            if block.type == "text":
+                text = block.text.strip()
+                if text.startswith("```"):
+                    lines = text.split("\n")
+                    text = "\n".join(lines[1:-1]) if len(lines) > 2 else text
+                try:
+                    parsed = json.loads(text)
+                    if isinstance(parsed, list):
+                        parsed = parsed[0] if parsed else {}
+                    if isinstance(parsed, dict):
+                        return TaskClassification(
+                            task_type=parsed.get("task_type", "unknown"),
+                            params=parsed.get("params", {}),
+                        )
+                except json.JSONDecodeError:
+                    logger.warning("LLM text fallback non-JSON: %.200s", text)
+
+        logger.warning("No tool_use or parseable text in LLM response")
+        return TaskClassification(task_type="unknown", params={})

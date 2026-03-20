@@ -36,9 +36,7 @@ COST_CATEGORY_MAP = {
 }
 
 
-def _resolve_employee(
-    api_client: TripletexClient, employee: Any
-) -> dict[str, int]:
+def _resolve_employee(api_client: TripletexClient, employee: Any) -> dict[str, int]:
     """Resolve employee to {"id": N}. Searches by name or creates."""
     if isinstance(employee, dict) and "id" in employee:
         return {"id": int(employee["id"])}
@@ -130,8 +128,9 @@ def _find_cost_category(
 
 
 def _get_payment_type(api_client: TripletexClient) -> dict[str, int] | None:
-    """Get the first available travel payment type."""
-    resp = api_client.get(
+    """Get the first available travel payment type (cached per session)."""
+    resp = api_client.get_cached(
+        "travel_payment_type",
         "/travelExpense/paymentType",
         params={"count": 1},
         fields="id",
@@ -153,9 +152,7 @@ class CreateTravelExpenseHandler(BaseHandler):
     def required_params(self) -> list[str]:
         return ["employee"]
 
-    def execute(
-        self, api_client: TripletexClient, params: dict[str, Any]
-    ) -> dict[str, Any]:
+    def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         today = dt_date.today().isoformat()
 
         # Step 1: Resolve employee
@@ -170,12 +167,16 @@ class CreateTravelExpenseHandler(BaseHandler):
         # Include travelDetails to make it a proper travel expense (type=0)
         # Without this, it's an employee expense (type=1) which doesn't support per diem
         td = params.get("travelDetails", {})
-        dep_date = self.validate_date(
-            params.get("departureDate") or td.get("departureDate"), "departureDate"
-        ) or today
-        ret_date = self.validate_date(
-            params.get("returnDate") or td.get("returnDate"), "returnDate"
-        ) or today
+        dep_date = (
+            self.validate_date(
+                params.get("departureDate") or td.get("departureDate"), "departureDate"
+            )
+            or today
+        )
+        ret_date = (
+            self.validate_date(params.get("returnDate") or td.get("returnDate"), "returnDate")
+            or today
+        )
         body["travelDetails"] = {
             "departureDate": dep_date,
             "returnDate": ret_date,
@@ -207,9 +208,7 @@ class CreateTravelExpenseHandler(BaseHandler):
                 cost_body: dict[str, Any] = {
                     "travelExpense": {"id": te_id},
                     "date": cost.get("date") or today,
-                    "amountCurrencyIncVat": cost.get(
-                        "amount", cost.get("amountCurrencyIncVat", 0)
-                    ),
+                    "amountCurrencyIncVat": cost.get("amount", cost.get("amountCurrencyIncVat", 0)),
                     "currency": {"id": 1},  # NOK
                 }
                 if payment_type:
@@ -243,9 +242,7 @@ class CreateTravelExpenseHandler(BaseHandler):
                     or 1
                 )
                 rate = (
-                    per_diem.get("dailyRate")
-                    or per_diem.get("rate")
-                    or per_diem.get("amount", 0)
+                    per_diem.get("dailyRate") or per_diem.get("rate") or per_diem.get("amount", 0)
                 )
                 location = (
                     per_diem.get("location")
@@ -257,13 +254,9 @@ class CreateTravelExpenseHandler(BaseHandler):
                     "count": days,
                     "rate": rate,
                     "location": location,
-                    "overnightAccommodation": per_diem.get(
-                        "overnightAccommodation", "HOTEL"
-                    ),
+                    "overnightAccommodation": per_diem.get("overnightAccommodation", "HOTEL"),
                 }
-                api_client.post(
-                    "/travelExpense/perDiemCompensation", data=pd_body
-                )
+                api_client.post("/travelExpense/perDiemCompensation", data=pd_body)
                 logger.info("Added per diem to travel expense %s", te_id)
             except TripletexApiError as e:
                 logger.warning("Failed to add per diem: %s", e)
@@ -282,9 +275,7 @@ class DeleteTravelExpenseHandler(BaseHandler):
     def required_params(self) -> list[str]:
         return []
 
-    def execute(
-        self, api_client: TripletexClient, params: dict[str, Any]
-    ) -> dict[str, Any]:
+    def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         te_id = params.get("travelExpenseId") or params.get("id")
         if not te_id:
             # Search by employee or get most recent
@@ -293,9 +284,7 @@ class DeleteTravelExpenseHandler(BaseHandler):
                 emp_ref = _resolve_employee(api_client, params["employee"])
                 if emp_ref["id"]:
                     search_params["employeeId"] = str(emp_ref["id"])
-            resp = api_client.get(
-                "/travelExpense", params=search_params, fields="id,title"
-            )
+            resp = api_client.get("/travelExpense", params=search_params, fields="id,title")
             values = resp.get("values", [])
             if not values:
                 logger.warning("No travel expenses found to delete")
@@ -326,13 +315,9 @@ class DeliverTravelExpenseHandler(BaseHandler):
     def required_params(self) -> list[str]:
         return ["travelExpenseId"]
 
-    def execute(
-        self, api_client: TripletexClient, params: dict[str, Any]
-    ) -> dict[str, Any]:
+    def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         te_id = int(params["travelExpenseId"])
-        api_client.put(
-            f"/travelExpense/{te_id}/:deliver", data={"id": te_id}
-        )
+        api_client.put(f"/travelExpense/{te_id}/:deliver", data={"id": te_id})
         logger.info("Delivered travel expense id=%s", te_id)
         return {"id": te_id, "action": "delivered"}
 
@@ -348,12 +333,8 @@ class ApproveTravelExpenseHandler(BaseHandler):
     def required_params(self) -> list[str]:
         return ["travelExpenseId"]
 
-    def execute(
-        self, api_client: TripletexClient, params: dict[str, Any]
-    ) -> dict[str, Any]:
+    def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         te_id = int(params["travelExpenseId"])
-        api_client.put(
-            f"/travelExpense/{te_id}/:approve", data={"id": te_id}
-        )
+        api_client.put(f"/travelExpense/{te_id}/:approve", data={"id": te_id})
         logger.info("Approved travel expense id=%s", te_id)
         return {"id": te_id, "action": "approved"}
