@@ -1,0 +1,97 @@
+{
+  "timestamp": "2026-03-20 23:42:56",
+  "prompt": "Registrer en reiseregning for Sigurd Hansen (sigurd.hansen@example.org) for \"Kundebesøk Trondheim\". Reisen varte 4 dager med diett (dagsats 800 kr). Utlegg: flybillett 6150 kr og taxi 500 kr.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/employee",
+      "status": 200,
+      "duration_s": 0.27
+    },
+    {
+      "method": "POST",
+      "endpoint": "/travelExpense",
+      "status": 201,
+      "duration_s": 0.28
+    },
+    {
+      "method": "GET",
+      "endpoint": "/travelExpense/paymentType",
+      "status": 200,
+      "duration_s": 0.22
+    },
+    {
+      "method": "GET",
+      "endpoint": "/travelExpense/costCategory",
+      "status": 200,
+      "duration_s": 0.2
+    },
+    {
+      "method": "POST",
+      "endpoint": "/travelExpense/cost",
+      "status": 201,
+      "duration_s": 0.26
+    },
+    {
+      "method": "POST",
+      "endpoint": "/travelExpense/cost",
+      "status": 201,
+      "duration_s": 0.36
+    },
+    {
+      "method": "POST",
+      "endpoint": "/travelExpense/cost",
+      "status": 201,
+      "duration_s": 0.26
+    },
+    {
+      "method": "POST",
+      "endpoint": "/travelExpense/perDiemCompensation",
+      "status": 201,
+      "duration_s": 0.27
+    }
+  ],
+  "errors": [],
+  "task_type": "create_travel_expense",
+  "params": {
+    "employee": {
+      "firstName": "Sigurd",
+      "lastName": "Hansen",
+      "email": "sigurd.hansen@example.org"
+    },
+    "title": "Kundebesøk Trondheim",
+    "travelDetails": {
+      "duration": 4,
+      "durationUnit": "days",
+      "destination": "Trondheim",
+      "perDiem": {
+        "dailyRate": 800,
+        "days": 4,
+        "totalAmount": 3200
+      }
+    },
+    "costs": [
+      {
+        "description": "Diett",
+        "amount": 3200
+      },
+      {
+        "description": "Flybillett",
+        "amount": 6150
+      },
+      {
+        "description": "Taxi",
+        "amount": 500
+      }
+    ]
+  },
+  "handler": "CreateTravelExpenseHandler",
+  "total_api_calls": 8,
+  "total_duration_s": 7.64,
+  "result": {
+    "id": 11146334,
+    "action": "created"
+  },
+  "service": "tripletex-agent-2"
+}
