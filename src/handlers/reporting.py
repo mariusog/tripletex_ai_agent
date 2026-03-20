@@ -28,7 +28,10 @@ class LedgerCorrectionHandler(BaseHandler):
         return ["date"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        body: dict[str, Any] = {"date": params["date"]}
+        date_val = self.validate_date(params["date"], "date")
+        if not date_val:
+            return {"error": "invalid_date"}
+        body: dict[str, Any] = {"date": date_val}
 
         for field in ("description", "number", "tempNumber"):
             if field in params:
