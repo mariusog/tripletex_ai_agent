@@ -49,18 +49,28 @@ class CreateTravelExpenseHandler(BaseHandler):
         }
 
         # Include travelDetails to make it a proper travel expense (type=0)
-        # Without this, it's an employee expense (type=1) which doesn't support per diem
         td = params.get("travelDetails", {})
+        if not isinstance(td, dict):
+            td = {}
         dep_date = (
             self.validate_date(
                 params.get("departureDate") or td.get("departureDate"), "departureDate"
             )
             or today
         )
-        ret_date = (
-            self.validate_date(params.get("returnDate") or td.get("returnDate"), "returnDate")
-            or today
+        ret_date = self.validate_date(
+            params.get("returnDate") or td.get("returnDate"), "returnDate"
         )
+        # Calculate return date from duration if not provided
+        if not ret_date:
+            from datetime import timedelta
+
+            duration = td.get("duration") or td.get("numberOfDays") or params.get("numberOfDays")
+            if isinstance(duration, (int, float)) and duration > 1:
+                dep = dt_date.fromisoformat(dep_date)
+                ret_date = (dep + timedelta(days=int(duration) - 1)).isoformat()
+            else:
+                ret_date = dep_date
         body["travelDetails"] = {
             "departureDate": dep_date,
             "returnDate": ret_date,
@@ -85,8 +95,10 @@ class CreateTravelExpenseHandler(BaseHandler):
         payment_type = _get_payment_type(api_client)
         cat_cache: dict[str, list[dict[str, Any]]] = {}
 
+        per_diem_keywords = {"per diem", "diett", "diet", "dagpenger"}
         for cost in costs:
-            if cost.get("type") == "per_diem":
+            desc_lower = (cost.get("description") or "").lower()
+            if cost.get("type") == "per_diem" or desc_lower in per_diem_keywords:
                 continue  # Handle per diem separately
             try:
                 cost_body: dict[str, Any] = {
