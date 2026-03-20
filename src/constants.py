@@ -92,6 +92,7 @@ TIER_1_TASKS = [
     "update_employee",
     "create_customer",
     "update_customer",
+    "create_supplier",
     "create_product",
     "create_department",
     "create_project",
@@ -142,6 +143,7 @@ OPTIMAL_CALL_COUNTS: dict[str, int] = {
     "update_employee": 2,  # GET /employee + PUT /employee/{id}
     "create_customer": 1,  # POST /customer
     "update_customer": 2,  # GET /customer + PUT /customer/{id}
+    "create_supplier": 1,  # POST /supplier
     "create_product": 1,  # POST /product
     "create_department": 1,  # POST /department
     "create_project": 1,  # POST /project

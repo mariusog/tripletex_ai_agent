@@ -1,0 +1,17 @@
+{
+  "task_type": "create_supplier",
+  "prompts": {
+    "no": "Registrer leverandøren Nordlys AS med organisasjonsnummer 912345678 og e-post post@nordlys.no.",
+    "en": "Register the supplier Northern Lights Ltd with organization number 912345678 and email post@northernlights.no.",
+    "es": "Registre el proveedor Luz del Norte SL con número de organización 912345678 y correo post@luzdelnorte.es.",
+    "pt": "Registe o fornecedor Luz do Norte Lda com número de organização 912345678. E-mail: post@luznorte.no.",
+    "nn": "Registrer leverandøren Nordlys AS med organisasjonsnummer 912345678 og e-post post@nordlys.no.",
+    "de": "Registrieren Sie den Lieferanten Nordlicht GmbH mit Organisationsnummer 912345678 und E-Mail post@nordlicht.de.",
+    "fr": "Enregistrez le fournisseur Lumière du Nord SARL avec le numéro d'organisation 912345678 et l'email post@lumierenord.fr."
+  },
+  "expected_params": {
+    "name": "Northern Lights Ltd",
+    "organizationNumber": "912345678",
+    "email": "post@northernlights.no"
+  }
+}
