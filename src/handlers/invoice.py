@@ -293,7 +293,7 @@ class RegisterPaymentHandler(BaseHandler):
 
 @register_handler
 class CreateCreditNoteHandler(BaseHandler):
-    """Create invoice if needed, then POST /invoice/{id}/:createCreditNote."""
+    """Create invoice if needed, then PUT /invoice/{id}/:createCreditNote."""
 
     def get_task_type(self) -> str:
         return "create_credit_note"
@@ -323,7 +323,7 @@ class CreateCreditNoteHandler(BaseHandler):
                 cn_body["date"] = date_val
 
         try:
-            result = api_client.post(f"/invoice/{invoice_id}/:createCreditNote", data=cn_body)
+            result = api_client.put(f"/invoice/{invoice_id}/:createCreditNote", data=cn_body)
             credit_note = result.get("value", {}) if result else {}
             cn_id = credit_note.get("id")
             logger.info("Created credit note id=%s for invoice id=%s", cn_id, invoice_id)

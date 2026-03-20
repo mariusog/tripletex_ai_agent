@@ -223,7 +223,7 @@ class TestCreateCreditNote:
         inv = make_invoice(invoice_id=42)
         client = MagicMock()
         client.get.return_value = sample_api_response(values=[inv])
-        client.post.return_value = sample_api_response(value={"id": 300})
+        client.put.return_value = sample_api_response(value={"id": 300})
         handler = get_handler("create_credit_note")
         assert handler is not None
         result = handler.execute(client, {"invoiceNumber": 10001})
