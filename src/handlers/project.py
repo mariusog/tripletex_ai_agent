@@ -27,18 +27,20 @@ class CreateProjectHandler(BaseHandler):
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         from datetime import date as dt_date
 
-        # projectManager must have PM access — use account owner (first employee)
-        # Cached so this is free after first call in the container
-        emp_search = api_client.get_cached(
-            "account_owner", "/employee", params={"count": 1}, fields="id"
-        )
-        emp_values = emp_search.get("values", [])
-        pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
-
-        # Also create the requested employee (competition checks they exist)
+        # Resolve project manager — try using the requested PM first,
+        # fall back to account owner if creation fails
         pm = params.get("projectManager")
+        pm_ref = None
         if pm and isinstance(pm, dict) and "id" not in pm:
-            _resolve_employee(api_client, pm)
+            emp_ref = _resolve_employee(api_client, pm)
+            if emp_ref and emp_ref.get("id"):
+                pm_ref = emp_ref
+        if not pm_ref:
+            emp_search = api_client.get_cached(
+                "account_owner", "/employee", params={"count": 1}, fields="id"
+            )
+            emp_values = emp_search.get("values", [])
+            pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
 
         import secrets
 

@@ -180,7 +180,37 @@ class TripletexClient:
             # Success — parse JSON if present
             if response.status_code == 204:
                 return None
-            return response.json()
+            result = response.json()
+            # Log created entity fields for observability (zero extra API calls)
+            if method in ("POST", "PUT") and response.status_code in (200, 201):
+                value = result.get("value", {})
+                if value and isinstance(value, dict):
+                    logger.info(
+                        "CREATED_ENTITY %s %s id=%s fields=%s",
+                        method,
+                        endpoint,
+                        value.get("id", "?"),
+                        {
+                            k: v
+                            for k, v in value.items()
+                            if k
+                            in (
+                                "name",
+                                "firstName",
+                                "lastName",
+                                "email",
+                                "organizationNumber",
+                                "number",
+                                "userType",
+                                "date",
+                                "title",
+                                "description",
+                                "amount",
+                            )
+                            and v is not None
+                        },
+                    )
+            return result
 
         # Should not reach here, but handle defensively
         raise TripletexApiError(ApiError(status=429, message="Rate limit retries exhausted"))
