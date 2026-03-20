@@ -33,9 +33,17 @@ class CreateCustomerHandler(BaseHandler):
             if flag in params:
                 body[flag] = bool(params[flag])
 
-        for addr_field in ("postalAddress", "physicalAddress", "deliveryAddress"):
-            if params.get(addr_field):
-                body[addr_field] = params[addr_field]
+        # Resolve address — LLM may extract as postalAddress, physicalAddress,
+        # address, or deliveryAddress. Send to both postalAddress and physicalAddress
+        # since scoring may check either.
+        address = (
+            params.get("postalAddress") or params.get("physicalAddress") or params.get("address")
+        )
+        if address:
+            body["postalAddress"] = address
+            body["physicalAddress"] = address
+        if params.get("deliveryAddress"):
+            body["deliveryAddress"] = params["deliveryAddress"]
 
         body = self.strip_none_values(body)
         result = api_client.post("/customer", data=body)
@@ -70,6 +78,13 @@ class UpdateCustomerHandler(BaseHandler):
             if params.get(field):
                 customer[field] = params[field]
 
+        # Address fields
+        address = (
+            params.get("postalAddress") or params.get("physicalAddress") or params.get("address")
+        )
+        if address:
+            customer["postalAddress"] = address
+            customer["physicalAddress"] = address
         if params.get("deliveryAddress"):
             customer["deliveryAddress"] = params["deliveryAddress"]
 

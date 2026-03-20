@@ -73,8 +73,10 @@ PARAMETER SCHEMAS per task type:
 - create_employee: {{firstName, lastName, email, phoneNumberMobile, \
 userType ("STANDARD" or "ADMINISTRATOR")}}
 - update_employee: {{firstName, lastName (to find), fields to update...}}
-- create_customer: {{name, email, phoneNumber, organizationNumber, ...}}
-- update_customer: {{name (to find), fields to update...}}
+- create_customer: {{name, email, phoneNumber, organizationNumber, \
+postalAddress: {{addressLine1, postalCode, city}}, isSupplier (if mentioned as supplier), ...}}
+- update_customer: {{name (to find), postalAddress: {{addressLine1, postalCode, city}}, \
+fields to update...}}
 - create_product: {{name, number, priceExcludingVatCurrency, vatType, ...}}
 - create_department: {{name, departmentNumber, departmentManager, ...}}
 - create_project: {{name, number, startDate, endDate, customer, ...}}
