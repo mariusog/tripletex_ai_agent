@@ -291,9 +291,7 @@ class CreateInvoiceHandler(BaseHandler):
             if params.get("send_invoice"):
                 invoice_params["sendToCustomer"] = "true"
 
-            inv_result = api_client.put(
-                f"/order/{order_id}/:invoice", params=invoice_params
-            )
+            inv_result = api_client.put(f"/order/{order_id}/:invoice", params=invoice_params)
             invoice = inv_result.get("value", {})
             inv_id = invoice.get("id")
             logger.info("Created invoice id=%s from order id=%s", inv_id, order_id)

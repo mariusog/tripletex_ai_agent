@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Tripletex AI Agent", version="0.1.0")
 
+_GIT_COMMIT = os.environ.get("GIT_COMMIT", "unknown")
+
 # Optional Bearer token auth -- set API_KEY env var to enable
 _bearer_scheme = HTTPBearer(auto_error=False)
 _bearer_dependency = Depends(_bearer_scheme)
@@ -59,9 +61,10 @@ async def solve(
     is_competition = "tx-proxy" in (request.tripletex_credentials.base_url or "")
     if is_competition:
         logger.info(
-            "COMPETITION_RUN prompt=%s base_url=%s",
+            "COMPETITION_RUN prompt=%s base_url=%s git=%s",
             json.dumps(request.prompt[:500]),
             request.tripletex_credentials.base_url,
+            _GIT_COMMIT,
         )
 
     try:
