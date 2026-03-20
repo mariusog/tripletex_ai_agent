@@ -54,7 +54,8 @@ def _resolve_account(
         number = int(account)
     except (TypeError, ValueError):
         return {"id": 0}, None
-    resp = api_client.get(
+    resp = api_client.get_cached(
+        f"account_{number}",
         "/ledger/account",
         params={"number": str(number), "count": 1},
         fields="id,vatType(id)",
