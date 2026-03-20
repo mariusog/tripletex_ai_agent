@@ -13,7 +13,7 @@ from src.api_client import TripletexApiError, TripletexClient
 
 logger = logging.getLogger(__name__)
 
-_bank_account_set = False
+_bank_account_set: dict[str, bool] = {}
 
 # Map common cost descriptions to Tripletex costCategory descriptions
 COST_CATEGORY_MAP = {
@@ -46,8 +46,9 @@ def ensure_bank_account(api_client: TripletexClient) -> None:
     Tripletex requires a bank account number before invoices can be created.
     Caches the result to avoid repeated API calls.
     """
-    global _bank_account_set
-    if _bank_account_set:
+    # Cache per base_url — each sandbox is different
+    cache_key = getattr(api_client, "base_url", "default")
+    if _bank_account_set.get(cache_key):
         return
     try:
         resp = api_client.get(
@@ -57,11 +58,11 @@ def ensure_bank_account(api_client: TripletexClient) -> None:
         )
         values = resp.get("values", [])
         if not values:
-            _bank_account_set = True
+            _bank_account_set[cache_key] = True
             return
         acct = values[0]
         if acct.get("bankAccountNumber"):
-            _bank_account_set = True
+            _bank_account_set[cache_key] = True
             return
         api_client.put(
             f"/ledger/account/{acct['id']}",
@@ -74,7 +75,7 @@ def ensure_bank_account(api_client: TripletexClient) -> None:
             },
         )
         logger.info("Set bank account number on ledger account 1920")
-        _bank_account_set = True
+        _bank_account_set[cache_key] = True
     except TripletexApiError as e:
         logger.warning("Failed to set bank account: %s", e)
 
