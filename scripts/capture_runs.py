@@ -17,7 +17,6 @@ import json
 import os
 import re
 import subprocess
-from datetime import datetime
 from pathlib import Path
 
 RUNS_DIR = Path(__file__).parent.parent / "runs"
@@ -101,6 +100,27 @@ def parse_runs(log_text: str) -> list[dict]:
                 current_run["api_calls"].append(call)
                 if call["status"] >= 400:
                     current_run["errors"].append(call)
+
+        # Detect request bodies
+        if current_run and "API_BODY" in line:
+            body_match = re.search(r"API_BODY (\S+) (\S+) (.+)", line)
+            if body_match:
+                current_run.setdefault("request_bodies", []).append({
+                    "method": body_match.group(1),
+                    "endpoint": body_match.group(2),
+                    "body": body_match.group(3)[:300],
+                })
+
+        # Detect created entity fields
+        if current_run and "CREATED_ENTITY" in line:
+            entity_match = re.search(r"CREATED_ENTITY (\S+) (\S+) id=(\S+) fields=(.+)", line)
+            if entity_match:
+                current_run.setdefault("created_entities", []).append({
+                    "method": entity_match.group(1),
+                    "endpoint": entity_match.group(2),
+                    "id": entity_match.group(3),
+                    "fields": entity_match.group(4)[:300],
+                })
 
         # Detect API errors with details
         if current_run and "API error" in line:

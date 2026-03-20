@@ -138,6 +138,15 @@ class TripletexClient:
                     for item in json_data
                 ]
 
+        # Log request body for observability (helps debug scoring failures)
+        if json_data and method in ("POST", "PUT"):
+            import json as _json
+
+            body_str = _json.dumps(json_data, ensure_ascii=False, default=str)
+            if len(body_str) > 500:
+                body_str = body_str[:500] + "..."
+            logger.info("API_BODY %s %s %s", method, endpoint, body_str)
+
         start = time.monotonic()
 
         for attempt in range(API_RATE_LIMIT_MAX_RETRIES + 1):
