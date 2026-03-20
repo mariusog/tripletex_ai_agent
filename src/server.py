@@ -51,13 +51,17 @@ async def solve(
     3. Execute the appropriate handler with deterministic API calls
     4. Return {"status": "completed"} regardless of outcome
     """
+    import json as _json
+
     start_time = time.monotonic()
     base_url = request.tripletex_credentials.base_url if request.tripletex_credentials else "?"
-    logger.info(
-        'COMPETITION_RUN prompt="%s" base_url=%s',
-        request.prompt[:200],
-        base_url,
-    )
+    is_competition = "tx-proxy" in (request.tripletex_credentials.base_url or "")
+    if is_competition:
+        logger.info(
+            "COMPETITION_RUN prompt=%s base_url=%s",
+            _json.dumps(request.prompt[:500]),
+            base_url,
+        )
     logger.info("Received solve request, prompt length=%d", len(request.prompt))
 
     try:
