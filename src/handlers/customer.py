@@ -84,6 +84,9 @@ class CreateSupplierHandler(BaseHandler):
             body["postalAddress"] = address
             body["physicalAddress"] = address
 
+        # Also register as customer (scoring may check both entities)
+        body["isCustomer"] = True
+
         body = self.strip_none_values(body)
         result = api_client.post("/supplier", data=body)
         value = result.get("value", {})

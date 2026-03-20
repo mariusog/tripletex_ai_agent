@@ -86,7 +86,7 @@ def main() -> None:
     print(f"{'='*80}")
 
     # Improvement opportunities
-    print(f"\nTOP IMPROVEMENT OPPORTUNITIES (excess API calls):")
+    print("\nTOP IMPROVEMENT OPPORTUNITIES (excess API calls):")
     ranked = sorted(task_best.items(), key=lambda x: x[1].get("total_api_calls", 0) - OPTIMAL_CALLS.get(x[0], 0), reverse=True)
     for task, run in ranked[:10]:
         calls = run.get("total_api_calls", 0)
