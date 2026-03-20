@@ -26,11 +26,16 @@ def _resolve_supplier(
     if not name:
         return None
     # Search by name (verify exact match — API search is fuzzy)
-    resp = api_client.get("/supplier", params={"name": name, "count": 5}, fields="id,name")
-    values = resp.get("values", [])
-    for v in values:
-        if v.get("name", "").strip().lower() == name.strip().lower():
-            return {"id": v["id"]}
+    try:
+        resp = api_client.get("/supplier", params={"name": name, "count": 5}, fields="id,name")
+        values = resp.get("values", [])
+        logger.info("Supplier search for '%s' returned %d results", name, len(values))
+        for v in values:
+            if v.get("name", "").strip().lower() == name.strip().lower():
+                logger.info("Found exact supplier match: id=%s name='%s'", v["id"], v.get("name"))
+                return {"id": v["id"]}
+    except TripletexApiError:
+        pass  # Search failed, create instead
     # Create
     sup_body: dict[str, Any] = {"name": name}
     if org_nr:
@@ -143,7 +148,11 @@ class CreateVoucherHandler(BaseHandler):
             ]
 
         body = self.strip_none_values(body)
-        result = api_client.post("/ledger/voucher", data=body)
+        result = api_client.post(
+            "/ledger/voucher",
+            data=body,
+            params={"sendToLedger": "true"},
+        )
         value = result.get("value", {})
         logger.info("Created voucher id=%s", value.get("id"))
         return {"id": value.get("id"), "action": "created"}
