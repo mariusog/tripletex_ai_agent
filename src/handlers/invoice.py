@@ -311,19 +311,34 @@ class RegisterPaymentHandler(BaseHandler):
 
         # If no existing invoice, create one first (full flow)
         if not invoice_id and params.get("customer"):
+            pay_amount = params.get("amount", 0)
+            is_reversal = params.get("reversal") or (pay_amount and pay_amount < 0)
+            abs_amount = abs(pay_amount) if pay_amount else 0
+
             inv_params = dict(params)
-            # Set order line from payment amount if no lines specified
-            if not inv_params.get("orderLines") and params.get("amount"):
+            # Use absolute amount for the invoice and order line
+            if not inv_params.get("orderLines") and abs_amount:
                 inv_params["orderLines"] = [
                     {
                         "description": params.get("description", "Faktura"),
-                        "unitPriceExcludingVatCurrency": params["amount"],
+                        "unitPriceExcludingVatCurrency": abs_amount,
                         "count": 1,
                     }
                 ]
+
+            # For reversals: create invoice with full payment first
+            if is_reversal:
+                inv_params["register_payment"] = {"amount": abs_amount}
+                inv_params.pop("reversal", None)
+
             invoice_handler = CreateInvoiceHandler()
             inv_result = invoice_handler.execute(api_client, inv_params)
             invoice_id = inv_result.get("id")
+
+            # For reversals, override amount to negative for the reversal payment below
+            if is_reversal:
+                params = dict(params)
+                params["amount"] = -abs_amount
 
         if not invoice_id:
             return {"error": "invoice_not_found"}
