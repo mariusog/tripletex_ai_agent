@@ -41,11 +41,17 @@ class LedgerCorrectionHandler(BaseHandler):
         if "voucherType" in params:
             body["voucherType"] = {"id": int(params["voucherType"])}
 
+        # Resolve supplier if present (needed for AP account postings like 2400)
+        from src.handlers.ledger import _resolve_supplier
+
+        supplier_ref = _resolve_supplier(api_client, params.get("supplier"))
+
         # Build correction postings
         postings = params.get("postings", [])
         if postings:
             body["postings"] = [
-                _build_posting(api_client, p, row=i + 1) for i, p in enumerate(postings)
+                _build_posting(api_client, p, row=i + 1, supplier=supplier_ref)
+                for i, p in enumerate(postings)
             ]
 
         # If correcting a specific voucher, reverse it first

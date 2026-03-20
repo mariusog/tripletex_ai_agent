@@ -23,6 +23,8 @@ class CreateAssetHandler(BaseHandler):
         return ["name"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
+        from datetime import date as dt_date
+
         body: dict[str, Any] = {"name": params["name"]}
 
         # Map common names to correct OpenAPI field names
@@ -38,6 +40,9 @@ class CreateAssetHandler(BaseHandler):
         for param_name, api_name in field_map.items():
             if param_name in params:
                 body[api_name] = params[param_name]
+        # dateOfAcquisition is required
+        if "dateOfAcquisition" not in body:
+            body["dateOfAcquisition"] = dt_date.today().isoformat()
 
         for ref_field in ("account", "depreciationAccount", "department"):
             if ref_field in params:
