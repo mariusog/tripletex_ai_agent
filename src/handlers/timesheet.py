@@ -17,41 +17,32 @@ from src.handlers.resolvers import (
 logger = logging.getLogger(__name__)
 
 
-def _find_or_create_activity(api_client: TripletexClient, name: str) -> dict[str, int]:
-    """Find activity by name or create it."""
-    resp = api_client.get(
-        "/activity",
-        params={"name": name, "count": 5},
-        fields="id,name",
-    )
-    for v in resp.get("values", []):
-        if (v.get("name") or "").strip().lower() == name.strip().lower():
-            return {"id": v["id"]}
-    result = api_client.post(
-        "/activity",
-        data={"name": name, "activityType": "GENERAL_ACTIVITY"},
-    )
-    act_id = result.get("value", {}).get("id")
-    logger.info("Created activity '%s' id=%s", name, act_id)
-    return {"id": act_id}
+def _create_activity(api_client: TripletexClient, name: str) -> dict[str, int]:
+    """Always create an activity by name."""
+    try:
+        result = api_client.post(
+            "/activity",
+            data={"name": name, "activityType": "GENERAL_ACTIVITY"},
+        )
+        act_id = result.get("value", {}).get("id")
+        logger.info("Created activity '%s' id=%s", name, act_id)
+        return {"id": act_id}
+    except TripletexApiError:
+        # Name might already exist — search for it
+        resp = api_client.get("/activity", params={"name": name, "count": 5}, fields="id,name")
+        for v in resp.get("values", []):
+            if (v.get("name") or "").strip().lower() == name.strip().lower():
+                return {"id": v["id"]}
+    return {"id": 0}
 
 
-def _find_or_create_project(
+def _create_project(
     api_client: TripletexClient,
     name: str,
     customer_ref: dict[str, int] | None = None,
     pm_ref: dict[str, int] | None = None,
 ) -> dict[str, int]:
-    """Find project by name or create it."""
-    resp = api_client.get(
-        "/project",
-        params={"name": name, "count": 5},
-        fields="id,name",
-    )
-    for v in resp.get("values", []):
-        if (v.get("name") or "").strip().lower() == name.strip().lower():
-            return {"id": v["id"]}
-
+    """Always create a project by name."""
     import secrets
 
     body: dict[str, Any] = {
@@ -62,10 +53,18 @@ def _find_or_create_project(
     }
     if customer_ref:
         body["customer"] = customer_ref
-    result = api_client.post("/project", data=body)
-    proj_id = result.get("value", {}).get("id")
-    logger.info("Created project '%s' id=%s", name, proj_id)
-    return {"id": proj_id}
+    try:
+        result = api_client.post("/project", data=body)
+        proj_id = result.get("value", {}).get("id")
+        logger.info("Created project '%s' id=%s", name, proj_id)
+        return {"id": proj_id}
+    except TripletexApiError:
+        # Search as fallback
+        resp = api_client.get("/project", params={"name": name, "count": 5}, fields="id,name")
+        for v in resp.get("values", []):
+            if (v.get("name") or "").strip().lower() == name.strip().lower():
+                return {"id": v["id"]}
+    return {"id": 0}
 
 
 @register_handler
@@ -106,7 +105,7 @@ class LogTimesheetHandler(BaseHandler):
         if isinstance(proj_name, dict):
             proj_name = proj_name.get("name", "")
         if proj_name:
-            project_ref = _find_or_create_project(api_client, proj_name, customer_ref, pm_ref)
+            project_ref = _create_project(api_client, proj_name, customer_ref, pm_ref)
 
         # Step 5: Find or create activity
         activity_ref = None
@@ -114,7 +113,7 @@ class LogTimesheetHandler(BaseHandler):
         if isinstance(act_name, dict):
             act_name = act_name.get("name", "")
         if act_name:
-            activity_ref = _find_or_create_activity(api_client, act_name)
+            activity_ref = _create_activity(api_client, act_name)
 
         # Step 6: Create timesheet entry
         hours = params.get("hours") or params.get("hoursLogged") or 0
