@@ -9,6 +9,16 @@
 
 The agent is live and scoring on the competition leaderboard. Best results so far: 7/7 and 8/8 on some tasks, typically 5-7/8 on complex ones.
 
+**MCP docs server configured:** `nmiai` — use `ListMcpResourcesTool` / `ReadMcpResourceTool` to query competition docs.
+
+## Critical Scoring Insight
+
+**ALL API calls count for efficiency** (GET, POST, PUT, DELETE). Minimize total calls.
+- Don't verify after creation unless needed — you already have the ID from the response
+- Cache lookups (e.g., bank account, payment types) across the handler
+- Use batch endpoints (`/list`) where possible
+- Every 4xx error also reduces the efficiency bonus
+
 ## Architecture
 
 ```
