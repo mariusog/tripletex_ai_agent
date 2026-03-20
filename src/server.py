@@ -71,6 +71,15 @@ async def solve(
     return SolveResponse(status="completed")
 
 
+@app.post("/")
+async def solve_root(
+    request: SolveRequest,
+    _auth: None = Depends(verify_api_key),
+) -> SolveResponse:
+    """Mirror of /solve at root path — some platforms POST to / directly."""
+    return await solve(request, _auth)
+
+
 @app.get("/health")
 async def health() -> dict[str, str]:
     """Health check endpoint for deployment probes."""
