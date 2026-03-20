@@ -166,11 +166,22 @@ class CreateTravelExpenseHandler(BaseHandler):
             "employee": employee_ref,
             "title": params.get("title", "Reise"),
         }
-        for date_field in ("departureDate", "returnDate"):
-            if date_field in params:
-                date_val = self.validate_date(params[date_field], date_field)
-                if date_val:
-                    body[date_field] = date_val
+
+        # Include travelDetails to make it a proper travel expense (type=0)
+        # Without this, it's an employee expense (type=1) which doesn't support per diem
+        td = params.get("travelDetails", {})
+        dep_date = self.validate_date(
+            params.get("departureDate") or td.get("departureDate"), "departureDate"
+        ) or today
+        ret_date = self.validate_date(
+            params.get("returnDate") or td.get("returnDate"), "returnDate"
+        ) or today
+        body["travelDetails"] = {
+            "departureDate": dep_date,
+            "returnDate": ret_date,
+            "destination": td.get("destination", ""),
+            "purpose": td.get("purpose", params.get("title", "")),
+        }
 
         for ref_field in ("project", "department"):
             if ref_field in params:
@@ -213,7 +224,7 @@ class CreateTravelExpenseHandler(BaseHandler):
                 logger.warning("Failed to add cost: %s", e)
 
         # Step 4: Add per diem if mentioned
-        per_diem = params.get("travelDetails", {}).get("perDiem")
+        per_diem = params.get("perDiem") or params.get("travelDetails", {}).get("perDiem")
         if not per_diem:
             # Check costs for per_diem type
             for cost in costs:
@@ -223,15 +234,32 @@ class CreateTravelExpenseHandler(BaseHandler):
 
         if per_diem:
             try:
+                days = (
+                    per_diem.get("days")
+                    or per_diem.get("numberOfDays")
+                    or per_diem.get("count")
+                    or params.get("travelDetails", {}).get("numberOfDays")
+                    or params.get("travelDetails", {}).get("duration", {}).get("days")
+                    or 1
+                )
+                rate = (
+                    per_diem.get("dailyRate")
+                    or per_diem.get("rate")
+                    or per_diem.get("amount", 0)
+                )
+                location = (
+                    per_diem.get("location")
+                    or params.get("travelDetails", {}).get("destination")
+                    or params.get("title", "Norge")
+                )
                 pd_body: dict[str, Any] = {
                     "travelExpense": {"id": te_id},
-                    "count": per_diem.get(
-                        "days",
-                        params.get("travelDetails", {})
-                        .get("duration", {})
-                        .get("days", 1),
+                    "count": days,
+                    "rate": rate,
+                    "location": location,
+                    "overnightAccommodation": per_diem.get(
+                        "overnightAccommodation", "HOTEL"
                     ),
-                    "rate": per_diem.get("dailyRate", per_diem.get("amount", 0)),
                 }
                 api_client.post(
                     "/travelExpense/perDiemCompensation", data=pd_body
