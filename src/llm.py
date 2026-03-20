@@ -40,7 +40,8 @@ CLASSIFICATION RULES (important!):
 "create_invoice" and include payment info in register_payment param
 - If the task ONLY creates an order (no invoice), classify as "create_order"
 - If the task mentions REVERSING a payment, returned payment, or "reversering av betaling", \
-classify as "register_payment" with negative amount and "reversal": true
+classify as "register_payment" with negative amount and "reversal": true. \
+Include "orderLines" with the product/service name and amount from the original invoice.
 - Do NOT classify payment reversals as "reverse_voucher" — use "register_payment" instead
 - If the task mentions a customer by name, pass the full name as "customer" \
 (string or object with "name")
@@ -65,7 +66,8 @@ orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency}}
 orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency or amount}}], \
 register_payment: {{amount, paymentDate}} (if payment mentioned)}}
 - send_invoice: {{invoiceId or search criteria...}}
-- register_payment: {{invoiceId or search criteria, amount, paymentDate, ...}}
+- register_payment: {{customer, amount, paymentDate, description, reversal (bool), \
+orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency}}] (for creating the invoice)}}
 - create_credit_note: {{invoiceId or search criteria, ...}}
 - create_travel_expense: {{employee, project, travelDetails, costs, ...}}
 - deliver_travel_expense: {{travelExpenseId or search criteria...}}
