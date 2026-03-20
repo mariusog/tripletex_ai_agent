@@ -25,9 +25,7 @@ class TestHealthEndpoint:
 
 class TestSolveEndpoint:
     @patch("src.task_router.create_router")
-    def test_solve_returns_completed(
-        self, mock_create: AsyncMock, client: TestClient
-    ) -> None:
+    def test_solve_returns_completed(self, mock_create: AsyncMock, client: TestClient) -> None:
         mock_router = AsyncMock()
         mock_create.return_value = mock_router
 
@@ -69,9 +67,7 @@ class TestSolveEndpoint:
 class TestApiKeyAuth:
     @patch.dict(os.environ, {"API_KEY": "secret-key"})
     @patch("src.task_router.create_router")
-    def test_valid_api_key_accepted(
-        self, mock_create: AsyncMock, client: TestClient
-    ) -> None:
+    def test_valid_api_key_accepted(self, mock_create: AsyncMock, client: TestClient) -> None:
         mock_create.return_value = AsyncMock()
         response = client.post(
             "/solve",
