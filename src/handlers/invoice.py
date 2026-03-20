@@ -154,6 +154,17 @@ class CreateInvoiceHandler(BaseHandler):
             else:
                 pay_amount = payment
                 pay_date = None
+
+            # Use the invoice's actual amount (incl. VAT) for full payment
+            if inv_id:
+                try:
+                    inv_data = api_client.get(f"/invoice/{inv_id}", fields="amount")
+                    actual_amount = inv_data.get("value", {}).get("amount")
+                    if actual_amount:
+                        pay_amount = actual_amount
+                except TripletexApiError:
+                    pass
+
             if not pay_amount and "totalAmount" in params:
                 pay_amount = params["totalAmount"]
 
@@ -282,10 +293,20 @@ class RegisterPaymentHandler(BaseHandler):
         pt_values = pt_resp.get("values", [])
         pt_id = int(params.get("paymentTypeId", pt_values[0]["id"] if pt_values else 0))
 
+        # Use the invoice's actual amount (incl. VAT) for full payment
+        pay_amount = params["amount"]
+        try:
+            inv_data = api_client.get(f"/invoice/{invoice_id}", fields="amount")
+            actual_amount = inv_data.get("value", {}).get("amount")
+            if actual_amount and not params.get("reversal"):
+                pay_amount = actual_amount
+        except TripletexApiError:
+            pass
+
         pay_params: dict[str, Any] = {
             "paymentDate": pay_date,
             "paymentTypeId": pt_id,
-            "paidAmount": params["amount"],
+            "paidAmount": pay_amount,
         }
         api_client.put(f"/invoice/{invoice_id}/:payment", params=pay_params)
         logger.info("Registered payment on invoice id=%s", invoice_id)
