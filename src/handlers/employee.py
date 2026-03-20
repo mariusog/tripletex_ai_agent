@@ -35,8 +35,7 @@ class CreateEmployeeHandler(BaseHandler):
             "lastName": params["lastName"],
             "userType": user_type,
             "dateOfBirth": (
-                self.validate_date(params.get("dateOfBirth"), "dateOfBirth")
-                or "1990-01-01"
+                self.validate_date(params.get("dateOfBirth"), "dateOfBirth") or "1990-01-01"
             ),
         }
 
@@ -49,14 +48,20 @@ class CreateEmployeeHandler(BaseHandler):
 
         # Employment record
         start_date = self.validate_date(params.get("startDate"), "startDate") or today
-        body["employments"] = [{
-            "startDate": start_date,
-            "employmentDetails": [{
-                "date": start_date,
-                "employmentType": params.get("employmentType", "ORDINARY"),
-                "percentageOfFullTimeEquivalent": params.get("percentageOfFullTimeEquivalent", 100),
-            }],
-        }]
+        body["employments"] = [
+            {
+                "startDate": start_date,
+                "employmentDetails": [
+                    {
+                        "date": start_date,
+                        "employmentType": params.get("employmentType", "ORDINARY"),
+                        "percentageOfFullTimeEquivalent": params.get(
+                            "percentageOfFullTimeEquivalent", 100
+                        ),
+                    }
+                ],
+            }
+        ]
 
         body = self.strip_none_values(body)
 

@@ -159,9 +159,7 @@ class CreateInvoiceHandler(BaseHandler):
             proj_name = proj.get("name") if isinstance(proj, dict) else str(proj)
             if proj_name:
                 # Use account owner as PM (guaranteed to have PM access)
-                emp_search = api_client.get(
-                    "/employee", params={"count": 1}, fields="id"
-                )
+                emp_search = api_client.get("/employee", params={"count": 1}, fields="id")
                 emp_values = emp_search.get("values", [])
                 pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
 
@@ -274,12 +272,8 @@ class CreateInvoiceHandler(BaseHandler):
                         "paymentTypeId": pt_id,
                         "paidAmount": pay_amount,
                     }
-                    api_client.put(
-                        f"/invoice/{inv_id}/:payment", params=pay_params
-                    )
-                    logger.info(
-                        "Registered payment of %s on invoice %s", pay_amount, inv_id
-                    )
+                    api_client.put(f"/invoice/{inv_id}/:payment", params=pay_params)
+                    logger.info("Registered payment of %s on invoice %s", pay_amount, inv_id)
                 except TripletexApiError as e:
                     logger.warning("Payment failed: %s", e)
 
@@ -371,9 +365,7 @@ class RegisterPaymentHandler(BaseHandler):
                 pay_date = date_val
 
         # Look up payment type
-        pt_resp = api_client.get(
-            "/invoice/paymentType", params={"count": 1}, fields="id"
-        )
+        pt_resp = api_client.get("/invoice/paymentType", params={"count": 1}, fields="id")
         pt_values = pt_resp.get("values", [])
         pt_id = int(params.get("paymentTypeId", pt_values[0]["id"] if pt_values else 0))
 

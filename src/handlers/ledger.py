@@ -11,9 +11,7 @@ from src.handlers.base import BaseHandler, register_handler
 logger = logging.getLogger(__name__)
 
 
-def _resolve_supplier(
-    api_client: TripletexClient, supplier: Any
-) -> dict[str, int] | None:
+def _resolve_supplier(api_client: TripletexClient, supplier: Any) -> dict[str, int] | None:
     """Resolve supplier to {"id": N}. Creates if not found."""
     if supplier is None:
         return None
@@ -146,16 +144,20 @@ class CreateVoucherHandler(BaseHandler):
         for p in raw_postings:
             if "debitAccount" in p and "creditAccount" in p:
                 amt = p.get("amount", p.get("amountGross", 0))
-                postings.append({
-                    "account": p["debitAccount"],
-                    "debit": amt,
-                    "description": p.get("description", ""),
-                })
-                postings.append({
-                    "account": p["creditAccount"],
-                    "credit": amt,
-                    "description": p.get("description", ""),
-                })
+                postings.append(
+                    {
+                        "account": p["debitAccount"],
+                        "debit": amt,
+                        "description": p.get("description", ""),
+                    }
+                )
+                postings.append(
+                    {
+                        "account": p["creditAccount"],
+                        "credit": amt,
+                        "description": p.get("description", ""),
+                    }
+                )
             else:
                 postings.append(p)
 
