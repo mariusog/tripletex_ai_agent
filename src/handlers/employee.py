@@ -75,6 +75,10 @@ class CreateEmployeeHandler(BaseHandler):
                 dept_vals = dept.get("values", [])
                 if dept_vals:
                     body["department"] = {"id": dept_vals[0]["id"]}
+                else:
+                    # Create a default department
+                    new_dept = api_client.post("/department", data={"name": "Avdeling"})
+                    body["department"] = {"id": new_dept.get("value", {}).get("id")}
                 result = api_client.post("/employee", data=body)
             else:
                 raise
