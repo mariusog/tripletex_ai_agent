@@ -131,12 +131,43 @@ class CreateInvoiceHandler(BaseHandler):
         # Step 1: Resolve customer (search or create)
         customer_ref = _resolve_customer(api_client, params.get("customer"))
 
+        # Step 1b: Create project if specified
+        project_ref = None
+        if params.get("project"):
+            proj = params["project"]
+            proj_name = proj.get("name") if isinstance(proj, dict) else str(proj)
+            if proj_name:
+                # Use account owner as PM (guaranteed to have PM access)
+                emp_search = api_client.get(
+                    "/employee", params={"count": 1}, fields="id"
+                )
+                emp_values = emp_search.get("values", [])
+                pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
+                import random
+
+                proj_num = str(proj.get("number")) if isinstance(proj, dict) and proj.get("number") else str(random.randint(10000, 99999))
+                proj_body: dict[str, Any] = {
+                    "name": proj_name,
+                    "number": proj_num,
+                    "projectManager": pm_ref,
+                    "startDate": today,
+                    "customer": customer_ref,
+                }
+                try:
+                    proj_result = api_client.post("/project", data=proj_body)
+                    project_ref = {"id": proj_result.get("value", {}).get("id")}
+                    logger.info("Created project id=%s", project_ref["id"])
+                except TripletexApiError as e:
+                    logger.warning("Project creation failed: %s", e)
+
         # Step 2: Create order
         order_body: dict[str, Any] = {
             "customer": customer_ref,
             "orderDate": params.get("orderDate") or today,
             "deliveryDate": params.get("deliveryDate") or today,
         }
+        if project_ref:
+            order_body["project"] = project_ref
         order_body = self.strip_none_values(order_body)
         order_result = api_client.post("/order", data=order_body)
         order_id = order_result.get("value", {}).get("id")
