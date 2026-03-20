@@ -194,7 +194,7 @@ class TestRegisterPayment:
         )
         assert result["id"] == 100
         assert result["action"] == "payment_registered"
-        endpoint = client.post.call_args[0][0]
+        endpoint = client.put.call_args[0][0]
         assert "/:payment" in endpoint
 
     def test_search_by_invoice_number(self):

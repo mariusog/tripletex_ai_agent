@@ -144,25 +144,38 @@ class CreateInvoiceHandler(BaseHandler):
         except TripletexApiError as e:
             logger.warning("Invoice creation failed: %s", e)
 
-        # Step 5: Register payment if requested
+        # Step 5: Register payment if requested (PUT with query params)
         payment = params.get("register_payment", params.get("payment"))
         if payment and inv_id:
             if isinstance(payment, dict):
                 pay_amount = payment.get("amount")
+                pay_date = payment.get("paymentDate")
             else:
                 pay_amount = payment
+                pay_date = None
             if not pay_amount and "totalAmount" in params:
                 pay_amount = params["totalAmount"]
 
             if pay_amount:
                 try:
-                    pay_body: dict[str, Any] = {
-                        "paymentDate": params.get("paymentDate") or today,
-                        "paymentTypeId": params.get("paymentTypeId", 0),
-                        "amount": pay_amount,
+                    # Look up a payment type
+                    pt_resp = api_client.get(
+                        "/invoice/paymentType", params={"count": 1}, fields="id"
+                    )
+                    pt_values = pt_resp.get("values", [])
+                    pt_id = pt_values[0]["id"] if pt_values else 0
+
+                    pay_params: dict[str, Any] = {
+                        "paymentDate": pay_date or today,
+                        "paymentTypeId": pt_id,
+                        "paidAmount": pay_amount,
                     }
-                    api_client.post(f"/invoice/{inv_id}/:payment", data=pay_body)
-                    logger.info("Registered payment of %s on invoice %s", pay_amount, inv_id)
+                    api_client.put(
+                        f"/invoice/{inv_id}/:payment", params=pay_params
+                    )
+                    logger.info(
+                        "Registered payment of %s on invoice %s", pay_amount, inv_id
+                    )
                 except TripletexApiError as e:
                     logger.warning("Payment failed: %s", e)
 
@@ -208,19 +221,32 @@ class RegisterPaymentHandler(BaseHandler):
         return ["amount"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
+        from datetime import date as dt_date
+
         invoice_id = _find_invoice_id(api_client, params)
         if not invoice_id:
             return {"error": "invoice_not_found"}
 
-        pay_body: dict[str, Any] = {"amount": params["amount"]}
+        today = dt_date.today().isoformat()
+        pay_date = today
         if "paymentDate" in params:
             date_val = self.validate_date(params["paymentDate"], "paymentDate")
             if date_val:
-                pay_body["paymentDate"] = date_val
-        if "paymentTypeId" in params:
-            pay_body["paymentTypeId"] = int(params["paymentTypeId"])
+                pay_date = date_val
 
-        api_client.post(f"/invoice/{invoice_id}/:payment", data=pay_body)
+        # Look up payment type
+        pt_resp = api_client.get(
+            "/invoice/paymentType", params={"count": 1}, fields="id"
+        )
+        pt_values = pt_resp.get("values", [])
+        pt_id = int(params.get("paymentTypeId", pt_values[0]["id"] if pt_values else 0))
+
+        pay_params: dict[str, Any] = {
+            "paymentDate": pay_date,
+            "paymentTypeId": pt_id,
+            "paidAmount": params["amount"],
+        }
+        api_client.put(f"/invoice/{invoice_id}/:payment", params=pay_params)
         logger.info("Registered payment on invoice id=%s", invoice_id)
         return {"id": invoice_id, "action": "payment_registered"}
 
