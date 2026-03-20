@@ -61,16 +61,19 @@ def _resolve_employee(
         first = parts[0] if parts else ""
         last = parts[-1] if len(parts) > 1 else ""
 
-    # Search by name
-    search_params: dict[str, Any] = {"count": 1}
+    # Search by name (verify exact match — API search can be fuzzy)
+    search_params: dict[str, Any] = {"count": 5}
     if first:
         search_params["firstName"] = first
     if last:
         search_params["lastName"] = last
-    resp = api_client.get("/employee", params=search_params, fields="id")
+    resp = api_client.get("/employee", params=search_params, fields="id,firstName,lastName")
     values = resp.get("values", [])
-    if values:
-        return {"id": values[0]["id"]}
+    for v in values:
+        v_first = (v.get("firstName") or "").strip().lower()
+        v_last = (v.get("lastName") or "").strip().lower()
+        if v_first == first.strip().lower() and v_last == last.strip().lower():
+            return {"id": v["id"]}
 
     # Create employee via handler (handles dept, employment, etc.)
     from src.handlers import HANDLER_REGISTRY
