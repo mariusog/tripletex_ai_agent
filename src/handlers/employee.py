@@ -117,7 +117,7 @@ class UpdateEmployeeHandler(BaseHandler):
         employee = values[0]
         emp_id = employee["id"]
 
-        for field in ("phoneNumberMobile", "firstName", "lastName"):
+        for field in ("phoneNumberMobile", "firstName", "lastName", "email"):
             if params.get(field):
                 employee[field] = params[field]
 

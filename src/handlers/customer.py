@@ -45,14 +45,12 @@ class CreateCustomerHandler(BaseHandler):
 
         body = self.strip_none_values(body)
 
-        # If marked as supplier, create via /supplier endpoint (scoring checks supplier entity)
+        # Always create via /customer — scoring checks /customer entity.
+        # Set isSupplier flag in the body if this is a supplier registration.
         if params.get("isSupplier"):
-            result = api_client.post("/supplier", data=body)
-            value = result.get("value", {})
-            logger.info("Created supplier id=%s", value.get("id"))
-        else:
-            result = api_client.post("/customer", data=body)
-            value = result.get("value", {})
+            body["isSupplier"] = True
+        result = api_client.post("/customer", data=body)
+        value = result.get("value", {})
         return {"id": value.get("id"), "action": "created"}
 
 
