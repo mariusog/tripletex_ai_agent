@@ -291,6 +291,23 @@ class RegisterPaymentHandler(BaseHandler):
         from datetime import date as dt_date
 
         invoice_id = _find_invoice_id(api_client, params)
+
+        # If no existing invoice, create one first (full flow)
+        if not invoice_id and params.get("customer"):
+            inv_params = dict(params)
+            # Set order line from payment amount if no lines specified
+            if not inv_params.get("orderLines") and params.get("amount"):
+                inv_params["orderLines"] = [
+                    {
+                        "description": params.get("description", "Faktura"),
+                        "unitPriceExcludingVatCurrency": params["amount"],
+                        "count": 1,
+                    }
+                ]
+            invoice_handler = CreateInvoiceHandler()
+            inv_result = invoice_handler.execute(api_client, inv_params)
+            invoice_id = inv_result.get("id")
+
         if not invoice_id:
             return {"error": "invoice_not_found"}
 
