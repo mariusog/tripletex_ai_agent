@@ -78,7 +78,7 @@ LLM_GEMINI_MODEL = "gemini-2.0-flash"
 LLM_TEMPERATURE = 0.0
 
 # Vertex AI configuration (Claude via GCP)
-LLM_VERTEX_MODEL = "claude-opus-4-6"
+LLM_VERTEX_MODEL = "claude-sonnet-4-20250514"
 LLM_VERTEX_PROJECT_ID = "ai-nm26osl-1792"
 LLM_VERTEX_REGION = "us-east5"
 

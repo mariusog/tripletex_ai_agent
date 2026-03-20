@@ -42,9 +42,7 @@ class CreateProjectHandler(BaseHandler):
             emp_values = emp_search.get("values", [])
             pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
 
-        import secrets
-
-        proj_num = str(params.get("number", secrets.randbelow(90000) + 10000))
+        proj_num = str(params.get("number", abs(hash(params["name"])) % 90000 + 10000))
 
         body: dict[str, Any] = {
             "name": params["name"],
