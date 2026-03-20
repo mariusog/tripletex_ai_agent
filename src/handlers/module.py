@@ -5,17 +5,10 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from src.api_client import TripletexClient
+from src.api_client import TripletexApiError, TripletexClient
 from src.handlers.base import BaseHandler, register_handler
 
 logger = logging.getLogger(__name__)
-
-
-def _resolve_ref(value: Any) -> dict[str, Any]:
-    """Convert an int or dict to a Tripletex object reference {id: ...}."""
-    if isinstance(value, dict):
-        return value
-    return {"id": int(value)}
 
 
 @register_handler
@@ -36,11 +29,11 @@ class EnableModuleHandler(BaseHandler):
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         module_name = params["moduleName"]
 
-        # Try to get current module config and update
         try:
             current = api_client.get("/modules")
             modules = current.get("value", {})
-        except Exception:
+        except TripletexApiError as exc:
+            logger.warning("Failed to fetch current modules: %s", exc)
             modules = {}
 
         # Set the module flag to True

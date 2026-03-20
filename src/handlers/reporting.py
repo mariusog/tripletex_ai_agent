@@ -5,18 +5,11 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from src.api_client import TripletexClient
+from src.api_client import TripletexApiError, TripletexClient
 from src.handlers.base import BaseHandler, register_handler
 from src.handlers.ledger import _build_posting
 
 logger = logging.getLogger(__name__)
-
-
-def _resolve_ref(value: Any) -> dict[str, Any]:
-    """Convert an int or dict to a Tripletex object reference {id: ...}."""
-    if isinstance(value, dict):
-        return value
-    return {"id": int(value)}
 
 
 @register_handler
@@ -58,7 +51,7 @@ class LedgerCorrectionHandler(BaseHandler):
                     data={"id": orig_id, "date": params["date"]},
                 )
                 logger.info("Reversed original voucher id=%s", orig_id)
-            except Exception:
+            except TripletexApiError:
                 logger.warning("Could not reverse voucher %s, proceeding", orig_id)
 
         result = api_client.post("/ledger/voucher", data=body)

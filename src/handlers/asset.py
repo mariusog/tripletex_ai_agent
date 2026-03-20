@@ -11,13 +11,6 @@ from src.handlers.base import BaseHandler, register_handler
 logger = logging.getLogger(__name__)
 
 
-def _resolve_ref(value: Any) -> dict[str, Any]:
-    """Convert an int or dict to a Tripletex object reference {id: ...}."""
-    if isinstance(value, dict):
-        return value
-    return {"id": int(value)}
-
-
 @register_handler
 class CreateAssetHandler(BaseHandler):
     """POST /asset with extracted fields."""
@@ -46,7 +39,7 @@ class CreateAssetHandler(BaseHandler):
 
         for ref_field in ("account", "depreciationAccount", "department", "type"):
             if ref_field in params:
-                body[ref_field] = _resolve_ref(params[ref_field])
+                body[ref_field] = self.ensure_ref(params[ref_field], ref_field)
 
         result = api_client.post("/asset", data=body)
         value = result.get("value", {})
@@ -86,7 +79,7 @@ class UpdateAssetHandler(BaseHandler):
 
         for ref_field in ("account", "depreciationAccount", "department", "type"):
             if ref_field in params:
-                asset[ref_field] = _resolve_ref(params[ref_field])
+                asset[ref_field] = self.ensure_ref(params[ref_field], ref_field)
 
         result = api_client.put(f"/asset/{asset_id}", data=asset)
         logger.info("Updated asset id=%s", asset_id)
