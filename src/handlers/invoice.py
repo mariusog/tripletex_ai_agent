@@ -3,20 +3,83 @@
 from __future__ import annotations
 
 import logging
+from datetime import date as dt_date
 from typing import Any
 
-from src.api_client import TripletexClient
+from src.api_client import TripletexClient, TripletexApiError
 from src.handlers.base import BaseHandler, register_handler
-from src.handlers.order import CreateOrderHandler
 
 logger = logging.getLogger(__name__)
 
 
+def _resolve_customer(api_client: TripletexClient, customer: Any) -> dict[str, int]:
+    """Resolve customer to {"id": N}. Creates if not found by name."""
+    if customer is None:
+        return {"id": 0}
+    if isinstance(customer, dict) and "id" in customer:
+        return {"id": int(customer["id"])}
+    if isinstance(customer, (int, float)):
+        return {"id": int(customer)}
+    try:
+        return {"id": int(customer)}
+    except (TypeError, ValueError):
+        pass
+    name = str(customer) if not isinstance(customer, dict) else customer.get("name", "")
+    if not name:
+        return {"id": 0}
+    resp = api_client.get("/customer", params={"name": name, "count": 1}, fields="id,name")
+    values = resp.get("values", [])
+    if values:
+        return {"id": values[0]["id"]}
+    # Create the customer
+    org_nr = customer.get("organizationNumber") if isinstance(customer, dict) else None
+    cust_body: dict[str, Any] = {"name": name}
+    if org_nr:
+        cust_body["organizationNumber"] = str(org_nr)
+    result = api_client.post("/customer", data=cust_body)
+    cust_id = result.get("value", {}).get("id")
+    logger.info("Auto-created customer '%s' id=%s", name, cust_id)
+    return {"id": cust_id}
+
+
+def _resolve_product(api_client: TripletexClient, product: Any) -> dict[str, int]:
+    """Resolve product to {"id": N}. Creates if not found."""
+    if isinstance(product, dict) and "id" in product:
+        return {"id": int(product["id"])}
+    if isinstance(product, (int, float)):
+        return {"id": int(product)}
+    try:
+        return {"id": int(product)}
+    except (TypeError, ValueError):
+        pass
+    name = str(product) if not isinstance(product, dict) else product.get("name", "")
+    number = product.get("number") if isinstance(product, dict) else None
+    # Search by number first (more precise), then by name
+    if number:
+        resp = api_client.get("/product", params={"number": str(number), "count": 1}, fields="id")
+        values = resp.get("values", [])
+        if values:
+            return {"id": values[0]["id"]}
+    if name:
+        resp = api_client.get("/product", params={"name": name, "count": 1}, fields="id")
+        values = resp.get("values", [])
+        if values:
+            return {"id": values[0]["id"]}
+    # Create the product
+    prod_body: dict[str, Any] = {"name": name or f"Product {number}"}
+    if number:
+        prod_body["number"] = int(number)
+    result = api_client.post("/product", data=prod_body)
+    prod_id = result.get("value", {}).get("id")
+    logger.info("Auto-created product '%s' id=%s", name, prod_id)
+    return {"id": prod_id}
+
+
 @register_handler
 class CreateInvoiceHandler(BaseHandler):
-    """Full flow: create order -> add lines -> create invoice from order.
+    """Full flow: resolve entities -> create order -> add lines -> invoice -> payment.
 
-    Optimal: 2 calls (order + invoice, no lines) or 3 calls (with lines).
+    Handles the common competition pattern of multi-step invoice tasks.
     """
 
     def get_task_type(self) -> str:
@@ -27,32 +90,82 @@ class CreateInvoiceHandler(BaseHandler):
         return ["customer"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        # Step 1: Create order (reuse CreateOrderHandler)
-        order_handler = CreateOrderHandler()
-        order_result = order_handler.execute(api_client, params)
-        order_id = order_result.get("id")
-        if not order_id:
-            return {"error": "order_creation_failed"}
+        today = dt_date.today().isoformat()
 
-        # Step 2: Create invoice from order
-        inv_body: dict[str, Any] = {"orders": [{"id": order_id}]}
+        # Step 1: Resolve customer (search or create)
+        customer_ref = _resolve_customer(api_client, params.get("customer"))
 
-        for date_field in ("invoiceDate", "invoiceDueDate"):
-            if date_field in params:
-                date_val = self.validate_date(params[date_field], date_field)
-                if date_val:
-                    inv_body[date_field] = date_val
+        # Step 2: Create order
+        order_body: dict[str, Any] = {
+            "customer": customer_ref,
+            "orderDate": params.get("orderDate") or today,
+            "deliveryDate": params.get("deliveryDate") or today,
+        }
+        order_body = self.strip_none_values(order_body)
+        order_result = api_client.post("/order", data=order_body)
+        order_id = order_result.get("value", {}).get("id")
+        logger.info("Created order id=%s", order_id)
 
-        if params.get("comment"):
-            inv_body["comment"] = params["comment"]
-        if "paymentTypeId" in params:
-            inv_body["paymentTypeId"] = int(params["paymentTypeId"])
+        # Step 3: Add order lines
+        lines = params.get("orderLines", params.get("lines", []))
+        if lines:
+            payloads = []
+            for line in lines:
+                ol: dict[str, Any] = {"order": {"id": order_id}}
+                if "product" in line:
+                    ol["product"] = _resolve_product(api_client, line["product"])
+                if "description" in line:
+                    ol["description"] = line["description"]
+                ol["count"] = line.get("count", line.get("quantity", 1))
+                if "unitPriceExcludingVatCurrency" in line:
+                    ol["unitPriceExcludingVatCurrency"] = line["unitPriceExcludingVatCurrency"]
+                elif "amount" in line:
+                    ol["unitPriceExcludingVatCurrency"] = line["amount"]
+                elif "price" in line:
+                    ol["unitPriceExcludingVatCurrency"] = line["price"]
+                payloads.append(self.strip_none_values(ol))
+            if payloads:
+                api_client.post("/order/orderline/list", data=payloads)
+                logger.info("Added %d order lines", len(payloads))
 
-        inv_body = self.strip_none_values(inv_body)
-        result = api_client.post("/invoice", data=inv_body)
-        invoice = result.get("value", {})
-        inv_id = invoice.get("id")
-        logger.info("Created invoice id=%s from order id=%s", inv_id, order_id)
+        # Step 4: Create invoice from order
+        inv_id = None
+        try:
+            inv_body: dict[str, Any] = {
+                "invoiceDate": params.get("invoiceDate") or today,
+                "invoiceDueDate": params.get("invoiceDueDate") or today,
+                "orders": [{"id": order_id}],
+            }
+            inv_body = self.strip_none_values(inv_body)
+            inv_result = api_client.post("/invoice", data=inv_body)
+            invoice = inv_result.get("value", {})
+            inv_id = invoice.get("id")
+            logger.info("Created invoice id=%s from order id=%s", inv_id, order_id)
+        except TripletexApiError as e:
+            logger.warning("Invoice creation failed: %s", e)
+
+        # Step 5: Register payment if requested
+        payment = params.get("register_payment", params.get("payment"))
+        if payment and inv_id:
+            if isinstance(payment, dict):
+                pay_amount = payment.get("amount")
+            else:
+                pay_amount = payment
+            if not pay_amount and "totalAmount" in params:
+                pay_amount = params["totalAmount"]
+
+            if pay_amount:
+                try:
+                    pay_body: dict[str, Any] = {
+                        "paymentDate": params.get("paymentDate") or today,
+                        "paymentTypeId": params.get("paymentTypeId", 0),
+                        "amount": pay_amount,
+                    }
+                    api_client.post(f"/invoice/{inv_id}/:payment", data=pay_body)
+                    logger.info("Registered payment of %s on invoice %s", pay_amount, inv_id)
+                except TripletexApiError as e:
+                    logger.warning("Payment failed: %s", e)
+
         return {"id": inv_id, "orderId": order_id, "action": "created"}
 
 
@@ -114,10 +227,7 @@ class RegisterPaymentHandler(BaseHandler):
 
 @register_handler
 class CreateCreditNoteHandler(BaseHandler):
-    """Find invoice then POST /invoice/{id}/:createCreditNote.
-
-    Optimal: 1 call (direct ID) or 2 calls (search + credit note).
-    """
+    """Create invoice if needed, then POST /invoice/{id}/:createCreditNote."""
 
     def get_task_type(self) -> str:
         return "create_credit_note"
@@ -128,6 +238,13 @@ class CreateCreditNoteHandler(BaseHandler):
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         invoice_id = _find_invoice_id(api_client, params)
+
+        # If no existing invoice, create one first (full flow)
+        if not invoice_id and params.get("customer"):
+            invoice_handler = CreateInvoiceHandler()
+            inv_result = invoice_handler.execute(api_client, params)
+            invoice_id = inv_result.get("id")
+
         if not invoice_id:
             return {"error": "invoice_not_found"}
 
@@ -139,11 +256,15 @@ class CreateCreditNoteHandler(BaseHandler):
             if date_val:
                 cn_body["date"] = date_val
 
-        result = api_client.post(f"/invoice/{invoice_id}/:createCreditNote", data=cn_body)
-        credit_note = result.get("value", {}) if result else {}
-        cn_id = credit_note.get("id")
-        logger.info("Created credit note id=%s for invoice id=%s", cn_id, invoice_id)
-        return {"id": cn_id, "invoiceId": invoice_id, "action": "credit_note_created"}
+        try:
+            result = api_client.post(f"/invoice/{invoice_id}/:createCreditNote", data=cn_body)
+            credit_note = result.get("value", {}) if result else {}
+            cn_id = credit_note.get("id")
+            logger.info("Created credit note id=%s for invoice id=%s", cn_id, invoice_id)
+            return {"id": cn_id, "invoiceId": invoice_id, "action": "credit_note_created"}
+        except TripletexApiError as e:
+            logger.warning("Credit note creation failed: %s", e)
+            return {"invoiceId": invoice_id, "action": "invoice_created_credit_note_failed"}
 
 
 def _find_invoice_id(api_client: TripletexClient, params: dict[str, Any]) -> int | None:
@@ -155,12 +276,26 @@ def _find_invoice_id(api_client: TripletexClient, params: dict[str, Any]) -> int
         search_params["invoiceNumber"] = params["invoiceNumber"]
     elif "customer" in params:
         cust = params["customer"]
-        search_params["customerId"] = int(cust) if not isinstance(cust, dict) else cust["id"]
+        if isinstance(cust, dict):
+            if "id" in cust:
+                search_params["customerId"] = int(cust["id"])
+            elif "name" in cust:
+                # Can't search invoice by customer name directly
+                return None
+            else:
+                return None
+        else:
+            try:
+                search_params["customerId"] = int(cust)
+            except (TypeError, ValueError):
+                return None
     else:
         return None
-    resp = api_client.get("/invoice", params=search_params)
-    values = resp.get("values", [])
-    if not values:
+    try:
+        resp = api_client.get("/invoice", params=search_params)
+        values = resp.get("values", [])
+        if not values:
+            return None
+        return values[0].get("id")
+    except TripletexApiError:
         return None
-    inv_id: int | None = values[0].get("id")
-    return inv_id

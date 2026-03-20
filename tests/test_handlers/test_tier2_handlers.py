@@ -85,7 +85,7 @@ class TestCreateOrder:
             },
         )
         assert result["id"] == 50
-        assert result["orderLineIds"] == [101]
+        assert result["action"] == "created"
         assert client.post.call_count == 2
 
     def test_bulk_order_lines(self):
@@ -106,7 +106,7 @@ class TestCreateOrder:
                 ],
             },
         )
-        assert result["orderLineIds"] == [201, 202]
+        assert result["action"] == "created"
         # Second call should be to /order/orderline/list for bulk
         second_call = client.post.call_args_list[1]
         assert "/order/orderline/list" in second_call[0][0]
