@@ -36,6 +36,10 @@ class CreateCustomerHandler(BaseHandler):
             if params.get(field):
                 body[field] = params[field]
 
+        # Also set email as invoiceEmail if not separately provided
+        if body.get("email") and not body.get("invoiceEmail"):
+            body["invoiceEmail"] = body["email"]
+
         # Address fields — Tripletex has postalAddress, physicalAddress, deliveryAddress
         for addr_field in ("postalAddress", "physicalAddress", "deliveryAddress"):
             if params.get(addr_field):

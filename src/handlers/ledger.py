@@ -57,9 +57,15 @@ class CreateSupplierHandler(BaseHandler):
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         body: dict[str, Any] = {"name": params["name"]}
-        for field in ("email", "phoneNumber", "organizationNumber"):
+        for field in (
+            "email", "phoneNumber", "phoneNumberMobile",
+            "organizationNumber", "invoiceEmail", "description",
+        ):
             if params.get(field):
                 body[field] = params[field]
+        # Also set email as invoiceEmail if not separately provided
+        if body.get("email") and not body.get("invoiceEmail"):
+            body["invoiceEmail"] = body["email"]
         for addr_field in ("postalAddress", "physicalAddress"):
             if params.get(addr_field):
                 body[addr_field] = params[addr_field]
