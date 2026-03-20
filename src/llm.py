@@ -48,6 +48,8 @@ Include "orderLines" with the product/service name and amount from the original 
 - If the task mentions products by name/number, include them in orderLines with product name/number
 - For supplier invoices (leverandørfaktura/Lieferantenrechnung), classify as "create_voucher"
 - For payroll/salary tasks (lønn, paie, Gehalt, nómina, run payroll), classify as "run_payroll"
+- For custom accounting dimensions (dimensjon, dimension, Dimension) with voucher, \
+classify as "create_dimension_voucher"
 
 PARAMETER SCHEMAS per task type:
 - create_employee: {{firstName, lastName, email, phoneNumberMobile, \
@@ -100,6 +102,9 @@ reconciliationDate, adjustments: [{{amount, description, date}}]}}
 - run_payroll: {{employee (name string or {{firstName, lastName, email}}), \
 baseSalary (base monthly salary amount), bonus (one-time bonus amount), \
 bonusDescription, month, year, extras: [{{amount, description}}]}}
+- create_dimension_voucher: {{dimensionName, dimensionValues: ["val1", "val2"], \
+linkedValue (which value to link the voucher to), \
+postings: [{{account (number), amount}}], date, description}}
 
 Respond ONLY with valid JSON: {{"task_type": "<type>", "params": {{...}}}}
 Extract ALL relevant parameters from the prompt. Use field names matching the Tripletex API.

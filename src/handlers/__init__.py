@@ -11,6 +11,7 @@ from src.handlers import (  # noqa: F401
     customer,
     delete,
     department,
+    dimension,
     employee,
     invoice,
     ledger,
