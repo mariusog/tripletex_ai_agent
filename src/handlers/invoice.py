@@ -12,11 +12,18 @@ from src.handlers.base import BaseHandler, register_handler
 logger = logging.getLogger(__name__)
 
 
+_bank_account_set = False
+
+
 def _ensure_bank_account(api_client: TripletexClient) -> None:
     """Ensure the company has a bank account on ledger account 1920.
 
     Tripletex requires a bank account number before invoices can be created.
+    Caches the result to avoid repeated API calls.
     """
+    global _bank_account_set
+    if _bank_account_set:
+        return
     try:
         resp = api_client.get(
             "/ledger/account",
@@ -25,11 +32,12 @@ def _ensure_bank_account(api_client: TripletexClient) -> None:
         )
         values = resp.get("values", [])
         if not values:
+            _bank_account_set = True
             return
         acct = values[0]
         if acct.get("bankAccountNumber"):
-            return  # Already set
-        # Set a dummy Norwegian bank account number (11 digits, valid MOD11)
+            _bank_account_set = True
+            return
         api_client.put(
             f"/ledger/account/{acct['id']}",
             data={
@@ -41,6 +49,7 @@ def _ensure_bank_account(api_client: TripletexClient) -> None:
             },
         )
         logger.info("Set bank account number on ledger account 1920")
+        _bank_account_set = True
     except TripletexApiError as e:
         logger.warning("Failed to set bank account: %s", e)
 

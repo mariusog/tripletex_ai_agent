@@ -72,25 +72,25 @@ def _resolve_employee(
     if values:
         return {"id": values[0]["id"]}
 
-    # Create employee - need department
-    dept_resp = api_client.get("/department", params={"count": 1}, fields="id")
-    dept_values = dept_resp.get("values", [])
-    dept_ref = {"id": dept_values[0]["id"]} if dept_values else None
+    # Create employee via handler (handles dept, employment, etc.)
+    from src.handlers import HANDLER_REGISTRY
 
-    emp_body: dict[str, Any] = {
+    emp_handler = HANDLER_REGISTRY["create_employee"]
+    emp_params: dict[str, Any] = {
         "firstName": first or "Unknown",
         "lastName": last or "Employee",
-        "userType": "STANDARD",
     }
     if email:
-        emp_body["email"] = email
-    if dept_ref:
-        emp_body["department"] = dept_ref
+        emp_params["email"] = email
 
-    result = api_client.post("/employee", data=emp_body)
-    emp_id = result.get("value", {}).get("id")
-    logger.info("Auto-created employee '%s %s' id=%s", first, last, emp_id)
-    return {"id": emp_id}
+    try:
+        result = emp_handler.execute(api_client, emp_params)
+        emp_id = result.get("id")
+        logger.info("Auto-created employee '%s %s' id=%s", first, last, emp_id)
+        return {"id": emp_id}
+    except TripletexApiError as e:
+        logger.warning("Failed to create employee: %s", e)
+        return {"id": 0}
 
 
 def _find_cost_category(

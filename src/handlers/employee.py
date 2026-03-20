@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import logging
+from datetime import date as dt_date
 from typing import Any
 
-from src.api_client import TripletexClient
+from src.api_client import TripletexApiError, TripletexClient
 from src.handlers.base import BaseHandler, register_handler
 
 logger = logging.getLogger(__name__)
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 @register_handler
 class CreateEmployeeHandler(BaseHandler):
-    """POST /employee with extracted fields. 1 API call."""
+    """POST /employee with extracted fields. Optimal: 1 API call."""
 
     def get_task_type(self) -> str:
         return "create_employee"
@@ -23,61 +24,53 @@ class CreateEmployeeHandler(BaseHandler):
         return ["firstName", "lastName"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        # Look up default department if none specified
-        if "department" not in params:
-            dept_search = api_client.get("/department", params={"count": 1}, fields="id")
-            dept_values = dept_search.get("values", [])
-            dept_id = dept_values[0]["id"] if dept_values else None
-        else:
-            dept_id = None
+        today = dt_date.today().isoformat()
+
+        # Determine userType: STANDARD needs email, NO_ACCESS doesn't
+        has_email = bool(params.get("email"))
+        user_type = params.get("userType", "STANDARD" if has_email else "NO_ACCESS")
 
         body: dict[str, Any] = {
             "firstName": params["firstName"],
             "lastName": params["lastName"],
-            "userType": params.get("userType", "STANDARD"),
+            "userType": user_type,
+            "dateOfBirth": self.validate_date(params.get("dateOfBirth"), "dateOfBirth") or "1990-01-01",
         }
-
-        if "department" in params:
-            body["department"] = self.ensure_ref(params["department"], "department")
-        elif dept_id:
-            body["department"] = {"id": dept_id}
 
         for field in ("email", "phoneNumberMobile"):
             if params.get(field):
                 body[field] = params[field]
 
-        if "dateOfBirth" in params:
-            date_val = self.validate_date(params["dateOfBirth"], "dateOfBirth")
-            if date_val:
-                body["dateOfBirth"] = date_val
+        if "department" in params:
+            body["department"] = self.ensure_ref(params["department"], "department")
 
-        # dateOfBirth is required when creating with employment — default if missing
-        if "dateOfBirth" not in body:
-            body["dateOfBirth"] = "1990-01-01"
-
-        # Add employment with start date if provided
-        from datetime import date as dt_date
-
-        start_date = None
-        if "startDate" in params:
-            start_date = self.validate_date(params["startDate"], "startDate")
-
-        employment: dict[str, Any] = {
-            "startDate": start_date or dt_date.today().isoformat(),
-            "employmentDetails": [
-                {
-                    "date": start_date or dt_date.today().isoformat(),
-                    "employmentType": params.get("employmentType", "ORDINARY"),
-                    "percentageOfFullTimeEquivalent": params.get(
-                        "percentageOfFullTimeEquivalent", 100
-                    ),
-                }
-            ],
-        }
-        body["employments"] = [employment]
+        # Employment record
+        start_date = self.validate_date(params.get("startDate"), "startDate") or today
+        body["employments"] = [{
+            "startDate": start_date,
+            "employmentDetails": [{
+                "date": start_date,
+                "employmentType": params.get("employmentType", "ORDINARY"),
+                "percentageOfFullTimeEquivalent": params.get("percentageOfFullTimeEquivalent", 100),
+            }],
+        }]
 
         body = self.strip_none_values(body)
-        result = api_client.post("/employee", data=body)
+
+        # Try creating — if it fails due to missing department, add one and retry
+        try:
+            result = api_client.post("/employee", data=body)
+        except TripletexApiError as e:
+            err_fields = [m.get("field", "") for m in e.error.validation_messages]
+            if "department.id" in err_fields and "department" not in body:
+                dept = api_client.get("/department", params={"count": 1}, fields="id")
+                dept_vals = dept.get("values", [])
+                if dept_vals:
+                    body["department"] = {"id": dept_vals[0]["id"]}
+                result = api_client.post("/employee", data=body)
+            else:
+                raise
+
         value = result.get("value", {})
         logger.info("Created employee id=%s", value.get("id"))
         return {"id": value.get("id"), "action": "created"}
@@ -85,7 +78,7 @@ class CreateEmployeeHandler(BaseHandler):
 
 @register_handler
 class UpdateEmployeeHandler(BaseHandler):
-    """GET /employee (search by name) then PUT /employee/{id}. 2 API calls."""
+    """GET /employee (search) then PUT /employee/{id}. 2 API calls."""
 
     def get_task_type(self) -> str:
         return "update_employee"
@@ -110,7 +103,6 @@ class UpdateEmployeeHandler(BaseHandler):
         employee = values[0]
         emp_id = employee["id"]
 
-        # Only update fields that the API allows changing
         for field in ("phoneNumberMobile", "firstName", "lastName"):
             if params.get(field):
                 employee[field] = params[field]
@@ -119,8 +111,6 @@ class UpdateEmployeeHandler(BaseHandler):
             date_val = self.validate_date(params["dateOfBirth"], "dateOfBirth")
             if date_val:
                 employee["dateOfBirth"] = date_val
-
-        # dateOfBirth is required on PUT — default if missing
         if not employee.get("dateOfBirth"):
             employee["dateOfBirth"] = "1990-01-01"
 
