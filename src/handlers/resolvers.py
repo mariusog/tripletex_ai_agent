@@ -198,6 +198,16 @@ def resolve_employee(api_client: TripletexClient, employee: Any) -> dict[str, in
         if v_first == first.strip().lower() and v_last == last.strip().lower():
             return {"id": v["id"]}
 
+    # Search by email if name didn't match (sandbox may have employee with same email)
+    if email:
+        try:
+            resp = api_client.get("/employee", params={"email": email, "count": 1}, fields="id")
+            vals = resp.get("values", [])
+            if vals:
+                return {"id": vals[0]["id"]}
+        except TripletexApiError:
+            pass
+
     from src.handlers import HANDLER_REGISTRY
 
     emp_handler = HANDLER_REGISTRY["create_employee"]

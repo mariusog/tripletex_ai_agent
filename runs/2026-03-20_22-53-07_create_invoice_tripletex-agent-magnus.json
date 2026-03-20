@@ -1,0 +1,117 @@
+{
+  "timestamp": "2026-03-20 22:53:07",
+  "prompt": "Crea un pedido para el cliente Luna SL (org. nº 966920963) con los productos Desarrollo de sistemas (5271) a 6950 NOK y Asesoría de datos (3613) a 7000 NOK. Convierte el pedido en factura y registra el pago completo.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "status": 201,
+      "duration_s": 1.94
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "status": 201,
+      "duration_s": 1.85
+    },
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "status": 201,
+      "duration_s": 0.26
+    },
+    {
+      "method": "GET",
+      "endpoint": "/product",
+      "status": 200,
+      "duration_s": 1.75
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "status": 201,
+      "duration_s": 0.3
+    },
+    {
+      "method": "GET",
+      "endpoint": "/product",
+      "status": 200,
+      "duration_s": 0.19
+    },
+    {
+      "method": "GET",
+      "endpoint": "/product",
+      "status": 200,
+      "duration_s": 0.21
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order/orderline/list",
+      "status": 201,
+      "duration_s": 0.29
+    },
+    {
+      "method": "POST",
+      "endpoint": "/invoice",
+      "status": 201,
+      "duration_s": 0.57
+    },
+    {
+      "method": "GET",
+      "endpoint": "/invoice/paymentType",
+      "status": 200,
+      "duration_s": 0.3
+    },
+    {
+      "method": "GET",
+      "endpoint": "/product",
+      "status": 200,
+      "duration_s": 1.76
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/invoice/2147553286/:payment",
+      "status": 200,
+      "duration_s": 0.35
+    }
+  ],
+  "errors": [],
+  "task_type": "create_invoice",
+  "params": {
+    "customer": {
+      "name": "Luna SL",
+      "organizationNumber": "966920963"
+    },
+    "orderLines": [
+      {
+        "product": {
+          "name": "Desarrollo de sistemas",
+          "number": "5271"
+        },
+        "count": 1,
+        "unitPriceExcludingVatCurrency": 6950
+      },
+      {
+        "product": {
+          "name": "Asesoría de datos",
+          "number": "3613"
+        },
+        "count": 1,
+        "unitPriceExcludingVatCurrency": 7000
+      }
+    ],
+    "register_payment": {
+      "amount": 13950
+    }
+  },
+  "handler": "CreateInvoiceHandler",
+  "total_api_calls": 8,
+  "total_duration_s": 7.01,
+  "result": {
+    "id": 2147553286,
+    "orderId": 401976594,
+    "action": "created"
+  },
+  "service": "tripletex-agent-magnus"
+}

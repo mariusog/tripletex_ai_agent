@@ -41,17 +41,8 @@ class CreateProjectHandler(BaseHandler):
             pm_first = pm.get("firstName", "")
             pm_last = pm.get("lastName", "")
             if pm_first and pm_last:
-                from src.handlers import HANDLER_REGISTRY
-
-                emp_handler = HANDLER_REGISTRY["create_employee"]
-                emp_params: dict[str, Any] = {
-                    "firstName": pm_first,
-                    "lastName": pm_last,
-                }
-                if pm.get("email"):
-                    emp_params["email"] = pm["email"]
                 try:
-                    emp_handler.execute(api_client, emp_params)
+                    _resolve_employee(api_client, pm)
                 except Exception:
                     logger.warning("PM employee creation failed, continuing")
             else:

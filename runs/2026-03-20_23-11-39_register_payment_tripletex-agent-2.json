@@ -1,0 +1,90 @@
+{
+  "timestamp": "2026-03-20 23:11:39",
+  "prompt": "Kunden Strandvik AS (org.nr 840390055) har ein utestÃ¥ande faktura pÃ¥ 27050 kr eksklusiv MVA for \"DatarÃ¥dgjeving\". Registrer full betaling pÃ¥ denne fakturaen.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 2.42
+    },
+    {
+      "method": "GET",
+      "endpoint": "/customer",
+      "status": 200,
+      "duration_s": 2.18
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "status": 201,
+      "duration_s": 2.79
+    },
+    {
+      "method": "GET",
+      "endpoint": "/product",
+      "status": 200,
+      "duration_s": 2.74
+    },
+    {
+      "method": "POST",
+      "endpoint": "/product",
+      "status": 201,
+      "duration_s": 3.29
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order/orderline/list",
+      "status": 201,
+      "duration_s": 3.16
+    },
+    {
+      "method": "POST",
+      "endpoint": "/invoice",
+      "status": 201,
+      "duration_s": 3.01
+    },
+    {
+      "method": "GET",
+      "endpoint": "/invoice/paymentType",
+      "status": 200,
+      "duration_s": 2.42
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/invoice/2147554273/:payment",
+      "status": 200,
+      "duration_s": 2.11
+    }
+  ],
+  "errors": [],
+  "task_type": "register_payment",
+  "params": {
+    "customer": {
+      "name": "Strandvik AS",
+      "organizationNumber": "840390055"
+    },
+    "amount": 27050,
+    "paymentDate": null,
+    "description": "Full betaling av faktura for Datarådgjeving",
+    "reversal": false,
+    "orderLines": [
+      {
+        "product": {
+          "name": "Datarådgjeving"
+        },
+        "count": 1,
+        "unitPriceExcludingVatCurrency": 27050
+      }
+    ]
+  },
+  "handler": "RegisterPaymentHandler",
+  "total_api_calls": 9,
+  "total_duration_s": 28.55,
+  "result": {
+    "id": 2147554273,
+    "action": "payment_registered"
+  },
+  "service": "tripletex-agent-2"
+}
