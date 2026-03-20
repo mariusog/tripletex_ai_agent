@@ -79,6 +79,15 @@ class BaseHandler(ABC):
         return None
 
     @staticmethod
+    def safe_int(value: Any, field_name: str = "", default: int = 0) -> int:
+        """Safely convert a value to int with logging on failure."""
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            logger.warning("Cannot convert '%s' to int for '%s'", value, field_name)
+            return default
+
+    @staticmethod
     def strip_none_values(data: dict[str, Any]) -> dict[str, Any]:
         """Remove keys with None values from a payload dict."""
         return {k: v for k, v in data.items() if v is not None}
