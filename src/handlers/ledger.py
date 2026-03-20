@@ -79,8 +79,9 @@ def _build_posting(
     """Build a single voucher posting payload."""
     result: dict[str, Any] = {"row": row}
     vat_ref = None
-    if "account" in posting:
-        acct_ref, vat_ref = _resolve_account(api_client, posting["account"])
+    acct = posting.get("account") or posting.get("debitAccount") or posting.get("creditAccount")
+    if acct:
+        acct_ref, vat_ref = _resolve_account(api_client, acct)
         result["account"] = acct_ref
     for field in ("amountCurrency", "amount", "description"):
         if field in posting and posting[field] is not None:
@@ -139,8 +140,25 @@ class CreateVoucherHandler(BaseHandler):
         # Resolve supplier if present (needed for supplier invoice vouchers)
         supplier_ref = _resolve_supplier(api_client, params.get("supplier"))
 
-        # Build postings — resolve account numbers to IDs
-        postings = params.get("postings", [])
+        # Normalize postings: split debitAccount/creditAccount into separate rows
+        raw_postings = params.get("postings", [])
+        postings: list[dict[str, Any]] = []
+        for p in raw_postings:
+            if "debitAccount" in p and "creditAccount" in p:
+                amt = p.get("amount", p.get("amountGross", 0))
+                postings.append({
+                    "account": p["debitAccount"],
+                    "debit": amt,
+                    "description": p.get("description", ""),
+                })
+                postings.append({
+                    "account": p["creditAccount"],
+                    "credit": amt,
+                    "description": p.get("description", ""),
+                })
+            else:
+                postings.append(p)
+
         if postings:
             body["postings"] = [
                 _build_posting(api_client, p, row=i + 1, supplier=supplier_ref)
