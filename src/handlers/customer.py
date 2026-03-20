@@ -24,12 +24,30 @@ class CreateCustomerHandler(BaseHandler):
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         body: dict[str, Any] = {"name": params["name"]}
-        for field in ("email", "phoneNumber", "organizationNumber", "invoiceEmail"):
+
+        for field in (
+            "email",
+            "phoneNumber",
+            "phoneNumberMobile",
+            "organizationNumber",
+            "invoiceEmail",
+            "isPrivateIndividual",
+        ):
             if params.get(field):
                 body[field] = params[field]
 
-        if params.get("deliveryAddress"):
-            body["deliveryAddress"] = params["deliveryAddress"]
+        # Address fields — Tripletex has postalAddress, physicalAddress, deliveryAddress
+        for addr_field in ("postalAddress", "physicalAddress", "deliveryAddress"):
+            if params.get(addr_field):
+                body[addr_field] = params[addr_field]
+
+        # Sometimes LLM extracts a flat "address" — map to postalAddress
+        if params.get("address") and "postalAddress" not in body:
+            addr = params["address"]
+            if isinstance(addr, str):
+                body["postalAddress"] = {"addressLine1": addr}
+            elif isinstance(addr, dict):
+                body["postalAddress"] = addr
 
         body = self.strip_none_values(body)
         result = api_client.post("/customer", data=body)
@@ -51,22 +69,42 @@ class UpdateCustomerHandler(BaseHandler):
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         name = params["name"]
-        search = api_client.get("/customer", params={"name": name, "count": 1})
+        search = api_client.get("/customer", params={"name": name, "count": 5}, fields="*")
         values = search.get("values", [])
-        if not values:
-            logger.warning("Customer not found: %s", name)
-            return {"error": "not_found"}
+        # Exact match
+        customer = None
+        for v in values:
+            if v.get("name", "").strip().lower() == name.strip().lower():
+                customer = v
+                break
+        if not customer:
+            if values:
+                customer = values[0]
+            else:
+                logger.warning("Customer not found: %s", name)
+                return {"error": "not_found"}
 
-        customer = values[0]
         cust_id = customer["id"]
 
-        for field in ("name", "email", "phoneNumber", "organizationNumber", "invoiceEmail"):
+        for field in (
+            "name",
+            "email",
+            "phoneNumber",
+            "phoneNumberMobile",
+            "organizationNumber",
+            "invoiceEmail",
+        ):
             if params.get(field):
                 customer[field] = params[field]
 
-        if params.get("deliveryAddress"):
-            customer["deliveryAddress"] = params["deliveryAddress"]
+        for addr_field in ("postalAddress", "physicalAddress", "deliveryAddress"):
+            if params.get(addr_field):
+                customer[addr_field] = params[addr_field]
 
         result = api_client.put(f"/customer/{cust_id}", data=customer)
         logger.info("Updated customer id=%s", cust_id)
-        return {"id": cust_id, "action": "updated", "value": result.get("value", {})}
+        return {
+            "id": cust_id,
+            "action": "updated",
+            "value": result.get("value", {}),
+        }
