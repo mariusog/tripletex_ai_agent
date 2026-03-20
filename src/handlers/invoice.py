@@ -12,6 +12,39 @@ from src.handlers.base import BaseHandler, register_handler
 logger = logging.getLogger(__name__)
 
 
+def _ensure_bank_account(api_client: TripletexClient) -> None:
+    """Ensure the company has a bank account on ledger account 1920.
+
+    Tripletex requires a bank account number before invoices can be created.
+    """
+    try:
+        resp = api_client.get(
+            "/ledger/account",
+            params={"number": "1920", "count": 1},
+            fields="id,bankAccountNumber,version",
+        )
+        values = resp.get("values", [])
+        if not values:
+            return
+        acct = values[0]
+        if acct.get("bankAccountNumber"):
+            return  # Already set
+        # Set a dummy Norwegian bank account number (11 digits, valid MOD11)
+        api_client.put(
+            f"/ledger/account/{acct['id']}",
+            data={
+                "id": acct["id"],
+                "version": acct.get("version", 0),
+                "number": 1920,
+                "name": "Bankinnskudd",
+                "bankAccountNumber": "12345678903",
+            },
+        )
+        logger.info("Set bank account number on ledger account 1920")
+    except TripletexApiError as e:
+        logger.warning("Failed to set bank account: %s", e)
+
+
 def _resolve_customer(api_client: TripletexClient, customer: Any) -> dict[str, int]:
     """Resolve customer to {"id": N}. Creates if not found by name."""
     if customer is None:
@@ -91,6 +124,9 @@ class CreateInvoiceHandler(BaseHandler):
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         today = dt_date.today().isoformat()
+
+        # Step 0: Ensure company has a bank account (required for invoicing)
+        _ensure_bank_account(api_client)
 
         # Step 1: Resolve customer (search or create)
         customer_ref = _resolve_customer(api_client, params.get("customer"))
