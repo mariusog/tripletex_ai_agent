@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class BankReconciliationHandler(BaseHandler):
     """POST /bank/reconciliation, optionally add adjustments.
 
-    Optimal: 1 call (no adjustments) + 1 per adjustment.
+    Resolves account by number if no ID provided.
     """
 
     def get_task_type(self) -> str:
@@ -23,10 +23,48 @@ class BankReconciliationHandler(BaseHandler):
 
     @property
     def required_params(self) -> list[str]:
-        return ["accountId"]
+        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        body: dict[str, Any] = {"account": {"id": int(params["accountId"])}}
+        # Resolve account: by ID, or by account number
+        account_id = params.get("accountId")
+        if not account_id and params.get("accountNumber"):
+            resp = api_client.get(
+                "/ledger/account",
+                params={"number": str(params["accountNumber"]), "count": 1},
+                fields="id",
+            )
+            values = resp.get("values", [])
+            if values:
+                account_id = values[0]["id"]
+        if not account_id and params.get("account"):
+            acct = params["account"]
+            if isinstance(acct, dict) and "id" in acct:
+                account_id = int(acct["id"])
+            elif isinstance(acct, (int, str)):
+                try:
+                    acct_num = int(acct)
+                    resp = api_client.get(
+                        "/ledger/account",
+                        params={"number": str(acct_num), "count": 1},
+                        fields="id",
+                    )
+                    values = resp.get("values", [])
+                    if values:
+                        account_id = values[0]["id"]
+                except (TypeError, ValueError):
+                    pass
+        if not account_id:
+            # Default to account 1920 (bank)
+            resp = api_client.get(
+                "/ledger/account",
+                params={"number": "1920", "count": 1},
+                fields="id",
+            )
+            values = resp.get("values", [])
+            account_id = values[0]["id"] if values else 0
+
+        body: dict[str, Any] = {"account": {"id": int(account_id)}}
 
         if "accountingPeriodId" in params:
             body["accountingPeriod"] = {"id": int(params["accountingPeriodId"])}

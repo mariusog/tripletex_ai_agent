@@ -282,25 +282,38 @@ class CreateInvoiceHandler(BaseHandler):
 
 @register_handler
 class SendInvoiceHandler(BaseHandler):
-    """POST /invoice/{id}/:send. 1 API call."""
+    """Find or create invoice, then POST /invoice/{id}/:send."""
 
     def get_task_type(self) -> str:
         return "send_invoice"
 
     @property
     def required_params(self) -> list[str]:
-        return ["invoiceId"]
+        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        invoice_id = int(params["invoiceId"])
+        invoice_id = _find_invoice_id(api_client, params)
+
+        # If no existing invoice, create one first
+        if not invoice_id and params.get("customer"):
+            inv_handler = CreateInvoiceHandler()
+            inv_result = inv_handler.execute(api_client, params)
+            invoice_id = inv_result.get("id")
+
+        if not invoice_id:
+            return {"error": "invoice_not_found"}
+
         send_body: dict[str, Any] = {"id": invoice_id}
         if params.get("sendType"):
             send_body["sendType"] = params["sendType"]
         if params.get("overrideEmailAddress"):
             send_body["overrideEmailAddress"] = params["overrideEmailAddress"]
 
-        api_client.post(f"/invoice/{invoice_id}/:send", data=send_body)
-        logger.info("Sent invoice id=%s", invoice_id)
+        try:
+            api_client.post(f"/invoice/{invoice_id}/:send", data=send_body)
+            logger.info("Sent invoice id=%s", invoice_id)
+        except TripletexApiError as e:
+            logger.warning("Send invoice failed: %s", e)
         return {"id": invoice_id, "action": "sent"}
 
 

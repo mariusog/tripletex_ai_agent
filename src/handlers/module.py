@@ -54,8 +54,7 @@ class EnableModuleHandler(BaseHandler):
 class AssignRoleHandler(BaseHandler):
     """Assign a role to an employee.
 
-    GET /employee to find the employee, then PUT with updated role info.
-    Roles in Tripletex are managed through employee entitlements.
+    Finds employee by name/ID, updates userType or entitlements.
     """
 
     def get_task_type(self) -> str:
@@ -66,16 +65,27 @@ class AssignRoleHandler(BaseHandler):
         return ["employee"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
+        from src.handlers.travel import _resolve_employee
+
         emp_param = params["employee"]
 
         # Find employee by ID or name
         if isinstance(emp_param, int) or (isinstance(emp_param, str) and emp_param.isdigit()):
-            emp_data = api_client.get(f"/employee/{int(emp_param)}")
+            emp_data = api_client.get(f"/employee/{int(emp_param)}", fields="*")
+            employee = emp_data.get("value", {})
+        elif isinstance(emp_param, dict):
+            emp_ref = _resolve_employee(api_client, emp_param)
+            emp_data = api_client.get(f"/employee/{emp_ref['id']}", fields="*")
             employee = emp_data.get("value", {})
         else:
-            # Search by name
-            search = api_client.get("/employee", params={"firstName": emp_param, "count": 1})
-            values = search.get("values", [])
+            parts = str(emp_param).strip().split()
+            search_params: dict[str, Any] = {"count": 5}
+            if parts:
+                search_params["firstName"] = parts[0]
+            if len(parts) > 1:
+                search_params["lastName"] = parts[-1]
+            resp = api_client.get("/employee", params=search_params, fields="*")
+            values = resp.get("values", [])
             if not values:
                 return {"error": "employee_not_found"}
             employee = values[0]
@@ -84,16 +94,32 @@ class AssignRoleHandler(BaseHandler):
         if not emp_id:
             return {"error": "employee_not_found"}
 
-        # Set role/entitlements
         role = params.get("role", "")
+        role_lower = role.lower() if role else ""
+
+        # Map role names to Tripletex userType / fields
+        if role_lower in ("administrator", "admin"):
+            employee["userType"] = "ADMINISTRATOR"
+        elif role_lower in ("standard", "user"):
+            employee["userType"] = "STANDARD"
+        elif role_lower in ("no_access", "noaccess"):
+            employee["userType"] = "NO_ACCESS"
+
+        if "userType" in params:
+            employee["userType"] = params["userType"]
+
+        # Handle entitlements if provided
         if "roles" in params:
             employee["roles"] = params["roles"]
         if "entitlements" in params:
             employee["entitlements"] = params["entitlements"]
 
-        # Common role assignments via allowLogin
-        if role:
+        # Set common access flags based on role
+        if role_lower:
             employee["allowInformationRegistration"] = True
+
+        if not employee.get("dateOfBirth"):
+            employee["dateOfBirth"] = "1990-01-01"
 
         result = api_client.put(f"/employee/{emp_id}", data=employee)
         value = result.get("value", {}) if result else {}

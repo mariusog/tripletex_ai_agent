@@ -49,21 +49,33 @@ class CreateAssetHandler(BaseHandler):
 
 @register_handler
 class UpdateAssetHandler(BaseHandler):
-    """GET /asset/{id} then PUT /asset/{id} with updated fields."""
+    """Find asset by ID or name, then PUT with updated fields."""
 
     def get_task_type(self) -> str:
         return "update_asset"
 
     @property
     def required_params(self) -> list[str]:
-        return ["assetId"]
+        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        asset_id = int(params["assetId"])
-        asset_data = api_client.get(f"/asset/{asset_id}")
-        asset = asset_data.get("value", {})
+        asset = None
+        asset_id = None
+        if "assetId" in params or "id" in params:
+            asset_id = int(params.get("assetId") or params["id"])
+            asset_data = api_client.get(f"/asset/{asset_id}")
+            asset = asset_data.get("value", {})
+        elif "name" in params:
+            resp = api_client.get("/asset", params={"name": params["name"], "count": 5}, fields="*")
+            for v in resp.get("values", []):
+                if v.get("name", "").strip().lower() == params["name"].strip().lower():
+                    asset = v
+                    break
+            if not asset and resp.get("values"):
+                asset = resp["values"][0]
         if not asset:
             return {"error": "asset_not_found"}
+        asset_id = asset["id"]
 
         for field in (
             "name",

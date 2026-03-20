@@ -57,29 +57,33 @@ userType ("STANDARD" or "ADMINISTRATOR")}}
 - create_product: {{name, number, priceExcludingVatCurrency, vatType, ...}}
 - create_department: {{name, departmentNumber, departmentManager, ...}}
 - create_project: {{name, number, startDate, endDate, customer, ...}}
-- update_project: {{projectId or name (to find), fields to update...}}
-- assign_role: {{firstName, lastName, role, ...}}
+- update_project: {{projectId or name (to find), newName (if renaming), fields to update...}}
+- assign_role: {{employee (name string or {{firstName, lastName}}), \
+role ("administrator"/"standard"/"no_access"), userType}}
 - enable_module: {{moduleName, ...}}
 - create_order: {{customer, orderDate, deliveryDate, \
 orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency}}]}}
 - create_invoice: {{customer, invoiceDate, invoiceDueDate, \
 orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency or amount}}], \
 register_payment: {{amount, paymentDate}} (if payment mentioned)}}
-- send_invoice: {{invoiceId or search criteria...}}
+- send_invoice: {{invoiceId or customer + orderLines (will create and send)}}
 - register_payment: {{customer, amount, paymentDate, description, reversal (bool), \
 orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency}}]}}
 - create_credit_note: {{invoiceId or search criteria, ...}}
 - create_travel_expense: {{employee, project, travelDetails, costs, ...}}
-- deliver_travel_expense: {{travelExpenseId or search criteria...}}
-- approve_travel_expense: {{travelExpenseId or search criteria...}}
-- link_project_customer: {{projectId, customer, ...}}
+- deliver_travel_expense: {{travelExpenseId or employee (name/dict), title, \
+costs, travelDetails (same as create_travel_expense if creating first)}}
+- approve_travel_expense: {{travelExpenseId or employee (name/dict), title, \
+costs, travelDetails (same as create_travel_expense if creating first)}}
+- link_project_customer: {{projectId or name (to find project), customer, ...}}
 - create_activity: {{name, ...}}
 - create_asset: {{name, ...}}
-- update_asset: {{id/name (to find), fields to update...}}
+- update_asset: {{assetId or name (to find), fields to update...}}
 - create_supplier: {{name, organizationNumber, email, phoneNumber, postalAddress, ...}}
 - create_voucher: {{date, description, postings (debit/credit accounts, amounts), supplier, ...}}
 - reverse_voucher: {{voucherId or search criteria...}}
-- bank_reconciliation: {{account, date, ...}}
+- bank_reconciliation: {{accountId or accountNumber (e.g. 1920), \
+reconciliationDate, adjustments: [{{amount, description, date}}]}}
 - ledger_correction: {{account, amount, date, description, ...}}
 - year_end_closing: {{year, ...}}
 - balance_sheet_report: {{dateFrom, dateTo, ...}}

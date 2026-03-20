@@ -78,25 +78,46 @@ class CreateProjectHandler(BaseHandler):
         return {"id": value.get("id"), "action": "created"}
 
 
+def _find_project(api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any] | None:
+    """Find project by ID or name search."""
+    if "projectId" in params:
+        proj_data = api_client.get(f"/project/{int(params['projectId'])}")
+        return proj_data.get("value")
+    name = params.get("name") or params.get("projectName")
+    if name:
+        resp = api_client.get("/project", params={"name": name, "count": 5}, fields="*")
+        for v in resp.get("values", []):
+            if v.get("name", "").strip().lower() == name.strip().lower():
+                return v
+        if resp.get("values"):
+            return resp["values"][0]
+    return None
+
+
 @register_handler
 class UpdateProjectHandler(BaseHandler):
-    """GET /project/{id} then PUT /project/{id}. 2 API calls."""
+    """GET /project (search by name or ID) then PUT. 2 API calls."""
 
     def get_task_type(self) -> str:
         return "update_project"
 
     @property
     def required_params(self) -> list[str]:
-        return ["projectId"]
+        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        proj_id = int(params["projectId"])
-        proj_data = api_client.get(f"/project/{proj_id}")
-        project = proj_data.get("value", {})
+        project = _find_project(api_client, params)
         if not project:
             return {"error": "project_not_found"}
+        proj_id = project["id"]
 
-        for field in ("name", "number", "isClosed", "isInternal"):
+        # Allow "newName" to rename the project
+        if "newName" in params:
+            project["name"] = params["newName"]
+        elif "name" in params and params["name"] != project.get("name"):
+            project["name"] = params["name"]
+
+        for field in ("number", "isClosed", "isInternal"):
             if field in params:
                 project[field] = params[field]
 
@@ -106,9 +127,16 @@ class UpdateProjectHandler(BaseHandler):
                 if date_val:
                     project[date_field] = date_val
 
-        for ref_field in ("projectManager", "department", "customer"):
+        for ref_field in ("projectManager", "department"):
             if ref_field in params:
                 project[ref_field] = self.ensure_ref(params[ref_field], ref_field)
+
+        if "customer" in params:
+            cust = params["customer"]
+            if isinstance(cust, dict) and "id" not in cust:
+                project["customer"] = _resolve_customer(api_client, cust)
+            else:
+                project["customer"] = self.ensure_ref(cust, "customer")
 
         result = api_client.put(f"/project/{proj_id}", data=project)
         logger.info("Updated project id=%s", proj_id)
@@ -117,23 +145,27 @@ class UpdateProjectHandler(BaseHandler):
 
 @register_handler
 class LinkProjectCustomerHandler(BaseHandler):
-    """GET /project/{id} then PUT /project/{id} with customer ref. 2 API calls."""
+    """Find project by name/ID, resolve customer, then PUT. 2-3 API calls."""
 
     def get_task_type(self) -> str:
         return "link_project_customer"
 
     @property
     def required_params(self) -> list[str]:
-        return ["projectId", "customer"]
+        return ["customer"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        proj_id = int(params["projectId"])
-        project = api_client.get(f"/project/{proj_id}")
-        proj_data = project.get("value", {})
+        proj_data = _find_project(api_client, params)
         if not proj_data:
             return {"error": "project_not_found"}
 
-        proj_data["customer"] = self.ensure_ref(params["customer"], "customer")
+        proj_id = proj_data["id"]
+        cust = params["customer"]
+        if isinstance(cust, dict) and "id" not in cust:
+            proj_data["customer"] = _resolve_customer(api_client, cust)
+        else:
+            proj_data["customer"] = self.ensure_ref(cust, "customer")
+
         api_client.put(f"/project/{proj_id}", data=proj_data)
         logger.info("Linked customer to project id=%s", proj_id)
         return {"id": proj_id, "action": "customer_linked"}

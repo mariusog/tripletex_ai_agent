@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from datetime import date as dt_date
 from typing import Any
@@ -263,19 +264,73 @@ class CreateTravelExpenseHandler(BaseHandler):
         return {"id": te_id, "action": "created"}
 
 
+def _find_travel_expense(api_client: TripletexClient, params: dict[str, Any]) -> int | None:
+    """Find travel expense by ID, title, or employee name."""
+    if "travelExpenseId" in params:
+        return int(params["travelExpenseId"])
+    if "id" in params:
+        return int(params["id"])
+    # Search by employee and/or title
+    search_params: dict[str, Any] = {"count": 5}
+    if params.get("employeeId"):
+        search_params["employeeId"] = int(params["employeeId"])
+    resp = api_client.get(
+        "/travelExpense", params=search_params, fields="id,title,employee(id,firstName,lastName)"
+    )
+    values = resp.get("values", [])
+    if not values:
+        return None
+    # Filter by title if provided
+    title = params.get("title", "")
+    if title:
+        for v in values:
+            if v.get("title", "").strip().lower() == title.strip().lower():
+                return v["id"]
+    # Filter by employee name if provided
+    emp = params.get("employee")
+    if emp and isinstance(emp, (str, dict)):
+        first = ""
+        last = ""
+        if isinstance(emp, str):
+            parts = emp.strip().split()
+            first = parts[0].lower() if parts else ""
+            last = parts[-1].lower() if len(parts) > 1 else ""
+        elif isinstance(emp, dict):
+            first = (emp.get("firstName") or "").lower()
+            last = (emp.get("lastName") or "").lower()
+        for v in values:
+            ve = v.get("employee", {})
+            vf = (ve.get("firstName") or "").strip().lower()
+            vl = (ve.get("lastName") or "").strip().lower()
+            if first and last and vf == first and vl == last:
+                return v["id"]
+            if first and vf == first:
+                return v["id"]
+    # Fallback: return the most recent
+    return values[0]["id"] if values else None
+
+
 @register_handler
 class DeliverTravelExpenseHandler(BaseHandler):
-    """POST /travelExpense/:deliver."""
+    """POST /travelExpense/:deliver. Searches by employee/title if no ID."""
 
     def get_task_type(self) -> str:
         return "deliver_travel_expense"
 
     @property
     def required_params(self) -> list[str]:
-        return ["travelExpenseId"]
+        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        te_id = int(params["travelExpenseId"])
+        te_id = _find_travel_expense(api_client, params)
+        if not te_id:
+            # If we have employee info, create then deliver
+            if params.get("employee"):
+                create_handler = CreateTravelExpenseHandler()
+                result = create_handler.execute(api_client, params)
+                te_id = result.get("id")
+            if not te_id:
+                return {"error": "travel_expense_not_found"}
         api_client.put(f"/travelExpense/{te_id}/:deliver", data={"id": te_id})
         logger.info("Delivered travel expense id=%s", te_id)
         return {"id": te_id, "action": "delivered"}
@@ -283,17 +338,28 @@ class DeliverTravelExpenseHandler(BaseHandler):
 
 @register_handler
 class ApproveTravelExpenseHandler(BaseHandler):
-    """POST /travelExpense/:approve."""
+    """POST /travelExpense/:approve. Searches by employee/title if no ID."""
 
     def get_task_type(self) -> str:
         return "approve_travel_expense"
 
     @property
     def required_params(self) -> list[str]:
-        return ["travelExpenseId"]
+        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        te_id = int(params["travelExpenseId"])
+        te_id = _find_travel_expense(api_client, params)
+        if not te_id:
+            # If we have employee info, create then approve
+            if params.get("employee"):
+                create_handler = CreateTravelExpenseHandler()
+                result = create_handler.execute(api_client, params)
+                te_id = result.get("id")
+                if te_id:
+                    with contextlib.suppress(TripletexApiError):
+                        api_client.put(f"/travelExpense/{te_id}/:deliver", data={"id": te_id})
+            if not te_id:
+                return {"error": "travel_expense_not_found"}
         api_client.put(f"/travelExpense/{te_id}/:approve", data={"id": te_id})
         logger.info("Approved travel expense id=%s", te_id)
         return {"id": te_id, "action": "approved"}
