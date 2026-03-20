@@ -144,7 +144,16 @@ class TripletexClient:
                 raise TripletexApiError(self._parse_error(response, response.status_code))
 
             if response.status_code >= 400:
-                raise TripletexApiError(self._parse_error(response, response.status_code))
+                error = self._parse_error(response, response.status_code)
+                logger.warning(
+                    "API error %d on %s %s: %s | validation: %s",
+                    error.status,
+                    method,
+                    endpoint,
+                    error.message,
+                    error.validation_messages,
+                )
+                raise TripletexApiError(error)
 
             # Success — parse JSON if present
             if response.status_code == 204:
@@ -167,9 +176,9 @@ class TripletexClient:
 
         return ApiError(
             status=status_code,
-            code=body.get("code", 0),
-            message=body.get("message", ""),
-            developer_message=body.get("developerMessage", ""),
-            validation_messages=body.get("validationMessages", []),
-            request_id=body.get("requestId", ""),
+            code=body.get("code") or 0,
+            message=body.get("message") or "",
+            developer_message=body.get("developerMessage") or "",
+            validation_messages=body.get("validationMessages") or [],
+            request_id=body.get("requestId") or "",
         )

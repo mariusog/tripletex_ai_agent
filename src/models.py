@@ -6,6 +6,8 @@ and internal data structures for task routing.
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -53,5 +55,5 @@ class ApiError(BaseModel):
     code: int = 0
     message: str = ""
     developer_message: str = ""
-    validation_messages: list[dict[str, str]] = Field(default_factory=list)
+    validation_messages: list[dict[str, Any]] = Field(default_factory=list)
     request_id: str = ""
