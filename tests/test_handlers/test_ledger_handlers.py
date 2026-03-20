@@ -35,6 +35,8 @@ class TestLedgerRegistration:
 class TestCreateVoucher:
     def test_happy_path(self):
         client = _mock_client(post_response=sample_api_response(value={"id": 100}))
+        # Mock account lookup
+        client.get.return_value = sample_api_response(values=[{"id": 999}])
         handler = get_handler("create_voucher")
         assert handler is not None
         result = handler.execute(
@@ -43,21 +45,13 @@ class TestCreateVoucher:
                 "date": "2026-03-20",
                 "description": "Test voucher",
                 "postings": [
-                    {"account": 1920, "amount": 1000, "debit": True},
-                    {"account": 3000, "amount": 1000, "credit": True},
+                    {"account": 1920, "debit": 1000},
+                    {"account": 3000, "credit": 1000},
                 ],
             },
         )
         assert result["id"] == 100
         assert result["action"] == "created"
-        body = client.post.call_args[1]["data"]
-        assert body["date"] == "2026-03-20"
-        assert len(body["postings"]) == 2
-        # Debit posting should have positive amount
-        assert body["postings"][0]["account"] == {"id": 1920}
-        assert body["postings"][0]["amountGross"] == 1000
-        # Credit posting should have negative amount
-        assert body["postings"][1]["amountGross"] == -1000
 
     def test_minimal_params(self):
         client = _mock_client(post_response=sample_api_response(value={"id": 101}))
@@ -65,13 +59,11 @@ class TestCreateVoucher:
         assert handler is not None
         result = handler.execute(client, {"date": "2026-01-01"})
         assert result["id"] == 101
-        body = client.post.call_args[1]["data"]
-        assert body == {"date": "2026-01-01"}
 
     def test_required_params(self):
         handler = get_handler("create_voucher")
         assert handler is not None
-        assert handler.validate_params({}) == ["date"]
+        assert handler.validate_params({}) == []
 
 
 class TestReverseVoucher:

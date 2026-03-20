@@ -11,19 +11,45 @@ from src.handlers.base import BaseHandler, register_handler
 logger = logging.getLogger(__name__)
 
 
-def _build_posting(posting: dict[str, Any]) -> dict[str, Any]:
+def _resolve_account(
+    api_client: TripletexClient, account: Any
+) -> dict[str, int]:
+    """Resolve account number to {"id": N}."""
+    if isinstance(account, dict) and "id" in account:
+        return {"id": int(account["id"])}
+    try:
+        number = int(account)
+    except (TypeError, ValueError):
+        return {"id": 0}
+    resp = api_client.get(
+        "/ledger/account",
+        params={"number": str(number), "count": 1},
+        fields="id",
+    )
+    values = resp.get("values", [])
+    if values:
+        return {"id": values[0]["id"]}
+    logger.warning("Account %d not found", number)
+    return {"id": 0}
+
+
+def _build_posting(
+    api_client: TripletexClient, posting: dict[str, Any]
+) -> dict[str, Any]:
     """Build a single voucher posting payload."""
     result: dict[str, Any] = {}
     if "account" in posting:
-        result["account"] = BaseHandler.ensure_ref(posting["account"], "account")
+        result["account"] = _resolve_account(api_client, posting["account"])
     for field in ("amountCurrency", "amount", "description"):
         if field in posting and posting[field] is not None:
             result[field] = posting[field]
-    # debit/credit override amountGross; only fall back to explicit amountGross
-    if "debit" in posting:
-        result["amountGross"] = abs(posting.get("amount", 0))
-    elif "credit" in posting:
-        result["amountGross"] = -abs(posting.get("amount", 0))
+    # Handle debit/credit amounts
+    debit = posting.get("debit", 0) or 0
+    credit = posting.get("credit", 0) or 0
+    if debit and not credit:
+        result["amountGross"] = abs(debit)
+    elif credit and not debit:
+        result["amountGross"] = -abs(credit)
     elif "amountGross" in posting and posting["amountGross"] is not None:
         result["amountGross"] = posting["amountGross"]
     return {k: v for k, v in result.items() if v is not None}
@@ -38,12 +64,14 @@ class CreateVoucherHandler(BaseHandler):
 
     @property
     def required_params(self) -> list[str]:
-        return ["date"]
+        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        date_val = self.validate_date(params["date"], "date")
+        from datetime import date as dt_date
+
+        date_val = self.validate_date(params.get("date"), "date")
         if not date_val:
-            return {"error": "invalid_date"}
+            date_val = dt_date.today().isoformat()
 
         body: dict[str, Any] = {"date": date_val}
 
@@ -54,10 +82,10 @@ class CreateVoucherHandler(BaseHandler):
         if "voucherType" in params:
             body["typeId"] = int(params["voucherType"])
 
-        # Build postings
+        # Build postings — resolve account numbers to IDs
         postings = params.get("postings", [])
         if postings:
-            body["postings"] = [_build_posting(p) for p in postings]
+            body["postings"] = [_build_posting(api_client, p) for p in postings]
 
         body = self.strip_none_values(body)
         result = api_client.post("/ledger/voucher", data=body)
