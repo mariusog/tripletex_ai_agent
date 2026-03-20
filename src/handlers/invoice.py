@@ -19,13 +19,15 @@ def _ensure_bank_account(api_client: TripletexClient) -> None:
     """Ensure the company has a bank account on ledger account 1920.
 
     Tripletex requires a bank account number before invoices can be created.
-    Caches the result to avoid repeated API calls.
+    Uses get_cached to leverage global process-level cache, avoiding
+    repeated API calls across client instances and handler invocations.
     """
     global _bank_account_set
     if _bank_account_set:
         return
     try:
-        resp = api_client.get(
+        resp = api_client.get_cached(
+            "ledger_account_1920",
             "/ledger/account",
             params={"number": "1920", "count": 1},
             fields="id,bankAccountNumber,version",
@@ -55,7 +57,12 @@ def _ensure_bank_account(api_client: TripletexClient) -> None:
 
 
 def _resolve_customer(api_client: TripletexClient, customer: Any) -> dict[str, int]:
-    """Resolve customer to {"id": N}. Creates if not found by name."""
+    """Resolve customer to {"id": N}. Creates if not found by name.
+
+    Uses create-first strategy: on fresh competition sandboxes customers
+    rarely pre-exist, so POST first saves a GET call. Falls back to
+    search only if creation fails (e.g. duplicate name).
+    """
     if customer is None:
         return {"id": 0}
     if isinstance(customer, dict) and "id" in customer:
@@ -69,21 +76,25 @@ def _resolve_customer(api_client: TripletexClient, customer: Any) -> dict[str, i
     name = str(customer) if not isinstance(customer, dict) else customer.get("name", "")
     if not name:
         return {"id": 0}
-    resp = api_client.get("/customer", params={"name": name, "count": 5}, fields="id,name")
-    values = resp.get("values", [])
-    # Verify exact or close name match (API search is fuzzy)
-    for v in values:
-        if v.get("name", "").strip().lower() == name.strip().lower():
-            return {"id": v["id"]}
-    # Create the customer
+    # Create-first: skip GET search, POST directly (saves 1 API call).
     org_nr = customer.get("organizationNumber") if isinstance(customer, dict) else None
     cust_body: dict[str, Any] = {"name": name}
     if org_nr:
         cust_body["organizationNumber"] = str(org_nr)
-    result = api_client.post("/customer", data=cust_body)
-    cust_id = result.get("value", {}).get("id")
-    logger.info("Auto-created customer '%s' id=%s", name, cust_id)
-    return {"id": cust_id}
+    try:
+        result = api_client.post("/customer", data=cust_body)
+        cust_id = result.get("value", {}).get("id")
+        logger.info("Auto-created customer '%s' id=%s", name, cust_id)
+        return {"id": cust_id}
+    except TripletexApiError:
+        pass
+    # Fallback: search if creation failed (e.g. duplicate name on non-fresh sandbox)
+    resp = api_client.get("/customer", params={"name": name, "count": 5}, fields="id,name")
+    values = resp.get("values", [])
+    for v in values:
+        if v.get("name", "").strip().lower() == name.strip().lower():
+            return {"id": v["id"]}
+    return {"id": 0}
 
 
 def _resolve_product(
@@ -148,7 +159,9 @@ class CreateInvoiceHandler(BaseHandler):
             proj_name = proj.get("name") if isinstance(proj, dict) else str(proj)
             if proj_name:
                 # Use account owner as PM (guaranteed to have PM access)
-                emp_search = api_client.get("/employee", params={"count": 1}, fields="id")
+                emp_search = api_client.get_cached(
+                    "account_owner", "/employee", params={"count": 1}, fields="id"
+                )
                 emp_values = emp_search.get("values", [])
                 pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
 
@@ -344,19 +357,32 @@ class RegisterPaymentHandler(BaseHandler):
                     }
                 ]
 
-            # For reversals: create invoice with full payment first
             if is_reversal:
+                # Reversals: create invoice with full positive payment first,
+                # then register the negative reversal payment below.
                 inv_params["register_payment"] = {"amount": abs_amount}
                 inv_params.pop("reversal", None)
+            else:
+                # Normal: register payment inside CreateInvoiceHandler to
+                # avoid a separate payment type lookup + payment PUT call.
+                inv_params["register_payment"] = {
+                    "amount": pay_amount,
+                    "paymentDate": params.get("paymentDate"),
+                }
 
             invoice_handler = CreateInvoiceHandler()
             inv_result = invoice_handler.execute(api_client, inv_params)
             invoice_id = inv_result.get("id")
 
+            if not is_reversal:
+                # Payment already registered inside CreateInvoiceHandler
+                if not invoice_id:
+                    return {"error": "invoice_not_found"}
+                return {"id": invoice_id, "action": "payment_registered"}
+
             # For reversals, override amount to negative for the reversal payment below
-            if is_reversal:
-                params = dict(params)
-                params["amount"] = -abs_amount
+            params = dict(params)
+            params["amount"] = -abs_amount
 
         if not invoice_id:
             return {"error": "invoice_not_found"}

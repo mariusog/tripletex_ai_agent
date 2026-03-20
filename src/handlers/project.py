@@ -27,8 +27,11 @@ class CreateProjectHandler(BaseHandler):
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         from datetime import date as dt_date
 
-        # projectManager must have PM access — use account owner as PM
-        emp_search = api_client.get("/employee", params={"count": 1}, fields="id")
+        # projectManager must have PM access — use account owner (first employee)
+        # Cached so this is free after first call in the container
+        emp_search = api_client.get_cached(
+            "account_owner", "/employee", params={"count": 1}, fields="id"
+        )
         emp_values = emp_search.get("values", [])
         pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
 
