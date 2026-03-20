@@ -26,12 +26,16 @@ class CreateDepartmentHandler(BaseHandler):
         body: dict[str, Any] = {"name": params["name"]}
 
         if "departmentNumber" in params and params["departmentNumber"] is not None:
-            body["departmentNumber"] = params["departmentNumber"]
+            body["departmentNumber"] = str(params["departmentNumber"])
 
         if "departmentManager" in params:
-            body["departmentManager"] = self.ensure_ref(
-                params["departmentManager"], "departmentManager"
-            )
+            mgr = params["departmentManager"]
+            if isinstance(mgr, dict) and "id" not in mgr:
+                from src.handlers.travel import _resolve_employee
+
+                body["departmentManager"] = _resolve_employee(api_client, mgr)
+            else:
+                body["departmentManager"] = self.ensure_ref(mgr, "departmentManager")
 
         body = self.strip_none_values(body)
         result = api_client.post("/department", data=body)
