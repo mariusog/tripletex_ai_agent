@@ -92,7 +92,11 @@ class TestDeliverTravelExpense:
         client = _mock_client()
         client.get.return_value = sample_api_response(
             values=[
-                {"id": 42, "title": "Trip", "employee": {"id": 1, "firstName": "Ola", "lastName": "N"}},
+                {
+                    "id": 42,
+                    "title": "Trip",
+                    "employee": {"id": 1, "firstName": "Ola", "lastName": "N"},
+                },
             ]
         )
         handler = get_handler("deliver_travel_expense")
@@ -124,7 +128,11 @@ class TestApproveTravelExpense:
         client = _mock_client()
         client.get.return_value = sample_api_response(
             values=[
-                {"id": 55, "title": "Oslo trip", "employee": {"id": 2, "firstName": "A", "lastName": "B"}},
+                {
+                    "id": 55,
+                    "title": "Oslo trip",
+                    "employee": {"id": 2, "firstName": "A", "lastName": "B"},
+                },
             ]
         )
         handler = get_handler("approve_travel_expense")
