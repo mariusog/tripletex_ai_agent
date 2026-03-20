@@ -4,7 +4,6 @@
 .devcontainer
 __pycache__
 *.pyc
-*.pyo
 *.egg-info
 .mypy_cache
 .pytest_cache
@@ -18,7 +17,6 @@ tmp/
 patches/
 TASKS*.md
 CLAUDE.md
+HANDOVER.md
 *.md
-.dockerignore
-Dockerfile
-clouddeploy.sh
+!pyproject.toml
