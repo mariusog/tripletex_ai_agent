@@ -65,7 +65,7 @@ class AssignRoleHandler(BaseHandler):
         return ["employee"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        from src.handlers.travel import _resolve_employee
+        from src.handlers.resolvers import resolve_employee as _resolve_employee
 
         emp_param = params["employee"]
 

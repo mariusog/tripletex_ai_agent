@@ -8,125 +8,20 @@ from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
 from src.handlers.base import BaseHandler, register_handler
+from src.handlers.resolvers import (
+    ensure_bank_account as _ensure_bank_account,
+)
+from src.handlers.resolvers import (
+    find_invoice_id as _find_invoice_id,
+)
+from src.handlers.resolvers import (
+    resolve_customer as _resolve_customer,
+)
+from src.handlers.resolvers import (
+    resolve_product as _resolve_product,
+)
 
 logger = logging.getLogger(__name__)
-
-
-_bank_account_set = False
-
-
-def _ensure_bank_account(api_client: TripletexClient) -> None:
-    """Ensure the company has a bank account on ledger account 1920.
-
-    Tripletex requires a bank account number before invoices can be created.
-    Caches the result to avoid repeated API calls.
-    """
-    global _bank_account_set
-    if _bank_account_set:
-        return
-    try:
-        resp = api_client.get(
-            "/ledger/account",
-            params={"number": "1920", "count": 1},
-            fields="id,bankAccountNumber,version",
-        )
-        values = resp.get("values", [])
-        if not values:
-            _bank_account_set = True
-            return
-        acct = values[0]
-        if acct.get("bankAccountNumber"):
-            _bank_account_set = True
-            return
-        api_client.put(
-            f"/ledger/account/{acct['id']}",
-            data={
-                "id": acct["id"],
-                "version": acct.get("version", 0),
-                "number": 1920,
-                "name": "Bankinnskudd",
-                "bankAccountNumber": "12345678903",
-            },
-        )
-        logger.info("Set bank account number on ledger account 1920")
-        _bank_account_set = True
-    except TripletexApiError as e:
-        logger.warning("Failed to set bank account: %s", e)
-
-
-def _resolve_customer(api_client: TripletexClient, customer: Any) -> dict[str, int]:
-    """Resolve customer to {"id": N}. Creates if not found by name."""
-    if customer is None:
-        return {"id": 0}
-    if isinstance(customer, dict) and "id" in customer:
-        return {"id": int(customer["id"])}
-    if isinstance(customer, (int, float)):
-        return {"id": int(customer)}
-    try:
-        return {"id": int(customer)}
-    except (TypeError, ValueError):
-        pass
-    name = str(customer) if not isinstance(customer, dict) else customer.get("name", "")
-    if not name:
-        return {"id": 0}
-    resp = api_client.get("/customer", params={"name": name, "count": 5}, fields="id,name")
-    values = resp.get("values", [])
-    # Verify exact or close name match (API search is fuzzy)
-    for v in values:
-        if v.get("name", "").strip().lower() == name.strip().lower():
-            return {"id": v["id"]}
-    # Create the customer
-    org_nr = customer.get("organizationNumber") if isinstance(customer, dict) else None
-    cust_body: dict[str, Any] = {"name": name}
-    if org_nr:
-        cust_body["organizationNumber"] = str(org_nr)
-    result = api_client.post("/customer", data=cust_body)
-    cust_id = result.get("value", {}).get("id")
-    logger.info("Auto-created customer '%s' id=%s", name, cust_id)
-    return {"id": cust_id}
-
-
-def _resolve_product(
-    api_client: TripletexClient, product: Any, price: Any = None
-) -> dict[str, int]:
-    """Resolve product to {"id": N}. Creates if not found."""
-    if isinstance(product, dict) and "id" in product:
-        return {"id": int(product["id"])}
-    if isinstance(product, (int, float)):
-        return {"id": int(product)}
-    try:
-        return {"id": int(product)}
-    except (TypeError, ValueError):
-        pass
-    name = str(product) if not isinstance(product, dict) else product.get("name", "")
-    number = product.get("number") if isinstance(product, dict) else None
-    # Search by number first (more precise), then by name
-    if number:
-        resp = api_client.get("/product", params={"number": str(number), "count": 1}, fields="id")
-        values = resp.get("values", [])
-        if values:
-            return {"id": values[0]["id"]}
-    if name:
-        resp = api_client.get("/product", params={"name": name, "count": 5}, fields="id,name")
-        values = resp.get("values", [])
-        for v in values:
-            if v.get("name", "").strip().lower() == name.strip().lower():
-                return {"id": v["id"]}
-    # Create the product with price
-    prod_body: dict[str, Any] = {"name": name or f"Product {number}"}
-    if number:
-        prod_body["number"] = int(number)
-    if price is not None:
-        prod_body["priceExcludingVatCurrency"] = price
-    try:
-        result = api_client.post("/product", data=prod_body)
-    except TripletexApiError:
-        # Retry without price (VAT conflict)
-        prod_body.pop("priceExcludingVatCurrency", None)
-        result = api_client.post("/product", data=prod_body)
-    prod_id = result.get("value", {}).get("id")
-    logger.info("Auto-created product '%s' id=%s", name, prod_id)
-    return {"id": prod_id}
 
 
 @register_handler
@@ -166,9 +61,9 @@ class CreateInvoiceHandler(BaseHandler):
                 # Also create the requested PM employee (competition checks they exist)
                 pm_info = proj.get("projectManager") if isinstance(proj, dict) else None
                 if pm_info and isinstance(pm_info, dict) and "id" not in pm_info:
-                    from src.handlers.travel import _resolve_employee
+                    from src.handlers.resolvers import resolve_employee
 
-                    _resolve_employee(api_client, pm_info)
+                    resolve_employee(api_client, pm_info)
                 import secrets
 
                 proj_num = (
@@ -432,37 +327,3 @@ class CreateCreditNoteHandler(BaseHandler):
         except TripletexApiError as e:
             logger.warning("Credit note creation failed: %s", e)
             return {"invoiceId": invoice_id, "action": "invoice_created_credit_note_failed"}
-
-
-def _find_invoice_id(api_client: TripletexClient, params: dict[str, Any]) -> int | None:
-    """Resolve invoice ID: direct ID avoids a GET call, otherwise search."""
-    if "invoiceId" in params:
-        return int(params["invoiceId"])
-    search_params: dict[str, Any] = {"count": 1}
-    if "invoiceNumber" in params:
-        search_params["invoiceNumber"] = params["invoiceNumber"]
-    elif "customer" in params:
-        cust = params["customer"]
-        if isinstance(cust, dict):
-            if "id" in cust:
-                search_params["customerId"] = int(cust["id"])
-            elif "name" in cust:
-                # Can't search invoice by customer name directly
-                return None
-            else:
-                return None
-        else:
-            try:
-                search_params["customerId"] = int(cust)
-            except (TypeError, ValueError):
-                return None
-    else:
-        return None
-    try:
-        resp = api_client.get("/invoice", params=search_params)
-        values = resp.get("values", [])
-        if not values:
-            return None
-        return values[0].get("id")
-    except TripletexApiError:
-        return None

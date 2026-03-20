@@ -8,7 +8,8 @@ from typing import Any
 
 from src.api_client import TripletexClient
 from src.handlers.base import BaseHandler, register_handler
-from src.handlers.invoice import _resolve_customer, _resolve_product
+from src.handlers.resolvers import resolve_customer as _resolve_customer
+from src.handlers.resolvers import resolve_product as _resolve_product
 
 logger = logging.getLogger(__name__)
 

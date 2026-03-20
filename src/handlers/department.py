@@ -31,7 +31,7 @@ class CreateDepartmentHandler(BaseHandler):
         if "departmentManager" in params:
             mgr = params["departmentManager"]
             if isinstance(mgr, dict) and "id" not in mgr:
-                from src.handlers.travel import _resolve_employee
+                from src.handlers.resolvers import resolve_employee as _resolve_employee
 
                 body["departmentManager"] = _resolve_employee(api_client, mgr)
             else:
@@ -78,7 +78,7 @@ class UpdateDepartmentHandler(BaseHandler):
         if "departmentManager" in params:
             mgr = params["departmentManager"]
             if isinstance(mgr, dict) and "id" not in mgr:
-                from src.handlers.travel import _resolve_employee
+                from src.handlers.resolvers import resolve_employee as _resolve_employee
 
                 dept["departmentManager"] = _resolve_employee(api_client, mgr)
             else:

@@ -9,136 +9,20 @@ from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
 from src.handlers.base import BaseHandler, register_handler
+from src.handlers.resolvers import (
+    find_cost_category as _find_cost_category,
+)
+from src.handlers.resolvers import (
+    find_travel_expense as _find_travel_expense,
+)
+from src.handlers.resolvers import (
+    get_travel_payment_type as _get_payment_type,
+)
+from src.handlers.resolvers import (
+    resolve_employee as _resolve_employee,
+)
 
 logger = logging.getLogger(__name__)
-
-# Map common cost descriptions to Tripletex costCategory descriptions
-COST_CATEGORY_MAP = {
-    "fly": "Fly",
-    "flybillett": "Fly",
-    "flight": "Fly",
-    "taxi": "Taxi",
-    "hotell": "Hotell",
-    "hotel": "Hotell",
-    "mat": "Mat",
-    "food": "Mat",
-    "parkering": "Parkering",
-    "parking": "Parkering",
-    "buss": "Buss",
-    "bus": "Buss",
-    "tog": "Tog",
-    "train": "Tog",
-    "drivstoff": "Drivstoff",
-    "fuel": "Drivstoff",
-    "ferge": "Ferge",
-    "ferry": "Ferge",
-    "kollektiv": "Kollektivtransport",
-    "public transport": "Kollektivtransport",
-}
-
-
-def _resolve_employee(api_client: TripletexClient, employee: Any) -> dict[str, int]:
-    """Resolve employee to {"id": N}. Searches by name or creates."""
-    if isinstance(employee, dict) and "id" in employee:
-        return {"id": int(employee["id"])}
-    if isinstance(employee, (int, float)):
-        return {"id": int(employee)}
-    try:
-        return {"id": int(employee)}
-    except (TypeError, ValueError):
-        pass
-
-    first = ""
-    last = ""
-    email = None
-    if isinstance(employee, dict):
-        first = employee.get("firstName", "")
-        last = employee.get("lastName", "")
-        email = employee.get("email")
-    elif isinstance(employee, str):
-        parts = employee.strip().split()
-        first = parts[0] if parts else ""
-        last = parts[-1] if len(parts) > 1 else ""
-
-    # Search by name (verify exact match — API search can be fuzzy)
-    search_params: dict[str, Any] = {"count": 5}
-    if first:
-        search_params["firstName"] = first
-    if last:
-        search_params["lastName"] = last
-    resp = api_client.get("/employee", params=search_params, fields="id,firstName,lastName")
-    values = resp.get("values", [])
-    for v in values:
-        v_first = (v.get("firstName") or "").strip().lower()
-        v_last = (v.get("lastName") or "").strip().lower()
-        if v_first == first.strip().lower() and v_last == last.strip().lower():
-            return {"id": v["id"]}
-
-    # Create employee via handler (handles dept, employment, etc.)
-    from src.handlers import HANDLER_REGISTRY
-
-    emp_handler = HANDLER_REGISTRY["create_employee"]
-    emp_params: dict[str, Any] = {
-        "firstName": first or "Unknown",
-        "lastName": last or "Employee",
-    }
-    if email:
-        emp_params["email"] = email
-
-    try:
-        result = emp_handler.execute(api_client, emp_params)
-        emp_id = result.get("id")
-        logger.info("Auto-created employee '%s %s' id=%s", first, last, emp_id)
-        return {"id": emp_id}
-    except TripletexApiError as e:
-        logger.warning("Failed to create employee: %s", e)
-        return {"id": 0}
-
-
-def _find_cost_category(
-    api_client: TripletexClient,
-    description: str,
-    _cache: dict[str, list[dict[str, Any]]] | None = None,
-) -> dict[str, int] | None:
-    """Find a cost category matching the description."""
-    if _cache is None:
-        _cache = {}
-    if "categories" not in _cache:
-        resp = api_client.get(
-            "/travelExpense/costCategory",
-            params={"showOnTravelExpenses": "true", "count": 50},
-            fields="id,description",
-        )
-        _cache["categories"] = resp.get("values", [])
-
-    desc_lower = description.lower().strip()
-    # Direct map
-    mapped = COST_CATEGORY_MAP.get(desc_lower)
-
-    for cat in _cache["categories"]:
-        cat_desc = cat.get("description", "").lower()
-        if mapped and cat_desc == mapped.lower():
-            return {"id": cat["id"]}
-        if desc_lower in cat_desc or cat_desc in desc_lower:
-            return {"id": cat["id"]}
-
-    # Fallback: first category
-    if _cache["categories"]:
-        return {"id": _cache["categories"][0]["id"]}
-    return None
-
-
-def _get_payment_type(api_client: TripletexClient) -> dict[str, int] | None:
-    """Get the first available travel payment type."""
-    resp = api_client.get(
-        "/travelExpense/paymentType",
-        params={"count": 1},
-        fields="id",
-    )
-    values = resp.get("values", [])
-    if values:
-        return {"id": values[0]["id"]}
-    return None
 
 
 @register_handler
@@ -262,52 +146,6 @@ class CreateTravelExpenseHandler(BaseHandler):
                 logger.warning("Failed to add per diem: %s", e)
 
         return {"id": te_id, "action": "created"}
-
-
-def _find_travel_expense(api_client: TripletexClient, params: dict[str, Any]) -> int | None:
-    """Find travel expense by ID, title, or employee name."""
-    if "travelExpenseId" in params:
-        return int(params["travelExpenseId"])
-    if "id" in params:
-        return int(params["id"])
-    # Search by employee and/or title
-    search_params: dict[str, Any] = {"count": 5}
-    if params.get("employeeId"):
-        search_params["employeeId"] = int(params["employeeId"])
-    resp = api_client.get(
-        "/travelExpense", params=search_params, fields="id,title,employee(id,firstName,lastName)"
-    )
-    values = resp.get("values", [])
-    if not values:
-        return None
-    # Filter by title if provided
-    title = params.get("title", "")
-    if title:
-        for v in values:
-            if v.get("title", "").strip().lower() == title.strip().lower():
-                return v["id"]
-    # Filter by employee name if provided
-    emp = params.get("employee")
-    if emp and isinstance(emp, (str, dict)):
-        first = ""
-        last = ""
-        if isinstance(emp, str):
-            parts = emp.strip().split()
-            first = parts[0].lower() if parts else ""
-            last = parts[-1].lower() if len(parts) > 1 else ""
-        elif isinstance(emp, dict):
-            first = (emp.get("firstName") or "").lower()
-            last = (emp.get("lastName") or "").lower()
-        for v in values:
-            ve = v.get("employee", {})
-            vf = (ve.get("firstName") or "").strip().lower()
-            vl = (ve.get("lastName") or "").strip().lower()
-            if first and last and vf == first and vl == last:
-                return v["id"]
-            if first and vf == first:
-                return v["id"]
-    # Fallback: return the most recent
-    return values[0]["id"] if values else None
 
 
 @register_handler
