@@ -8,6 +8,7 @@ from typing import Any
 from src.api_client import TripletexClient
 from src.handlers.base import BaseHandler, register_handler
 from src.handlers.invoice import _resolve_customer
+from src.handlers.travel import _resolve_employee
 
 logger = logging.getLogger(__name__)
 
@@ -26,15 +27,23 @@ class CreateProjectHandler(BaseHandler):
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         from datetime import date as dt_date
 
-        # projectManager must have PM access — always use first employee (account owner)
-        # Newly created employees won't have PM access, so the account owner is safest
+        # projectManager must have PM access — use account owner as PM
         emp_search = api_client.get("/employee", params={"count": 1}, fields="id")
         emp_values = emp_search.get("values", [])
         pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
 
+        # Also create the requested employee (competition checks they exist)
+        pm = params.get("projectManager")
+        if pm and isinstance(pm, dict) and "id" not in pm:
+            _resolve_employee(api_client, pm)
+
+        import secrets
+
+        proj_num = str(params.get("number", secrets.randbelow(90000) + 10000))
+
         body: dict[str, Any] = {
             "name": params["name"],
-            "number": str(params.get("number", "1")),
+            "number": proj_num,
             "projectManager": pm_ref,
         }
 
