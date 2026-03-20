@@ -119,7 +119,7 @@ class CreateDimensionVoucherHandler(BaseHandler):
                 "action": "dimension_created",
             }
 
-        date_val = params.get("date", today)
+        date_val = params.get("date") or today
         dim_field = f"freeAccountingDimension{dim_index}"
 
         voucher_postings = []
