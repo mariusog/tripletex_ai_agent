@@ -141,9 +141,7 @@ def _get_payment_type(api_client: TripletexClient) -> dict[str, int] | None:
     return None
 
 
-def _search_travel_expense(
-    api_client: TripletexClient, params: dict[str, Any]
-) -> int | None:
+def _search_travel_expense(api_client: TripletexClient, params: dict[str, Any]) -> int | None:
     """Search for a travel expense by employee name or title."""
     search_params: dict[str, Any] = {"count": 10}
     if params.get("employee"):

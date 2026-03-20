@@ -227,6 +227,35 @@ class CreateInvoiceHandler(BaseHandler):
                     ol["unitPriceExcludingVatCurrency"] = line["amount"]
                 elif "price" in line:
                     ol["unitPriceExcludingVatCurrency"] = line["price"]
+                # Set VAT type on order line if specified
+                if "vatType" in line:
+                    vat = line["vatType"]
+                    if isinstance(vat, dict) and "id" in vat:
+                        ol["vatType"] = vat
+                    else:
+                        # Resolve VAT type by percentage or name
+                        vat_str = str(vat).lower().strip().rstrip("%")
+                        try:
+                            vat_resp = api_client.get_cached(
+                                "vat_types",
+                                "/ledger/vatType",
+                                params={"count": 50},
+                                fields="id,name,percentage",
+                            )
+                            for v in vat_resp.get("values", []):
+                                try:
+                                    pct = float(vat_str)
+                                    if v.get("percentage") == pct:
+                                        ol["vatType"] = {"id": v["id"]}
+                                        break
+                                except ValueError:
+                                    pass
+                                v_name = (v.get("name") or "").lower()
+                                if vat_str in v_name or v_name in vat_str:
+                                    ol["vatType"] = {"id": v["id"]}
+                                    break
+                        except Exception:
+                            logger.warning("Could not resolve vatType '%s'", vat)
                 payloads.append(self.strip_none_values(ol))
             if payloads:
                 api_client.post("/order/orderline/list", data=payloads)
