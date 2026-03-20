@@ -252,19 +252,20 @@ class RegisterPaymentHandler(BaseHandler):
                     }
                 ]
 
-            # For reversals: create invoice with full payment first
+            # For reversals: create invoice WITHOUT payment — the result
+            # should be an unpaid invoice (payment was reversed)
             if is_reversal:
-                inv_params["register_payment"] = {"amount": abs_amount}
+                inv_params.pop("register_payment", None)
                 inv_params.pop("reversal", None)
+                inv_params.pop("payment", None)
 
             invoice_handler = CreateInvoiceHandler()
             inv_result = invoice_handler.execute(api_client, inv_params)
             invoice_id = inv_result.get("id")
 
-            # For reversals, override amount to negative for the reversal payment below
-            if is_reversal:
-                params = dict(params)
-                params["amount"] = -abs_amount
+            # For reversals, we're done — invoice is unpaid (outstanding)
+            if is_reversal and invoice_id:
+                return {"id": invoice_id, "action": "payment_reversed"}
 
         if not invoice_id:
             return {"error": "invoice_not_found"}
