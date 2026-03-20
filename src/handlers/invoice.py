@@ -118,8 +118,12 @@ def _resolve_product(
         prod_body["number"] = int(number)
     if price is not None:
         prod_body["priceExcludingVatCurrency"] = price
-        prod_body["priceIncludingVatCurrency"] = price
-    result = api_client.post("/product", data=prod_body)
+    try:
+        result = api_client.post("/product", data=prod_body)
+    except TripletexApiError:
+        # Retry without price (VAT conflict)
+        prod_body.pop("priceExcludingVatCurrency", None)
+        result = api_client.post("/product", data=prod_body)
     prod_id = result.get("value", {}).get("id")
     logger.info("Auto-created product '%s' id=%s", name, prod_id)
     return {"id": prod_id}
