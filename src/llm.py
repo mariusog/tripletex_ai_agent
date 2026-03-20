@@ -108,6 +108,9 @@ orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency}}
 
 Extract ALL relevant parameters from the prompt. Use field names matching the Tripletex API.
 If dates are mentioned, format as yyyy-MM-dd.
+If a date is NOT mentioned in the prompt, OMIT the field entirely. \
+Never output placeholder values like "<UNKNOWN>", "unknown", "TBD", or "N/A". \
+Only include fields you can actually extract from the prompt.
 If the prompt references attached files, note that in params as "has_attachments": true."""
 
 # Tool definition for structured output — forces valid JSON with constrained task_type

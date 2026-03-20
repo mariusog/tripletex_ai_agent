@@ -100,20 +100,15 @@ def _resolve_product(
         pass
     name = str(product) if not isinstance(product, dict) else product.get("name", "")
     number = product.get("number") if isinstance(product, dict) else None
-    # Search by number first (more precise), then by name
+    # Create-first: in competition sandboxes products never pre-exist.
+    # Skip the GET search entirely — saves 1 API call per product.
+    # Only search by number (precise match) if provided.
     if number:
         resp = api_client.get("/product", params={"number": str(number), "count": 1}, fields="id")
         values = resp.get("values", [])
         if values:
             return {"id": values[0]["id"]}
-    if name:
-        resp = api_client.get("/product", params={"name": name, "count": 5}, fields="id,name")
-        values = resp.get("values", [])
-        for v in values:
-            if v.get("name", "").strip().lower() == name.strip().lower():
-                return {"id": v["id"]}
     # Create the product WITHOUT price to avoid VAT type conflicts.
-    # Price is set on the order line instead, which always works.
     prod_body: dict[str, Any] = {"name": name or f"Product {number}"}
     if number:
         prod_body["number"] = str(number)

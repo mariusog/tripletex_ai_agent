@@ -32,6 +32,11 @@ class TripletexApiError(Exception):
         super().__init__(f"Tripletex API error {error.status}: {error.message}")
 
 
+# Module-level cache shared across TripletexClient instances within a process.
+# Keyed by (base_url, cache_key) so different sandbox URLs don't collide.
+_global_cache: dict[tuple[str, str], Any] = {}
+
+
 class TripletexClient:
     """HTTP client for the Tripletex REST API v2.
 
@@ -77,9 +82,13 @@ class TripletexClient:
         params: dict[str, Any] | None = None,
         fields: str | None = None,
     ) -> Any:
-        """GET with per-session caching. Saves API calls for repeated lookups."""
+        """GET with caching. Checks global process cache first, then per-session."""
+        global_key = (self.base_url, cache_key)
+        if global_key in _global_cache:
+            return _global_cache[global_key]
         if cache_key not in self._cache:
             self._cache[cache_key] = self.get(endpoint, params=params, fields=fields)
+        _global_cache[global_key] = self._cache[cache_key]
         return self._cache[cache_key]
 
     def post(
