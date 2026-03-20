@@ -60,10 +60,12 @@ def _resolve_customer(api_client: TripletexClient, customer: Any) -> dict[str, i
     name = str(customer) if not isinstance(customer, dict) else customer.get("name", "")
     if not name:
         return {"id": 0}
-    resp = api_client.get("/customer", params={"name": name, "count": 1}, fields="id,name")
+    resp = api_client.get("/customer", params={"name": name, "count": 5}, fields="id,name")
     values = resp.get("values", [])
-    if values:
-        return {"id": values[0]["id"]}
+    # Verify exact or close name match (API search is fuzzy)
+    for v in values:
+        if v.get("name", "").strip().lower() == name.strip().lower():
+            return {"id": v["id"]}
     # Create the customer
     org_nr = customer.get("organizationNumber") if isinstance(customer, dict) else None
     cust_body: dict[str, Any] = {"name": name}
@@ -75,7 +77,9 @@ def _resolve_customer(api_client: TripletexClient, customer: Any) -> dict[str, i
     return {"id": cust_id}
 
 
-def _resolve_product(api_client: TripletexClient, product: Any) -> dict[str, int]:
+def _resolve_product(
+    api_client: TripletexClient, product: Any, price: Any = None
+) -> dict[str, int]:
     """Resolve product to {"id": N}. Creates if not found."""
     if isinstance(product, dict) and "id" in product:
         return {"id": int(product["id"])}
@@ -94,14 +98,18 @@ def _resolve_product(api_client: TripletexClient, product: Any) -> dict[str, int
         if values:
             return {"id": values[0]["id"]}
     if name:
-        resp = api_client.get("/product", params={"name": name, "count": 1}, fields="id")
+        resp = api_client.get("/product", params={"name": name, "count": 5}, fields="id,name")
         values = resp.get("values", [])
-        if values:
-            return {"id": values[0]["id"]}
-    # Create the product
+        for v in values:
+            if v.get("name", "").strip().lower() == name.strip().lower():
+                return {"id": v["id"]}
+    # Create the product with price
     prod_body: dict[str, Any] = {"name": name or f"Product {number}"}
     if number:
         prod_body["number"] = int(number)
+    if price is not None:
+        prod_body["priceExcludingVatCurrency"] = price
+        prod_body["priceIncludingVatCurrency"] = price
     result = api_client.post("/product", data=prod_body)
     prod_id = result.get("value", {}).get("id")
     logger.info("Auto-created product '%s' id=%s", name, prod_id)
@@ -180,7 +188,8 @@ class CreateInvoiceHandler(BaseHandler):
             for line in lines:
                 ol: dict[str, Any] = {"order": {"id": order_id}}
                 if "product" in line:
-                    ol["product"] = _resolve_product(api_client, line["product"])
+                    line_price = line.get("unitPriceExcludingVatCurrency") or line.get("amount") or line.get("price")
+                    ol["product"] = _resolve_product(api_client, line["product"], price=line_price)
                 if "description" in line:
                     ol["description"] = line["description"]
                 ol["count"] = line.get("count", line.get("quantity", 1))

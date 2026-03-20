@@ -25,11 +25,12 @@ def _resolve_supplier(
     org_nr = supplier.get("organizationNumber") if isinstance(supplier, dict) else None
     if not name:
         return None
-    # Search by name
-    resp = api_client.get("/supplier", params={"name": name, "count": 1}, fields="id")
+    # Search by name (verify exact match — API search is fuzzy)
+    resp = api_client.get("/supplier", params={"name": name, "count": 5}, fields="id,name")
     values = resp.get("values", [])
-    if values:
-        return {"id": values[0]["id"]}
+    for v in values:
+        if v.get("name", "").strip().lower() == name.strip().lower():
+            return {"id": v["id"]}
     # Create
     sup_body: dict[str, Any] = {"name": name}
     if org_nr:

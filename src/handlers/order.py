@@ -51,7 +51,8 @@ class CreateOrderHandler(BaseHandler):
             for line in lines:
                 ol: dict[str, Any] = {"order": {"id": order_id}}
                 if "product" in line:
-                    ol["product"] = _resolve_product(api_client, line["product"])
+                    line_price = line.get("unitPriceExcludingVatCurrency") or line.get("amount") or line.get("price")
+                    ol["product"] = _resolve_product(api_client, line["product"], price=line_price)
                 if "description" in line:
                     ol["description"] = line["description"]
                 ol["count"] = line.get("count", line.get("quantity", 1))
