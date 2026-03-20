@@ -117,12 +117,21 @@ class CreateTravelExpenseHandler(BaseHandler):
 
         if per_diem:
             try:
+                td = params.get("travelDetails", {})
+                duration = td.get("duration") if isinstance(td, dict) else None
+                duration_days = (
+                    duration.get("days")
+                    if isinstance(duration, dict)
+                    else duration
+                    if isinstance(duration, (int, float))
+                    else None
+                )
                 days = (
                     per_diem.get("days")
                     or per_diem.get("numberOfDays")
                     or per_diem.get("count")
-                    or params.get("travelDetails", {}).get("numberOfDays")
-                    or params.get("travelDetails", {}).get("duration", {}).get("days")
+                    or (td.get("numberOfDays") if isinstance(td, dict) else None)
+                    or duration_days
                     or 1
                 )
                 rate = (
