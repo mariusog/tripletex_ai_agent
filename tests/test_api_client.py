@@ -104,9 +104,11 @@ class TestErrorHandling:
             "validationMessages": [{"field": "name", "message": "Required"}],
         }
         response = httpx.Response(400, json=body)
-        with patch.object(client._client, "request", return_value=response):
-            with pytest.raises(TripletexApiError) as exc_info:
-                client.get("/employee")
+        with (
+            patch.object(client._client, "request", return_value=response),
+            pytest.raises(TripletexApiError) as exc_info,
+        ):
+            client.get("/employee")
         err = exc_info.value.error
         assert err.status == 400
         assert err.developer_message == "Missing required field"
@@ -114,17 +116,21 @@ class TestErrorHandling:
 
     def test_404_raises_without_retry(self, client: TripletexClient) -> None:
         response = httpx.Response(404, json={"status": 404, "message": "NF"})
-        with patch.object(client._client, "request", return_value=response) as mock:
-            with pytest.raises(TripletexApiError):
-                client.get("/employee/999")
+        with (
+            patch.object(client._client, "request", return_value=response) as mock,
+            pytest.raises(TripletexApiError),
+        ):
+            client.get("/employee/999")
         # Should NOT retry on 4xx
         assert mock.call_count == 1
 
     def test_non_json_error_body(self, client: TripletexClient) -> None:
         response = httpx.Response(500, text="Internal Server Error")
-        with patch.object(client._client, "request", return_value=response):
-            with pytest.raises(TripletexApiError) as exc_info:
-                client.get("/employee")
+        with (
+            patch.object(client._client, "request", return_value=response),
+            pytest.raises(TripletexApiError) as exc_info,
+        ):
+            client.get("/employee")
         assert exc_info.value.error.status == 500
 
 
@@ -145,9 +151,11 @@ class TestRateLimiting:
     @patch("src.api_client.time.sleep")
     def test_exhausts_retries_on_429(self, mock_sleep: MagicMock, client: TripletexClient) -> None:
         r429 = httpx.Response(429, json={"status": 429, "message": "Slow"})
-        with patch.object(client._client, "request", return_value=r429):
-            with pytest.raises(TripletexApiError) as exc_info:
-                client.get("/employee")
+        with (
+            patch.object(client._client, "request", return_value=r429),
+            pytest.raises(TripletexApiError) as exc_info,
+        ):
+            client.get("/employee")
         assert exc_info.value.error.status == 429
         # 3 retries = 3 sleeps
         assert mock_sleep.call_count == 3

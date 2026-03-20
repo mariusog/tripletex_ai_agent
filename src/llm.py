@@ -35,7 +35,7 @@ PARAMETER SCHEMAS per task type:
 - update_employee: {{id/name (to find), fields to update...}}
 - create_customer: {{name, email, phoneNumber, organizationNumber, ...}}
 - update_customer: {{id/name (to find), fields to update...}}
-- create_product: {{name, number, priceExcludingVatCurrency, priceIncludingVatCurrency, vatType, ...}}
+- create_product: {{name, number, priceExcludingVatCurrency, vatType, ...}}
 - create_department: {{name, departmentNumber, departmentManager, ...}}
 - create_project: {{name, number, projectManager, startDate, endDate, customer, ...}}
 - update_project: {{id/name (to find), fields to update...}}
