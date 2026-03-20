@@ -269,12 +269,23 @@ class CreateInvoiceHandler(BaseHandler):
                 except TripletexApiError as e:
                     logger.warning("Payment failed: %s", e)
 
+        # Step 6: Send invoice if requested
+        if inv_id and params.get("send_invoice"):
+            try:
+                api_client.put(
+                    f"/invoice/{inv_id}/:send",
+                    params={"sendType": params.get("sendType", "EMAIL")},
+                )
+                logger.info("Sent invoice id=%s", inv_id)
+            except TripletexApiError as e:
+                logger.warning("Send invoice failed: %s", e)
+
         return {"id": inv_id, "orderId": order_id, "action": "created"}
 
 
 @register_handler
 class SendInvoiceHandler(BaseHandler):
-    """POST /invoice/{id}/:send. 1 API call."""
+    """PUT /invoice/{id}/:send. 1 API call."""
 
     def get_task_type(self) -> str:
         return "send_invoice"

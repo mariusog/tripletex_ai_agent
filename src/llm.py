@@ -85,7 +85,8 @@ userType ("STANDARD" or "ADMINISTRATOR")}}
 orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency}}]}}
 - create_invoice: {{customer, invoiceDate, invoiceDueDate, \
 orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency or amount}}], \
-register_payment: {{amount, paymentDate}} (if payment mentioned)}}
+register_payment: {{amount, paymentDate}} (if payment mentioned), \
+send_invoice: true (if the prompt asks to SEND the invoice)}}
 - send_invoice: {{invoiceId or search criteria...}}
 - register_payment: {{customer, amount, paymentDate, description, reversal (bool), \
 orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency}}]}}
