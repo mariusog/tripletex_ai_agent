@@ -43,8 +43,8 @@ CLASSIFICATION RULES (important!):
 classify as "register_payment" with negative amount and "reversal": true. \
 Include "orderLines" with the product/service name and amount from the original invoice.
 - Do NOT classify payment reversals as "reverse_voucher" — use "register_payment" instead
-- If the task mentions a customer by name, pass the full name as "customer" \
-(string or object with "name")
+- If the task mentions a customer by name, pass as "customer" object: \
+{{"name": "...", "organizationNumber": "..."}} (include org number if mentioned)
 - If the task mentions products by name/number, include them in orderLines with product name/number
 - For SUPPLIERS (leverandør, supplier, Lieferant, fournisseur, proveedor, fornecedor), \
 classify as "create_supplier" — NOT create_customer. \

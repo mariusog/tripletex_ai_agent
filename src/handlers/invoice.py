@@ -45,7 +45,11 @@ class CreateInvoiceHandler(BaseHandler):
         _ensure_bank_account(api_client)
 
         # Step 1: Resolve customer (search or create)
-        customer_ref = _resolve_customer(api_client, params.get("customer"))
+        cust_param = params.get("customer")
+        # Merge top-level organizationNumber into customer if it's a string
+        if isinstance(cust_param, str) and params.get("organizationNumber"):
+            cust_param = {"name": cust_param, "organizationNumber": params["organizationNumber"]}
+        customer_ref = _resolve_customer(api_client, cust_param)
 
         # Step 1b: Create project if specified
         project_ref = None
