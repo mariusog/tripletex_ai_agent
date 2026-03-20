@@ -273,13 +273,13 @@ def main() -> None:
             f.write(md_content)
         logger.info("Wrote %s", md_path)
 
-        # Print summary
         total_fields = sum(len(i.get_fields) for i in results.values())
         total_required = sum(len(i.required_fields) for i in results.values())
-        print(
-            f"Explored {len(results)} endpoints: "
-            f"{total_fields} fields discovered, "
-            f"{total_required} required fields identified"
+        logger.info(
+            "Explored %d endpoints: %d fields discovered, %d required fields identified",
+            len(results),
+            total_fields,
+            total_required,
         )
     finally:
         client.close()
