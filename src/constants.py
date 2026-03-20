@@ -130,6 +130,7 @@ TIER_3_TASKS = [
     "create_voucher",
     "reverse_voucher",
     "delete_voucher",
+    "run_payroll",
     "bank_reconciliation",
     "ledger_correction",
     "year_end_closing",

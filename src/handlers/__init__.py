@@ -19,6 +19,7 @@ from src.handlers import (  # noqa: F401
     product,
     project,
     reporting,
+    salary,
     travel,
 )
 from src.handlers.base import HANDLER_REGISTRY, BaseHandler, get_handler, register_handler

@@ -1,0 +1,17 @@
+{
+  "task_type": "run_payroll",
+  "prompts": {
+    "no": "Kjør lønnsberegning for Ola Nordmann med grunnlønn 40000 NOK og bonus 5000 NOK",
+    "en": "Run payroll for John Smith with base salary 40000 NOK and a bonus of 5000 NOK",
+    "es": "Ejecute la nómina de Juan García con salario base de 40000 NOK y un bono de 5000 NOK",
+    "pt": "Execute a folha de pagamento de João Silva com salário base de 40000 NOK e bônus de 5000 NOK",
+    "nn": "Køyr lønnsutrekning for Ola Nordmann med grunnløn 40000 NOK og bonus 5000 NOK",
+    "de": "Führen Sie die Gehaltsabrechnung für Hans Müller mit Grundgehalt 40000 NOK und Bonus 5000 NOK durch",
+    "fr": "Exécutez la paie de Jean Dupont avec salaire de base 40000 NOK et prime de 5000 NOK"
+  },
+  "expected_params": {
+    "employee": {},
+    "baseSalary": 40000,
+    "bonus": 5000
+  }
+}
