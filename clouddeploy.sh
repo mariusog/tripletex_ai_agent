@@ -38,8 +38,7 @@ gcloud run deploy "$SERVICE_NAME" \
     --min-instances 0 \
     --max-instances 10 \
     --concurrency 1 \
-    --set-env-vars "PORT=8080" \
-    --set-secrets "ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest"
+    --set-env-vars "PORT=8080,ANTHROPIC_VERTEX_PROJECT_ID=ai-nm26osl-1792,CLOUD_ML_REGION=us-east5"
 
 echo "=== Deployment complete ==="
 gcloud run services describe "$SERVICE_NAME" \
