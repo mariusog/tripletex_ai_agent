@@ -1,0 +1,15 @@
+{
+  "task_type": "deliver_travel_expense",
+  "prompts": {
+    "no": "Lever reiseregning nummer 5001 til godkjenning",
+    "en": "Deliver travel expense number 5001 for approval",
+    "es": "Entregue el gasto de viaje numero 5001 para aprobacion",
+    "pt": "Entregue a despesa de viagem numero 5001 para aprovacao",
+    "nn": "Lever reiserekning nummer 5001 til godkjenning",
+    "de": "Reichen Sie Reisekostenabrechnung Nummer 5001 zur Genehmigung ein",
+    "fr": "Soumettez la note de frais numero 5001 pour approbation"
+  },
+  "expected_params": {
+    "travelExpenseId": 5001
+  }
+}

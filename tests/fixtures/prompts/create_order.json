@@ -1,0 +1,17 @@
+{
+  "task_type": "create_order",
+  "prompts": {
+    "no": "Opprett en ny ordre til kunde Berge Bygg AS med ordredato 2024-04-01 og leveringsdato 2024-04-15",
+    "en": "Create a new order for customer Berge Bygg AS with order date 2024-04-01 and delivery date 2024-04-15",
+    "es": "Cree un nuevo pedido para el cliente Berge Bygg AS con fecha de pedido 2024-04-01 y fecha de entrega 2024-04-15",
+    "pt": "Crie um novo pedido para o cliente Berge Bygg AS com data do pedido 2024-04-01 e data de entrega 2024-04-15",
+    "nn": "Opprett ein ny ordre til kunde Berge Bygg AS med ordredato 2024-04-01 og leveringsdato 2024-04-15",
+    "de": "Erstellen Sie einen neuen Auftrag fur den Kunden Berge Bygg AS mit Bestelldatum 2024-04-01 und Lieferdatum 2024-04-15",
+    "fr": "Creez une nouvelle commande pour le client Berge Bygg AS avec date de commande 2024-04-01 et date de livraison 2024-04-15"
+  },
+  "expected_params": {
+    "customer": "Berge Bygg AS",
+    "orderDate": "2024-04-01",
+    "deliveryDate": "2024-04-15"
+  }
+}

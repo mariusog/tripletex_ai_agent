@@ -1,0 +1,15 @@
+{
+  "task_type": "create_asset",
+  "prompts": {
+    "no": "Opprett et nytt anleggsmiddel med navn Varebil Toyota, anskaffelsesverdi 350000 kr",
+    "en": "Create a new asset named Delivery Van Toyota, acquisition cost 350000 NOK",
+    "es": "Cree un nuevo activo llamado Furgoneta Toyota, costo de adquisicion 350000 NOK",
+    "pt": "Crie um novo ativo chamado Van de Entrega Toyota, custo de aquisicao 350000 NOK",
+    "nn": "Opprett eit nytt anleggsmiddel med namn Varebil Toyota, anskaffingsverdi 350000 kr",
+    "de": "Erstellen Sie ein neues Anlagegut namens Lieferwagen Toyota, Anschaffungskosten 350000 NOK",
+    "fr": "Creez un nouvel actif nomme Camionnette Toyota, cout d'acquisition 350000 NOK"
+  },
+  "expected_params": {
+    "name": "Varebil Toyota"
+  }
+}

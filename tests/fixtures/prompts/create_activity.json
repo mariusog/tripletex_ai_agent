@@ -1,0 +1,15 @@
+{
+  "task_type": "create_activity",
+  "prompts": {
+    "no": "Opprett en ny aktivitet med navn Prosjektledelse",
+    "en": "Create a new activity named Project Management",
+    "es": "Cree una nueva actividad llamada Gestion de Proyectos",
+    "pt": "Crie uma nova atividade chamada Gestao de Projetos",
+    "nn": "Opprett ein ny aktivitet med namn Prosjektleiing",
+    "de": "Erstellen Sie eine neue Aktivitat namens Projektmanagement",
+    "fr": "Creez une nouvelle activite nommee Gestion de Projet"
+  },
+  "expected_params": {
+    "name": "Prosjektledelse"
+  }
+}

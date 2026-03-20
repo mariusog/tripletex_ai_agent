@@ -1,0 +1,15 @@
+{
+  "task_type": "send_invoice",
+  "prompts": {
+    "no": "Send faktura nummer 10042 til kunden via e-post",
+    "en": "Send invoice number 10042 to the customer by email",
+    "es": "Envie la factura numero 10042 al cliente por correo electronico",
+    "pt": "Envie a fatura numero 10042 para o cliente por email",
+    "nn": "Send faktura nummer 10042 til kunden via e-post",
+    "de": "Senden Sie Rechnung Nummer 10042 per E-Mail an den Kunden",
+    "fr": "Envoyez la facture numero 10042 au client par email"
+  },
+  "expected_params": {
+    "invoiceId": 10042
+  }
+}

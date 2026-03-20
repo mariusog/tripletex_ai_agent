@@ -1,0 +1,16 @@
+{
+  "task_type": "assign_role",
+  "prompts": {
+    "no": "Tildel rollen regnskapssjef til ansatt Per Hansen",
+    "en": "Assign the role of accounting manager to employee Per Hansen",
+    "es": "Asigne el rol de gerente contable al empleado Per Hansen",
+    "pt": "Atribua o cargo de gerente de contabilidade ao funcionario Per Hansen",
+    "nn": "Tildel rolla rekneskapssjef til tilsett Per Hansen",
+    "de": "Weisen Sie dem Mitarbeiter Per Hansen die Rolle des Buchhaltungsleiters zu",
+    "fr": "Attribuez le role de responsable comptable a l'employe Per Hansen"
+  },
+  "expected_params": {
+    "employee": "Per Hansen",
+    "role": "regnskapssjef"
+  }
+}

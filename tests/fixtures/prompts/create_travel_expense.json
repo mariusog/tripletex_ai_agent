@@ -1,0 +1,16 @@
+{
+  "task_type": "create_travel_expense",
+  "prompts": {
+    "no": "Opprett en reiseregning for ansatt Per Hansen, prosjekt Kontoroppussing, reise til Bergen 2024-03-15, hotell 1500 kr",
+    "en": "Create a travel expense for employee Per Hansen, project Office Renovation, trip to Bergen 2024-03-15, hotel 1500 NOK",
+    "es": "Cree un gasto de viaje para el empleado Per Hansen, proyecto Renovacion de Oficina, viaje a Bergen 2024-03-15, hotel 1500 NOK",
+    "pt": "Crie uma despesa de viagem para o funcionario Per Hansen, projeto Renovacao do Escritorio, viagem a Bergen 2024-03-15, hotel 1500 NOK",
+    "nn": "Opprett ei reiserekning for tilsett Per Hansen, prosjekt Kontoroppussing, reise til Bergen 2024-03-15, hotell 1500 kr",
+    "de": "Erstellen Sie eine Reisekostenabrechnung fur den Mitarbeiter Per Hansen, Projekt Buroerneuerung, Reise nach Bergen 2024-03-15, Hotel 1500 NOK",
+    "fr": "Creez une note de frais de deplacement pour l'employe Per Hansen, projet Renovation du Bureau, voyage a Bergen 2024-03-15, hotel 1500 NOK"
+  },
+  "expected_params": {
+    "employee": "Per Hansen",
+    "project": "Kontoroppussing"
+  }
+}

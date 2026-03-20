@@ -1,0 +1,16 @@
+{
+  "task_type": "update_customer",
+  "prompts": {
+    "no": "Oppdater kunden Berge Bygg AS sitt telefonnummer til 98765432",
+    "en": "Update customer Berge Bygg AS phone number to 98765432",
+    "es": "Actualice el numero de telefono del cliente Berge Bygg AS a 98765432",
+    "pt": "Atualize o numero de telefone do cliente Berge Bygg AS para 98765432",
+    "nn": "Oppdater kunden Berge Bygg AS sitt telefonnummer til 98765432",
+    "de": "Aktualisieren Sie die Telefonnummer des Kunden Berge Bygg AS auf 98765432",
+    "fr": "Mettez a jour le numero de telephone du client Berge Bygg AS en 98765432"
+  },
+  "expected_params": {
+    "name": "Berge Bygg AS",
+    "phoneNumber": "98765432"
+  }
+}

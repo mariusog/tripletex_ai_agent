@@ -1,0 +1,16 @@
+{
+  "task_type": "balance_sheet_report",
+  "prompts": {
+    "no": "Generer en balanserapport fra 2024-01-01 til 2024-03-31",
+    "en": "Generate a balance sheet report from 2024-01-01 to 2024-03-31",
+    "es": "Genere un informe de balance desde 2024-01-01 hasta 2024-03-31",
+    "pt": "Gere um relatorio de balanco de 2024-01-01 a 2024-03-31",
+    "nn": "Generer ein balanserapport fraa 2024-01-01 til 2024-03-31",
+    "de": "Erstellen Sie einen Bilanzbericht vom 2024-01-01 bis 2024-03-31",
+    "fr": "Generez un bilan comptable du 2024-01-01 au 2024-03-31"
+  },
+  "expected_params": {
+    "dateFrom": "2024-01-01",
+    "dateTo": "2024-03-31"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "task_type": "create_credit_note",
+  "prompts": {
+    "no": "Opprett en kreditnota for faktura 10042",
+    "en": "Create a credit note for invoice 10042",
+    "es": "Cree una nota de credito para la factura 10042",
+    "pt": "Crie uma nota de credito para a fatura 10042",
+    "nn": "Opprett ein kreditnota for faktura 10042",
+    "de": "Erstellen Sie eine Gutschrift fur Rechnung 10042",
+    "fr": "Creez un avoir pour la facture 10042"
+  },
+  "expected_params": {
+    "invoiceId": 10042
+  }
+}

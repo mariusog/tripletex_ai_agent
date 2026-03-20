@@ -1,0 +1,16 @@
+{
+  "task_type": "create_voucher",
+  "prompts": {
+    "no": "Opprett et nytt bilag med dato 2024-04-01, beskrivelse Husleie april, debet konto 6300 kredit konto 1920, belop 15000 kr",
+    "en": "Create a new voucher dated 2024-04-01, description Rent April, debit account 6300 credit account 1920, amount 15000 NOK",
+    "es": "Cree un nuevo comprobante con fecha 2024-04-01, descripcion Alquiler abril, cuenta debito 6300 cuenta credito 1920, monto 15000 NOK",
+    "pt": "Crie um novo voucher com data 2024-04-01, descricao Aluguel abril, conta debito 6300 conta credito 1920, valor 15000 NOK",
+    "nn": "Opprett eit nytt bilag med dato 2024-04-01, skildring Husleige april, debet konto 6300 kredit konto 1920, belop 15000 kr",
+    "de": "Erstellen Sie einen neuen Beleg mit Datum 2024-04-01, Beschreibung Miete April, Sollkonto 6300 Habenkonto 1920, Betrag 15000 NOK",
+    "fr": "Creez une nouvelle piece comptable datee du 2024-04-01, description Loyer avril, compte debit 6300 compte credit 1920, montant 15000 NOK"
+  },
+  "expected_params": {
+    "date": "2024-04-01",
+    "description": "Husleie april"
+  }
+}

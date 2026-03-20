@@ -1,0 +1,16 @@
+{
+  "task_type": "bank_reconciliation",
+  "prompts": {
+    "no": "Utfor bankavstemming for konto 1920 per dato 2024-03-31",
+    "en": "Perform bank reconciliation for account 1920 as of 2024-03-31",
+    "es": "Realice la conciliacion bancaria para la cuenta 1920 al 2024-03-31",
+    "pt": "Realize a conciliacao bancaria para a conta 1920 em 2024-03-31",
+    "nn": "Utfor bankavstemming for konto 1920 per dato 2024-03-31",
+    "de": "Fuhren Sie den Bankabgleich fur Konto 1920 zum 2024-03-31 durch",
+    "fr": "Effectuez le rapprochement bancaire pour le compte 1920 au 2024-03-31"
+  },
+  "expected_params": {
+    "account": "1920",
+    "date": "2024-03-31"
+  }
+}

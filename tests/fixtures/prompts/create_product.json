@@ -1,0 +1,17 @@
+{
+  "task_type": "create_product",
+  "prompts": {
+    "no": "Opprett et nytt produkt med navn Kontorstol Deluxe, pris 4999 kr ekskl. mva, varenummer P-1001",
+    "en": "Create a new product named Kontorstol Deluxe, price 4999 NOK excl. VAT, product number P-1001",
+    "es": "Cree un nuevo producto llamado Kontorstol Deluxe, precio 4999 NOK sin IVA, numero de producto P-1001",
+    "pt": "Crie um novo produto chamado Kontorstol Deluxe, preco 4999 NOK sem IVA, numero do produto P-1001",
+    "nn": "Opprett eit nytt produkt med namn Kontorstol Deluxe, pris 4999 kr ekskl. mva, varenummer P-1001",
+    "de": "Erstellen Sie ein neues Produkt namens Kontorstol Deluxe, Preis 4999 NOK exkl. MwSt., Produktnummer P-1001",
+    "fr": "Creez un nouveau produit nomme Kontorstol Deluxe, prix 4999 NOK HT, numero de produit P-1001"
+  },
+  "expected_params": {
+    "name": "Kontorstol Deluxe",
+    "priceExcludingVatCurrency": 4999,
+    "number": "P-1001"
+  }
+}

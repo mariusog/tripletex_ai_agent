@@ -1,0 +1,15 @@
+{
+  "task_type": "reverse_voucher",
+  "prompts": {
+    "no": "Reverser bilag nummer 8001",
+    "en": "Reverse voucher number 8001",
+    "es": "Revierta el comprobante numero 8001",
+    "pt": "Reverta o voucher numero 8001",
+    "nn": "Reverser bilag nummer 8001",
+    "de": "Stornieren Sie Beleg Nummer 8001",
+    "fr": "Annulez la piece comptable numero 8001"
+  },
+  "expected_params": {
+    "voucherId": 8001
+  }
+}
