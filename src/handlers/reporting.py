@@ -25,12 +25,14 @@ class LedgerCorrectionHandler(BaseHandler):
 
     @property
     def required_params(self) -> list[str]:
-        return ["date"]
+        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        date_val = self.validate_date(params["date"], "date")
+        from datetime import date as dt_date
+
+        date_val = self.validate_date(params.get("date"), "date")
         if not date_val:
-            return {"error": "invalid_date"}
+            date_val = dt_date.today().isoformat()
         body: dict[str, Any] = {"date": date_val}
 
         for field in ("description", "number", "tempNumber"):
@@ -78,31 +80,110 @@ class YearEndClosingHandler(BaseHandler):
 
     @property
     def required_params(self) -> list[str]:
-        return ["year"]
+        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        year = int(params["year"])
+        from datetime import date as dt_date
+
+        # Extract year — from params, date, or current year
+        year = params.get("year")
+        if year:
+            year = int(year)
+        else:
+            date_str = params.get("date", "")
+            if date_str and len(str(date_str)) >= 4:
+                year = int(str(date_str)[:4])
+            else:
+                year = dt_date.today().year - 1  # Default to previous year
+
         date = params.get("date", f"{year}-12-31")
+        date_val = self.validate_date(date, "date") or f"{year}-12-31"
 
         body: dict[str, Any] = {
-            "date": date,
-            "description": params.get("description", f"Year-end closing {year}"),
+            "date": date_val,
+            "description": params.get("description", f"Årsoppgjør {year}"),
         }
 
         if "voucherType" in params:
             body["typeId"] = int(params["voucherType"])
 
-        # Build closing postings if provided
+        # Build closing postings if provided by LLM
         postings = params.get("postings", [])
         if postings:
             body["postings"] = [
                 _build_posting(api_client, p, row=i + 1) for i, p in enumerate(postings)
             ]
+        else:
+            # Auto-generate minimal closing entries if no postings extracted
+            # Standard Norwegian year-end: close result to equity (8800 -> 2050)
+            body["postings"] = self._generate_closing_postings(api_client, year)
 
-        result = api_client.post("/ledger/voucher", data=body)
+        body = self.strip_none_values(body)
+        result = api_client.post("/ledger/voucher", data=body, params={"sendToLedger": "true"})
         value = result.get("value", {})
         logger.info("Created year-end closing voucher id=%s for year %d", value.get("id"), year)
         return {"id": value.get("id"), "year": year, "action": "year_end_closed"}
+
+    def _generate_closing_postings(
+        self, api_client: TripletexClient, year: int
+    ) -> list[dict[str, Any]]:
+        """Generate standard closing postings based on balance sheet data."""
+        try:
+            result = api_client.get(
+                "/balanceSheet",
+                params={
+                    "dateFrom": f"{year}-01-01",
+                    "dateTo": f"{year}-12-31",
+                    "accountNumberFrom": 3000,
+                    "accountNumberTo": 8999,
+                },
+            )
+            entries = result.get("values", []) if result else []
+        except TripletexApiError:
+            logger.warning("Could not fetch balance sheet for year %d", year)
+            entries = []
+
+        postings = []
+        total = 0
+        row = 1
+
+        for entry in entries:
+            balance = entry.get("closingBalance", 0) or entry.get("balance", 0)
+            if not balance:
+                continue
+            acct = entry.get("account", {})
+            acct_id = acct.get("id")
+            if not acct_id:
+                continue
+
+            # Reverse the balance on the P&L account
+            postings.append(
+                {
+                    "row": row,
+                    "account": {"id": acct_id},
+                    "amountGross": -balance,
+                    "amountGrossCurrency": -balance,
+                }
+            )
+            total += balance
+            row += 1
+
+        if postings:
+            # Post the net result to equity account 2050
+            from src.handlers.ledger import _resolve_account
+
+            equity_ref, vat_ref = _resolve_account(api_client, 2050)
+            posting = {
+                "row": row,
+                "account": equity_ref,
+                "amountGross": total,
+                "amountGrossCurrency": total,
+            }
+            if vat_ref:
+                posting["vatType"] = vat_ref
+            postings.append(posting)
+
+        return postings
 
 
 @register_handler
@@ -117,12 +198,17 @@ class BalanceSheetReportHandler(BaseHandler):
 
     @property
     def required_params(self) -> list[str]:
-        return ["dateFrom", "dateTo"]
+        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
+        from datetime import date as dt_date
+
+        today = dt_date.today()
+        date_from = params.get("dateFrom", f"{today.year}-01-01")
+        date_to = params.get("dateTo", today.isoformat())
         query: dict[str, Any] = {
-            "dateFrom": params["dateFrom"],
-            "dateTo": params["dateTo"],
+            "dateFrom": date_from,
+            "dateTo": date_to,
         }
 
         if "accountNumberFrom" in params:

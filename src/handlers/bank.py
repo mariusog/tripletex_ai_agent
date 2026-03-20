@@ -11,11 +11,37 @@ from src.handlers.base import BaseHandler, register_handler
 logger = logging.getLogger(__name__)
 
 
+def _resolve_account_id(api_client: TripletexClient, params: dict[str, Any]) -> int:
+    """Resolve account ID from accountId, account number, or account name."""
+    if "accountId" in params:
+        return int(params["accountId"])
+
+    account = params.get("account") or params.get("accountNumber") or "1920"
+    try:
+        number = int(account)
+    except (TypeError, ValueError):
+        number = 1920
+
+    resp = api_client.get_cached(
+        f"account_{number}",
+        "/ledger/account",
+        params={"number": str(number), "count": 1},
+        fields="id",
+    )
+    values = resp.get("values", [])
+    if values:
+        return values[0]["id"]
+
+    logger.warning("Account %s not found, defaulting to searching all", number)
+    return 0
+
+
 @register_handler
 class BankReconciliationHandler(BaseHandler):
     """POST /bank/reconciliation, optionally add adjustments.
 
-    Optimal: 1 call (no adjustments) + 1 per adjustment.
+    Resolves account number to ID if needed. Handles both direct
+    accountId and account number from prompts.
     """
 
     def get_task_type(self) -> str:
@@ -23,10 +49,14 @@ class BankReconciliationHandler(BaseHandler):
 
     @property
     def required_params(self) -> list[str]:
-        return ["accountId"]
+        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        body: dict[str, Any] = {"account": {"id": int(params["accountId"])}}
+        account_id = _resolve_account_id(api_client, params)
+        if not account_id:
+            return {"error": "account_not_found"}
+
+        body: dict[str, Any] = {"account": {"id": account_id}}
 
         if "accountingPeriodId" in params:
             body["accountingPeriod"] = {"id": int(params["accountingPeriodId"])}
