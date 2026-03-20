@@ -52,6 +52,12 @@ async def solve(
     4. Return {"status": "completed"} regardless of outcome
     """
     start_time = time.monotonic()
+    base_url = request.tripletex_credentials.base_url if request.tripletex_credentials else "?"
+    logger.info(
+        'COMPETITION_RUN prompt="%s" base_url=%s',
+        request.prompt[:200],
+        base_url,
+    )
     logger.info("Received solve request, prompt length=%d", len(request.prompt))
 
     try:
