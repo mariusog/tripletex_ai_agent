@@ -6,7 +6,7 @@ import logging
 from datetime import date as dt_date
 from typing import Any
 
-from src.api_client import TripletexClient, TripletexApiError
+from src.api_client import TripletexApiError, TripletexClient
 from src.handlers.base import BaseHandler, register_handler
 
 logger = logging.getLogger(__name__)
@@ -151,9 +151,13 @@ class CreateInvoiceHandler(BaseHandler):
                 )
                 emp_values = emp_search.get("values", [])
                 pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
-                import random
+                import secrets
 
-                proj_num = str(proj.get("number")) if isinstance(proj, dict) and proj.get("number") else str(random.randint(10000, 99999))
+                proj_num = (
+                    str(proj.get("number"))
+                    if isinstance(proj, dict) and proj.get("number")
+                    else str(secrets.randbelow(90000) + 10000)
+                )
                 proj_body: dict[str, Any] = {
                     "name": proj_name,
                     "number": proj_num,
@@ -188,7 +192,11 @@ class CreateInvoiceHandler(BaseHandler):
             for line in lines:
                 ol: dict[str, Any] = {"order": {"id": order_id}}
                 if "product" in line:
-                    line_price = line.get("unitPriceExcludingVatCurrency") or line.get("amount") or line.get("price")
+                    line_price = (
+                        line.get("unitPriceExcludingVatCurrency")
+                        or line.get("amount")
+                        or line.get("price")
+                    )
                     ol["product"] = _resolve_product(api_client, line["product"], price=line_price)
                 if "description" in line:
                     ol["description"] = line["description"]

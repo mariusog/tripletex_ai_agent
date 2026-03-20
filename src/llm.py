@@ -9,9 +9,8 @@ from __future__ import annotations
 import base64
 import json
 import logging
-from typing import Any
-
 import os
+from typing import Any
 
 import anthropic
 
@@ -37,13 +36,16 @@ TASK TYPES: {json.dumps(ALL_TASK_TYPES)}
 
 CLASSIFICATION RULES (important!):
 - If the task mentions creating an order AND an invoice (or "faktura"), classify as "create_invoice"
-- If the task mentions creating an order/invoice AND registering payment, classify as "create_invoice" and include payment info in register_payment param
+- If the task mentions creating an order/invoice AND registering payment, classify as \
+"create_invoice" and include payment info in register_payment param
 - If the task ONLY creates an order (no invoice), classify as "create_order"
-- If the task mentions a customer by name, pass the full name as "customer" (string or object with "name")
+- If the task mentions a customer by name, pass the full name as "customer" \
+(string or object with "name")
 - If the task mentions products by name/number, include them in orderLines with product name/number
 
 PARAMETER SCHEMAS per task type:
-- create_employee: {{firstName, lastName, email, phoneNumberMobile, userType ("STANDARD" or "ADMINISTRATOR")}}
+- create_employee: {{firstName, lastName, email, phoneNumberMobile, \
+userType ("STANDARD" or "ADMINISTRATOR")}}
 - update_employee: {{firstName, lastName (to find), fields to update...}}
 - create_customer: {{name, email, phoneNumber, organizationNumber, ...}}
 - update_customer: {{name (to find), fields to update...}}
@@ -53,8 +55,11 @@ PARAMETER SCHEMAS per task type:
 - update_project: {{projectId or name (to find), fields to update...}}
 - assign_role: {{firstName, lastName, role, ...}}
 - enable_module: {{moduleName, ...}}
-- create_order: {{customer, orderDate, deliveryDate, orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency}}]}}
-- create_invoice: {{customer, invoiceDate, invoiceDueDate, orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency or amount}}], register_payment: {{amount, paymentDate}} (if payment mentioned)}}
+- create_order: {{customer, orderDate, deliveryDate, \
+orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency}}]}}
+- create_invoice: {{customer, invoiceDate, invoiceDueDate, \
+orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency or amount}}], \
+register_payment: {{amount, paymentDate}} (if payment mentioned)}}
 - send_invoice: {{invoiceId or search criteria...}}
 - register_payment: {{invoiceId or search criteria, amount, paymentDate, ...}}
 - create_credit_note: {{invoiceId or search criteria, ...}}
@@ -205,6 +210,12 @@ class LLMClient:
             parsed = json.loads(text)
         except json.JSONDecodeError:
             logger.warning("LLM returned non-JSON response: %.200s", text)
+            return TaskClassification(task_type="unknown", params={})
+        # Handle array responses — take the first element
+        if isinstance(parsed, list):
+            parsed = parsed[0] if parsed else {}
+        if not isinstance(parsed, dict):
+            logger.warning("LLM returned unexpected type: %s", type(parsed))
             return TaskClassification(task_type="unknown", params={})
         return TaskClassification(
             task_type=parsed.get("task_type", "unknown"),

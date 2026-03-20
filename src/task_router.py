@@ -81,7 +81,7 @@ class TaskRouter:
                 files=request.files or None,
             )
         except Exception:
-            logger.warning("LLM classification failed, retrying with rephrased prompt")
+            logger.exception("LLM classification failed, retrying with rephrased prompt")
 
         rephrased = (
             f"Identify the Tripletex accounting task in this request "

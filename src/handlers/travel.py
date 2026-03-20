@@ -6,7 +6,7 @@ import logging
 from datetime import date as dt_date
 from typing import Any
 
-from src.api_client import TripletexClient, TripletexApiError
+from src.api_client import TripletexApiError, TripletexClient
 from src.handlers.base import BaseHandler, register_handler
 
 logger = logging.getLogger(__name__)
