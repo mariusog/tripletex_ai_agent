@@ -44,6 +44,32 @@ def _resolve_supplier(api_client: TripletexClient, supplier: Any) -> dict[str, i
     return {"id": sup_id}
 
 
+@register_handler
+class CreateSupplierHandler(BaseHandler):
+    """POST /supplier with extracted fields. 1 API call."""
+
+    def get_task_type(self) -> str:
+        return "create_supplier"
+
+    @property
+    def required_params(self) -> list[str]:
+        return ["name"]
+
+    def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
+        body: dict[str, Any] = {"name": params["name"]}
+        for field in ("email", "phoneNumber", "organizationNumber"):
+            if params.get(field):
+                body[field] = params[field]
+        for addr_field in ("postalAddress", "physicalAddress"):
+            if params.get(addr_field):
+                body[addr_field] = params[addr_field]
+        body = self.strip_none_values(body)
+        result = api_client.post("/supplier", data=body)
+        value = result.get("value", {})
+        logger.info("Created supplier id=%s", value.get("id"))
+        return {"id": value.get("id"), "action": "created"}
+
+
 def _resolve_account(
     api_client: TripletexClient, account: Any
 ) -> tuple[dict[str, int], dict[str, int] | None]:
