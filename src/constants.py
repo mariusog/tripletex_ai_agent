@@ -77,6 +77,11 @@ LLM_GEMINI_MODEL = "gemini-2.0-flash"
 # Temperature for task classification (low = more deterministic)
 LLM_TEMPERATURE = 0.0
 
+# Vertex AI configuration (Claude via GCP)
+LLM_VERTEX_MODEL = "claude-opus-4-6"
+LLM_VERTEX_PROJECT_ID = "ai-nm26osl-1792"
+LLM_VERTEX_REGION = "us-east5"
+
 # ---------------------------------------------------------------------------
 # Task types (known from competition docs)
 # ---------------------------------------------------------------------------

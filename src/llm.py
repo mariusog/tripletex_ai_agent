@@ -11,6 +11,8 @@ import json
 import logging
 from typing import Any
 
+import os
+
 import anthropic
 
 from src.constants import (
@@ -20,6 +22,9 @@ from src.constants import (
     LLM_MAX_TOKENS,
     LLM_TEMPERATURE,
     LLM_TIMEOUT,
+    LLM_VERTEX_MODEL,
+    LLM_VERTEX_PROJECT_ID,
+    LLM_VERTEX_REGION,
 )
 from src.models import FileAttachment, TaskClassification
 
@@ -30,26 +35,33 @@ Given a user prompt (in any language), identify the task type and extract parame
 
 TASK TYPES: {json.dumps(ALL_TASK_TYPES)}
 
+CLASSIFICATION RULES (important!):
+- If the task mentions creating an order AND an invoice (or "faktura"), classify as "create_invoice"
+- If the task mentions creating an order/invoice AND registering payment, classify as "create_invoice" and include payment info in register_payment param
+- If the task ONLY creates an order (no invoice), classify as "create_order"
+- If the task mentions a customer by name, pass the full name as "customer" (string or object with "name")
+- If the task mentions products by name/number, include them in orderLines with product name/number
+
 PARAMETER SCHEMAS per task type:
-- create_employee: {{firstName, lastName, email, phoneNumberMobile, department, ...}}
-- update_employee: {{id/name (to find), fields to update...}}
+- create_employee: {{firstName, lastName, email, phoneNumberMobile, userType ("STANDARD" or "ADMINISTRATOR")}}
+- update_employee: {{firstName, lastName (to find), fields to update...}}
 - create_customer: {{name, email, phoneNumber, organizationNumber, ...}}
-- update_customer: {{id/name (to find), fields to update...}}
+- update_customer: {{name (to find), fields to update...}}
 - create_product: {{name, number, priceExcludingVatCurrency, vatType, ...}}
 - create_department: {{name, departmentNumber, departmentManager, ...}}
-- create_project: {{name, number, projectManager, startDate, endDate, customer, ...}}
-- update_project: {{id/name (to find), fields to update...}}
-- assign_role: {{employee (name/id), role, ...}}
+- create_project: {{name, number, startDate, endDate, customer, ...}}
+- update_project: {{projectId or name (to find), fields to update...}}
+- assign_role: {{firstName, lastName, role, ...}}
 - enable_module: {{moduleName, ...}}
-- create_order: {{customer, orderDate, deliveryDate, orderLines, ...}}
-- create_invoice: {{customer, invoiceDate, invoiceDueDate, lines, ...}}
+- create_order: {{customer, orderDate, deliveryDate, orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency}}]}}
+- create_invoice: {{customer, invoiceDate, invoiceDueDate, orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency or amount}}], register_payment: {{amount, paymentDate}} (if payment mentioned)}}
 - send_invoice: {{invoiceId or search criteria...}}
 - register_payment: {{invoiceId or search criteria, amount, paymentDate, ...}}
 - create_credit_note: {{invoiceId or search criteria, ...}}
 - create_travel_expense: {{employee, project, travelDetails, costs, ...}}
 - deliver_travel_expense: {{travelExpenseId or search criteria...}}
 - approve_travel_expense: {{travelExpenseId or search criteria...}}
-- link_project_customer: {{project (name/id), customer (name/id), ...}}
+- link_project_customer: {{projectId, customer, ...}}
 - create_activity: {{name, ...}}
 - create_asset: {{name, ...}}
 - update_asset: {{id/name (to find), fields to update...}}
@@ -67,13 +79,31 @@ If the prompt references attached files, note that in params as "has_attachments
 
 
 class LLMClient:
-    """Client for LLM-based task classification and parameter extraction."""
+    """Client for LLM-based task classification and parameter extraction.
+
+    Uses Vertex AI by default (set ANTHROPIC_VERTEX_PROJECT_ID env var).
+    Falls back to direct Anthropic API if ANTHROPIC_API_KEY is set instead.
+    """
 
     def __init__(self, api_key: str | None = None) -> None:
-        self._client = anthropic.Anthropic(
-            api_key=api_key,
-            timeout=LLM_TIMEOUT,
-        )
+        project_id = os.environ.get("ANTHROPIC_VERTEX_PROJECT_ID", LLM_VERTEX_PROJECT_ID)
+        region = os.environ.get("CLOUD_ML_REGION", LLM_VERTEX_REGION)
+
+        if project_id and not api_key and not os.environ.get("ANTHROPIC_API_KEY"):
+            self._client = anthropic.AnthropicVertex(
+                project_id=project_id,
+                region=region,
+                timeout=LLM_TIMEOUT,
+            )
+            self._model = LLM_VERTEX_MODEL
+            logger.info("Using Claude via Vertex AI (project=%s, region=%s)", project_id, region)
+        else:
+            self._client = anthropic.Anthropic(
+                api_key=api_key,
+                timeout=LLM_TIMEOUT,
+            )
+            self._model = LLM_CLAUDE_MODEL
+            logger.info("Using Claude via direct Anthropic API")
 
     def classify_and_extract(
         self,
@@ -90,7 +120,7 @@ class LLMClient:
         for attempt in range(LLM_MAX_RETRIES + 1):
             try:
                 response = self._client.messages.create(
-                    model=LLM_CLAUDE_MODEL,
+                    model=self._model,
                     max_tokens=LLM_MAX_TOKENS,
                     temperature=LLM_TEMPERATURE,
                     system=SYSTEM_PROMPT,
