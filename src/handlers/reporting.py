@@ -43,7 +43,10 @@ class LedgerCorrectionHandler(BaseHandler):
         # Build correction postings
         postings = params.get("postings", [])
         if postings:
-            body["postings"] = [_build_posting(api_client, p) for p in postings]
+            body["postings"] = [
+                _build_posting(api_client, p, row=i + 1)
+                for i, p in enumerate(postings)
+            ]
 
         # If correcting a specific voucher, reverse it first
         if "originalVoucherId" in params:
@@ -93,7 +96,10 @@ class YearEndClosingHandler(BaseHandler):
         # Build closing postings if provided
         postings = params.get("postings", [])
         if postings:
-            body["postings"] = [_build_posting(api_client, p) for p in postings]
+            body["postings"] = [
+                _build_posting(api_client, p, row=i + 1)
+                for i, p in enumerate(postings)
+            ]
 
         result = api_client.post("/ledger/voucher", data=body)
         value = result.get("value", {})

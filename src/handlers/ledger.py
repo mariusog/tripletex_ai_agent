@@ -13,33 +13,37 @@ logger = logging.getLogger(__name__)
 
 def _resolve_account(
     api_client: TripletexClient, account: Any
-) -> dict[str, int]:
-    """Resolve account number to {"id": N}."""
+) -> tuple[dict[str, int], dict[str, int] | None]:
+    """Resolve account number to ({"id": N}, vatType ref or None)."""
     if isinstance(account, dict) and "id" in account:
-        return {"id": int(account["id"])}
+        return {"id": int(account["id"])}, None
     try:
         number = int(account)
     except (TypeError, ValueError):
-        return {"id": 0}
+        return {"id": 0}, None
     resp = api_client.get(
         "/ledger/account",
         params={"number": str(number), "count": 1},
-        fields="id",
+        fields="id,vatType(id)",
     )
     values = resp.get("values", [])
     if values:
-        return {"id": values[0]["id"]}
+        vat = values[0].get("vatType")
+        vat_ref = {"id": vat["id"]} if vat and vat.get("id") else None
+        return {"id": values[0]["id"]}, vat_ref
     logger.warning("Account %d not found", number)
-    return {"id": 0}
+    return {"id": 0}, None
 
 
 def _build_posting(
-    api_client: TripletexClient, posting: dict[str, Any]
+    api_client: TripletexClient, posting: dict[str, Any], row: int = 0
 ) -> dict[str, Any]:
     """Build a single voucher posting payload."""
-    result: dict[str, Any] = {}
+    result: dict[str, Any] = {"row": row}
+    vat_ref = None
     if "account" in posting:
-        result["account"] = _resolve_account(api_client, posting["account"])
+        acct_ref, vat_ref = _resolve_account(api_client, posting["account"])
+        result["account"] = acct_ref
     for field in ("amountCurrency", "amount", "description"):
         if field in posting and posting[field] is not None:
             result[field] = posting[field]
@@ -47,11 +51,20 @@ def _build_posting(
     debit = posting.get("debit", 0) or 0
     credit = posting.get("credit", 0) or 0
     if debit and not credit:
-        result["amountGross"] = abs(debit)
+        amount = abs(debit)
     elif credit and not debit:
-        result["amountGross"] = -abs(credit)
+        amount = -abs(credit)
     elif "amountGross" in posting and posting["amountGross"] is not None:
-        result["amountGross"] = posting["amountGross"]
+        amount = posting["amountGross"]
+    else:
+        amount = 0
+    result["amountGross"] = amount
+    result["amountGrossCurrency"] = amount
+    # Set VAT type from account default if not explicitly provided
+    if "vatType" in posting:
+        result["vatType"] = BaseHandler.ensure_ref(posting["vatType"], "vatType")
+    elif vat_ref:
+        result["vatType"] = vat_ref
     return {k: v for k, v in result.items() if v is not None}
 
 
@@ -85,7 +98,10 @@ class CreateVoucherHandler(BaseHandler):
         # Build postings — resolve account numbers to IDs
         postings = params.get("postings", [])
         if postings:
-            body["postings"] = [_build_posting(api_client, p) for p in postings]
+            body["postings"] = [
+                _build_posting(api_client, p, row=i + 1)
+                for i, p in enumerate(postings)
+            ]
 
         body = self.strip_none_values(body)
         result = api_client.post("/ledger/voucher", data=body)

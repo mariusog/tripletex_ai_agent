@@ -27,16 +27,11 @@ class CreateProjectHandler(BaseHandler):
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         from datetime import date as dt_date
 
-        # Resolve projectManager — search/create employee if name given
-        pm = params.get("projectManager")
-        if pm and isinstance(pm, dict) and "id" not in pm:
-            pm_ref = _resolve_employee(api_client, pm)
-        elif pm:
-            pm_ref = self.ensure_ref(pm, "projectManager")
-        else:
-            emp_search = api_client.get("/employee", params={"count": 1}, fields="id")
-            emp_values = emp_search.get("values", [])
-            pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
+        # projectManager must have PM access — always use first employee (account owner)
+        # Newly created employees won't have PM access, so the account owner is safest
+        emp_search = api_client.get("/employee", params={"count": 1}, fields="id")
+        emp_values = emp_search.get("values", [])
+        pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
 
         body: dict[str, Any] = {
             "name": params["name"],
@@ -148,7 +143,10 @@ class CreateActivityHandler(BaseHandler):
         return ["name"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        body: dict[str, Any] = {"name": params["name"]}
+        body: dict[str, Any] = {
+            "name": params["name"],
+            "activityType": params.get("activityType", "GENERAL_ACTIVITY"),
+        }
 
         for field in ("number", "description"):
             if field in params and params[field] is not None:

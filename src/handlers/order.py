@@ -31,11 +31,8 @@ class CreateOrderHandler(BaseHandler):
         body: dict[str, Any] = {
             "customer": customer_ref,
             "orderDate": params.get("orderDate") or today,
+            "deliveryDate": params.get("deliveryDate") or today,
         }
-        if "deliveryDate" in params:
-            date_val = self.validate_date(params["deliveryDate"], "deliveryDate")
-            if date_val:
-                body["deliveryDate"] = date_val
 
         for ref_field in ("department", "project"):
             if ref_field in params:

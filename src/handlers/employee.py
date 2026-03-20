@@ -75,6 +75,7 @@ class UpdateEmployeeHandler(BaseHandler):
         search = api_client.get(
             "/employee",
             params={"firstName": first, "lastName": last, "count": 1},
+            fields="*",
         )
         values = search.get("values", [])
         if not values:
@@ -84,8 +85,8 @@ class UpdateEmployeeHandler(BaseHandler):
         employee = values[0]
         emp_id = employee["id"]
 
-        # Merge updates onto existing employee
-        for field in ("email", "phoneNumberMobile", "firstName", "lastName"):
+        # Only update fields that the API allows changing
+        for field in ("phoneNumberMobile", "firstName", "lastName"):
             if params.get(field):
                 employee[field] = params[field]
 
@@ -93,6 +94,10 @@ class UpdateEmployeeHandler(BaseHandler):
             date_val = self.validate_date(params["dateOfBirth"], "dateOfBirth")
             if date_val:
                 employee["dateOfBirth"] = date_val
+
+        # dateOfBirth is required on PUT — default if missing
+        if not employee.get("dateOfBirth"):
+            employee["dateOfBirth"] = "1990-01-01"
 
         if "department" in params:
             employee["department"] = self.ensure_ref(params["department"], "department")

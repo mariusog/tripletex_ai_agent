@@ -87,4 +87,5 @@ class TestCreateActivity:
         result = handler.execute(client, {"name": "Meeting"})
         assert result["id"] == 21
         body = client.post.call_args[1]["data"]
-        assert body == {"name": "Meeting"}
+        assert body["name"] == "Meeting"
+        assert body["activityType"] == "GENERAL_ACTIVITY"

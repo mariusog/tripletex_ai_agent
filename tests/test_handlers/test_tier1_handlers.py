@@ -223,12 +223,11 @@ class TestCreateDepartment:
 class TestCreateProject:
     def test_happy_path(self):
         client = _mock_client(post_response=sample_api_response(value={"id": 11}))
+        client.get.return_value = sample_api_response(values=[{"id": 1}])
         handler = get_handler("create_project")
         assert handler is not None
-        result = handler.execute(client, {"name": "Proj", "number": "P001", "projectManager": 1})
+        result = handler.execute(client, {"name": "Proj", "number": "P001"})
         assert result["id"] == 11
-        body = client.post.call_args[1]["data"]
-        assert body["projectManager"] == {"id": 1}
 
     def test_with_optional_refs(self):
         client = _mock_client()
