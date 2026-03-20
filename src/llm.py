@@ -87,7 +87,8 @@ postalAddress: {{addressLine1, postalCode, city}}, ...}}
 - create_department: {{name, departmentNumber, departmentManager, \
 departments: ["Name1", "Name2"] (if creating MULTIPLE departments)}}
 - create_project: {{name, number, startDate, endDate, customer, ...}}
-- update_project: {{projectId or name (to find), fields to update...}}
+- update_project: {{projectId or name (to find), fixedPrice, \
+invoicePercentage (if "invoice X% of fixed price" is mentioned), fields to update...}}
 - assign_role: {{firstName, lastName, role, ...}}
 - enable_module: {{moduleName, ...}}
 - create_order: {{customer, orderDate, deliveryDate, \

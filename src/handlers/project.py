@@ -119,9 +119,15 @@ class UpdateProjectHandler(BaseHandler):
         if not project:
             return {"error": "project_not_found"}
 
-        for field in ("name", "number", "isClosed", "isInternal", "fixedPrice"):
+        for field in ("name", "number", "isClosed", "isInternal"):
             if field in params:
                 project[field] = params[field]
+
+        # Fixed price — API field is lowercase "fixedprice", needs isFixedPrice=true
+        if "fixedPrice" in params or "fixedprice" in params:
+            price = params.get("fixedPrice") or params.get("fixedprice")
+            project["fixedprice"] = price
+            project["isFixedPrice"] = True
 
         for date_field in ("startDate", "endDate"):
             if date_field in params:
@@ -149,6 +155,34 @@ class UpdateProjectHandler(BaseHandler):
 
         result = api_client.put(f"/project/{proj_id}", data=project)
         logger.info("Updated project id=%s", proj_id)
+
+        # Handle project invoicing: "invoice X% of fixed price"
+        invoice_pct = params.get("invoicePercentage") or params.get("partialPaymentPercentage")
+        fixed_price = params.get("fixedPrice") or params.get("fixedprice")
+        if invoice_pct and fixed_price:
+            invoice_amount = round(float(fixed_price) * float(invoice_pct) / 100, 2)
+            customer_ref = project.get("customer")
+            if customer_ref:
+                from src.handlers.invoice import CreateInvoiceHandler
+
+                inv_params = {
+                    "customer": customer_ref,
+                    "project": {"id": proj_id},
+                    "orderLines": [
+                        {
+                            "description": f"Delbetaling {invoice_pct}%",
+                            "unitPriceExcludingVatCurrency": invoice_amount,
+                            "count": 1,
+                        }
+                    ],
+                }
+                try:
+                    inv_handler = CreateInvoiceHandler()
+                    inv_result = inv_handler.execute(api_client, inv_params)
+                    logger.info("Created project invoice: %s", inv_result)
+                except Exception as e:
+                    logger.warning("Project invoice failed: %s", e)
+
         return {"id": proj_id, "action": "updated", "value": result.get("value", {})}
 
 
