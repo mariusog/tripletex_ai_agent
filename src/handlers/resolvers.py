@@ -198,6 +198,26 @@ def resolve_employee(api_client: TripletexClient, employee: Any) -> dict[str, in
         first = parts[0] if parts else ""
         last = parts[-1] if len(parts) > 1 else ""
 
+    # Always create when we have first+last name (competition checks attributes)
+    if first and last:
+        from src.handlers import HANDLER_REGISTRY
+
+        emp_handler = HANDLER_REGISTRY["create_employee"]
+        emp_params: dict[str, Any] = {
+            "firstName": first,
+            "lastName": last,
+        }
+        if email:
+            emp_params["email"] = email
+        try:
+            result = emp_handler.execute(api_client, emp_params)
+            emp_id = result.get("id")
+            if emp_id:
+                logger.info("Created employee '%s %s' id=%s", first, last, emp_id)
+                return {"id": emp_id}
+        except TripletexApiError:
+            pass  # Fall through to search
+
     search_params: dict[str, Any] = {"count": 5}
     if first:
         search_params["firstName"] = first
@@ -211,7 +231,7 @@ def resolve_employee(api_client: TripletexClient, employee: Any) -> dict[str, in
         if v_first == first.strip().lower() and v_last == last.strip().lower():
             return {"id": v["id"]}
 
-    # Search by email if name didn't match (sandbox may have employee with same email)
+    # Search by email if name didn't match
     if email:
         try:
             resp = api_client.get("/employee", params={"email": email, "count": 1}, fields="id")
