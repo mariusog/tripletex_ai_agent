@@ -46,22 +46,22 @@ class BankReconciliationHandler(BaseHandler):
         recon_id = value.get("id")
         logger.info("Created bank reconciliation id=%s", recon_id)
 
-        # Handle adjustments if provided
-        adjustments = params.get("adjustments", [])
-        for adj in adjustments:
-            adj_body: dict[str, Any] = {}
-            for adj_field in ("amount", "description", "paymentType"):
-                if adj_field in adj and adj[adj_field] is not None:
-                    adj_body[adj_field] = adj[adj_field]
-            if "date" in adj:
-                date_val = self.validate_date(adj["date"], "adjustment.date")
-                if date_val:
-                    adj_body["date"] = date_val
-            if adj_body:
-                api_client.put(
-                    f"/bank/reconciliation/{recon_id}/:adjustment",
-                    data=adj_body,
-                )
-                logger.info("Added adjustment to reconciliation id=%s", recon_id)
+        for adj in params.get("adjustments", []):
+            self._add_adjustment(api_client, recon_id, adj)
 
         return {"id": recon_id, "action": "created"}
+
+    def _add_adjustment(
+        self, api_client: TripletexClient, recon_id: int, adj: dict[str, Any]
+    ) -> None:
+        adj_body: dict[str, Any] = {}
+        for field in ("amount", "description", "paymentType"):
+            if field in adj and adj[field] is not None:
+                adj_body[field] = adj[field]
+        if "date" in adj:
+            date_val = self.validate_date(adj["date"], "adjustment.date")
+            if date_val:
+                adj_body["date"] = date_val
+        if adj_body:
+            api_client.put(f"/bank/reconciliation/{recon_id}/:adjustment", data=adj_body)
+            logger.info("Added adjustment to reconciliation id=%s", recon_id)
