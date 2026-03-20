@@ -6,7 +6,7 @@ import logging
 from datetime import date as dt_date
 from typing import Any
 
-from src.api_client import TripletexApiError, TripletexClient
+from src.api_client import TripletexClient
 from src.handlers.base import BaseHandler, register_handler
 
 logger = logging.getLogger(__name__)
@@ -27,52 +27,63 @@ class CreateEmployeeHandler(BaseHandler):
         today = dt_date.today().isoformat()
 
         # Determine userType: STANDARD needs email, NO_ACCESS doesn't
+        # Map ADMINISTRATOR -> STANDARD (admin is set via allowInformationRegistration)
         has_email = bool(params.get("email"))
-        user_type = params.get("userType", "STANDARD" if has_email else "NO_ACCESS")
+        raw_type = params.get("userType", "STANDARD" if has_email else "NO_ACCESS")
+        is_admin = raw_type in ("ADMINISTRATOR", "ADMIN")
+        user_type = "STANDARD" if is_admin or raw_type == "STANDARD" else "NO_ACCESS"
+
+        # STANDARD requires email — if we need STANDARD but have no email, use NO_ACCESS
+        if user_type == "STANDARD" and not has_email:
+            user_type = "NO_ACCESS"
 
         body: dict[str, Any] = {
             "firstName": params["firstName"],
             "lastName": params["lastName"],
             "userType": user_type,
             "dateOfBirth": (
-                self.validate_date(params.get("dateOfBirth"), "dateOfBirth")
-                or "1990-01-01"
+                self.validate_date(params.get("dateOfBirth"), "dateOfBirth") or "1990-01-01"
             ),
         }
+
+        # Set admin flag if requested
+        if is_admin:
+            body["allowInformationRegistration"] = True
 
         for field in ("email", "phoneNumberMobile"):
             if params.get(field):
                 body[field] = params[field]
 
+        # Always set department (required by API) — use provided or fetch first available
         if "department" in params:
             body["department"] = self.ensure_ref(params["department"], "department")
+        else:
+            dept = api_client.get_cached(
+                "default_department", "/department", params={"count": 1}, fields="id"
+            )
+            dept_vals = dept.get("values", [])
+            if dept_vals:
+                body["department"] = {"id": dept_vals[0]["id"]}
 
         # Employment record
         start_date = self.validate_date(params.get("startDate"), "startDate") or today
-        body["employments"] = [{
-            "startDate": start_date,
-            "employmentDetails": [{
-                "date": start_date,
-                "employmentType": params.get("employmentType", "ORDINARY"),
-                "percentageOfFullTimeEquivalent": params.get("percentageOfFullTimeEquivalent", 100),
-            }],
-        }]
+        body["employments"] = [
+            {
+                "startDate": start_date,
+                "employmentDetails": [
+                    {
+                        "date": start_date,
+                        "employmentType": params.get("employmentType", "ORDINARY"),
+                        "percentageOfFullTimeEquivalent": params.get(
+                            "percentageOfFullTimeEquivalent", 100
+                        ),
+                    }
+                ],
+            }
+        ]
 
         body = self.strip_none_values(body)
-
-        # Try creating — if it fails due to missing department, add one and retry
-        try:
-            result = api_client.post("/employee", data=body)
-        except TripletexApiError as e:
-            err_fields = [m.get("field", "") for m in e.error.validation_messages]
-            if "department.id" in err_fields and "department" not in body:
-                dept = api_client.get("/department", params={"count": 1}, fields="id")
-                dept_vals = dept.get("values", [])
-                if dept_vals:
-                    body["department"] = {"id": dept_vals[0]["id"]}
-                result = api_client.post("/employee", data=body)
-            else:
-                raise
+        result = api_client.post("/employee", data=body)
 
         value = result.get("value", {})
         logger.info("Created employee id=%s", value.get("id"))
