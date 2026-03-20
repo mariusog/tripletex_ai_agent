@@ -261,37 +261,21 @@ class CreateInvoiceHandler(BaseHandler):
                 api_client.post("/order/orderline/list", data=payloads)
                 logger.info("Added %d order lines", len(payloads))
 
-        # Step 4: Create invoice from order
+        # Step 4: Create invoice from order using PUT /order/{id}/:invoice
+        # This single call creates the invoice AND optionally registers payment
         inv_id = None
         try:
-            inv_body: dict[str, Any] = {
+            invoice_params: dict[str, Any] = {
                 "invoiceDate": params.get("invoiceDate") or today,
-                "invoiceDueDate": params.get("invoiceDueDate") or today,
-                "orders": [{"id": order_id}],
             }
-            inv_body = self.strip_none_values(inv_body)
-            inv_result = api_client.post("/invoice", data=inv_body)
-            invoice = inv_result.get("value", {})
-            inv_id = invoice.get("id")
-            logger.info("Created invoice id=%s from order id=%s", inv_id, order_id)
-        except TripletexApiError as e:
-            logger.warning("Invoice creation failed: %s", e)
 
-        # Step 5: Register payment if requested (PUT with query params)
-        payment = params.get("register_payment", params.get("payment"))
-        if payment and inv_id:
-            if isinstance(payment, dict):
-                pay_amount = payment.get("amount")
-                pay_date = payment.get("paymentDate")
-            else:
-                pay_amount = payment
-                pay_date = None
-            if not pay_amount and "totalAmount" in params:
-                pay_amount = params["totalAmount"]
-
-            if pay_amount:
-                try:
-                    # Look up a payment type (cached per session)
+            # Include payment in the same call if requested
+            payment = params.get("register_payment", params.get("payment"))
+            if payment:
+                pay_amount = payment.get("amount") if isinstance(payment, dict) else payment
+                if not pay_amount and "totalAmount" in params:
+                    pay_amount = params["totalAmount"]
+                if pay_amount:
                     pt_resp = api_client.get_cached(
                         "invoice_payment_type",
                         "/invoice/paymentType",
@@ -299,28 +283,22 @@ class CreateInvoiceHandler(BaseHandler):
                         fields="id",
                     )
                     pt_values = pt_resp.get("values", [])
-                    pt_id = pt_values[0]["id"] if pt_values else 0
+                    if pt_values:
+                        invoice_params["paymentTypeId"] = pt_values[0]["id"]
+                        invoice_params["paidAmount"] = pay_amount
 
-                    pay_params: dict[str, Any] = {
-                        "paymentDate": pay_date or today,
-                        "paymentTypeId": pt_id,
-                        "paidAmount": pay_amount,
-                    }
-                    api_client.put(f"/invoice/{inv_id}/:payment", params=pay_params)
-                    logger.info("Registered payment of %s on invoice %s", pay_amount, inv_id)
-                except TripletexApiError as e:
-                    logger.warning("Payment failed: %s", e)
+            # Send invoice in the same call if requested
+            if params.get("send_invoice"):
+                invoice_params["sendToCustomer"] = "true"
 
-        # Step 6: Send invoice if requested
-        if inv_id and params.get("send_invoice"):
-            try:
-                api_client.put(
-                    f"/invoice/{inv_id}/:send",
-                    params={"sendType": params.get("sendType", "EMAIL")},
-                )
-                logger.info("Sent invoice id=%s", inv_id)
-            except TripletexApiError as e:
-                logger.warning("Send invoice failed: %s", e)
+            inv_result = api_client.put(
+                f"/order/{order_id}/:invoice", params=invoice_params
+            )
+            invoice = inv_result.get("value", {})
+            inv_id = invoice.get("id")
+            logger.info("Created invoice id=%s from order id=%s", inv_id, order_id)
+        except TripletexApiError as e:
+            logger.warning("Invoice creation failed: %s", e)
 
         return {"id": inv_id, "orderId": order_id, "action": "created"}
 

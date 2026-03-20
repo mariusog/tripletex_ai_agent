@@ -28,7 +28,8 @@ class CreateDepartmentHandler(BaseHandler):
         if not departments:
             departments = [params]
 
-        created_ids = []
+        # Build bodies for all departments
+        bodies = []
         for dept in departments:
             if isinstance(dept, str):
                 dept = {"name": dept}
@@ -51,12 +52,21 @@ class CreateDepartmentHandler(BaseHandler):
                 else:
                     body["departmentManager"] = self.ensure_ref(mgr, "departmentManager")
 
-            body = self.strip_none_values(body)
-            result = api_client.post("/department", data=body)
-            value = result.get("value", {})
-            dept_id = value.get("id")
-            logger.info("Created department '%s' id=%s", name, dept_id)
-            created_ids.append(dept_id)
+            bodies.append(self.strip_none_values(body))
+
+        if not bodies:
+            return {"error": "no_departments"}
+
+        # Use batch endpoint for multiple, single POST for one
+        if len(bodies) == 1:
+            result = api_client.post("/department", data=bodies[0])
+            values = [result.get("value", {})]
+        else:
+            result = api_client.post("/department/list", data=bodies)
+            values = result.get("values", []) if result else []
+
+        created_ids = [v.get("id") for v in values if v.get("id")]
+        logger.info("Created %d departments: %s", len(created_ids), created_ids)
 
         first_id = created_ids[0] if created_ids else None
         return {"id": first_id, "ids": created_ids, "action": "created"}
