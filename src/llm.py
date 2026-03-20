@@ -165,7 +165,7 @@ class LLMClient:
                 region=region,
                 timeout=LLM_TIMEOUT,
             )
-            self._model = LLM_VERTEX_MODEL
+            self._model = os.environ.get("LLM_MODEL_OVERRIDE", LLM_VERTEX_MODEL)
             logger.info("Using Claude via Vertex AI (project=%s, region=%s)", project_id, region)
         else:
             self._client = anthropic.Anthropic(
