@@ -167,10 +167,23 @@ class ReverseVoucherHandler(BaseHandler):
 
     @property
     def required_params(self) -> list[str]:
-        return ["voucherId"]
+        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        voucher_id = int(params["voucherId"])
+        # If no voucherId, fall back to register_payment with reversal
+        if "voucherId" not in params and params.get("customer"):
+            from src.handlers.invoice import RegisterPaymentHandler
+
+            pay_params = dict(params)
+            amount = params.get("amount", 0)
+            pay_params["amount"] = -abs(amount) if amount > 0 else amount
+            pay_params["reversal"] = True
+            handler = RegisterPaymentHandler()
+            return handler.execute(api_client, pay_params)
+
+        voucher_id = int(params.get("voucherId", 0))
+        if not voucher_id:
+            return {"error": "no_voucher_id"}
         body: dict[str, Any] = {"id": voucher_id}
         if "date" in params:
             date_val = self.validate_date(params["date"], "date")

@@ -39,9 +39,13 @@ CLASSIFICATION RULES (important!):
 - If the task mentions creating an order/invoice AND registering payment, classify as \
 "create_invoice" and include payment info in register_payment param
 - If the task ONLY creates an order (no invoice), classify as "create_order"
+- If the task mentions REVERSING a payment, returned payment, or "reversering av betaling", \
+classify as "register_payment" with negative amount and "reversal": true
+- Do NOT classify payment reversals as "reverse_voucher" — use "register_payment" instead
 - If the task mentions a customer by name, pass the full name as "customer" \
 (string or object with "name")
 - If the task mentions products by name/number, include them in orderLines with product name/number
+- For supplier invoices (leverandørfaktura/Lieferantenrechnung), classify as "create_voucher"
 
 PARAMETER SCHEMAS per task type:
 - create_employee: {{firstName, lastName, email, phoneNumberMobile, \

@@ -81,4 +81,4 @@ class TestReverseVoucher:
     def test_required_params(self):
         handler = get_handler("reverse_voucher")
         assert handler is not None
-        assert handler.validate_params({}) == ["voucherId"]
+        assert handler.validate_params({}) == []
