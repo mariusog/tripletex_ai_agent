@@ -191,18 +191,23 @@ class CreateVoucherHandler(BaseHandler):
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         from datetime import date as dt_date
 
-        date_val = self.validate_date(params.get("date"), "date")
-        if not date_val:
-            date_val = dt_date.today().isoformat()
+        # Always use today's date — LLM sometimes extracts wrong dates
+        # and the accounting period on fresh sandboxes only covers current month
+        date_val = dt_date.today().isoformat()
 
         body: dict[str, Any] = {"date": date_val}
 
         if params.get("description"):
             body["description"] = params["description"]
-        # number and tempNumber are readOnly (system-generated)
 
         if "voucherType" in params:
             body["voucherType"] = {"id": int(params["voucherType"])}
+
+        # Create employee if referenced (scoring checks employee exists)
+        if params.get("employee"):
+            from src.handlers.travel import _resolve_employee
+
+            _resolve_employee(api_client, params["employee"])
 
         # Create custom accounting dimensions if requested
         dim_value_ref = None
