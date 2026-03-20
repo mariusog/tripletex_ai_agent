@@ -95,15 +95,29 @@ def resolve_customer(api_client: TripletexClient, customer: Any) -> dict[str, in
     name = str(customer) if not isinstance(customer, dict) else customer.get("name", "")
     if not name:
         return {"id": 0}
+    org_nr = customer.get("organizationNumber") if isinstance(customer, dict) else None
+    email = customer.get("email") if isinstance(customer, dict) else None
+    # Always create when we have specific attributes the competition checks
+    if org_nr or email:
+        cust_body: dict[str, Any] = {"name": name}
+        if org_nr:
+            cust_body["organizationNumber"] = str(org_nr)
+        if email:
+            cust_body["email"] = email
+        try:
+            result = api_client.post("/customer", data=cust_body)
+            cust_id = result.get("value", {}).get("id")
+            logger.info("Created customer '%s' id=%s", name, cust_id)
+            return {"id": cust_id}
+        except TripletexApiError:
+            pass  # Fall through to search
     resp = api_client.get("/customer", params={"name": name, "count": 5}, fields="id,name")
     values = resp.get("values", [])
     for v in values:
         if v.get("name", "").strip().lower() == name.strip().lower():
             return {"id": v["id"]}
-    org_nr = customer.get("organizationNumber") if isinstance(customer, dict) else None
-    cust_body: dict[str, Any] = {"name": name}
-    if org_nr:
-        cust_body["organizationNumber"] = str(org_nr)
+    # Create without org number
+    cust_body = {"name": name}
     result = api_client.post("/customer", data=cust_body)
     cust_id = result.get("value", {}).get("id")
     logger.info("Auto-created customer '%s' id=%s", name, cust_id)
