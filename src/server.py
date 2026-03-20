@@ -6,6 +6,7 @@ and executes them via the Tripletex REST API.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import time
@@ -53,6 +54,15 @@ async def solve(
     """
     start_time = time.monotonic()
     logger.info("Received solve request, prompt length=%d", len(request.prompt))
+
+    # Log the full request for post-mortem analysis
+    is_competition = "tx-proxy" in (request.tripletex_credentials.base_url or "")
+    if is_competition:
+        logger.info(
+            "COMPETITION_RUN prompt=%s base_url=%s",
+            json.dumps(request.prompt[:500]),
+            request.tripletex_credentials.base_url,
+        )
 
     try:
         # Import here to avoid circular imports and allow lazy initialization

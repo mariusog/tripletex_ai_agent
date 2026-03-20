@@ -1,0 +1,2108 @@
+{
+  "Employee": {
+    "id": {
+      "type": "integer"
+    },
+    "version": {
+      "type": "integer"
+    },
+    "changes": {
+      "type": "array",
+      "readOnly": true
+    },
+    "url": {
+      "type": "string",
+      "readOnly": true
+    },
+    "firstName": {
+      "type": "string"
+    },
+    "lastName": {
+      "type": "string"
+    },
+    "displayName": {
+      "type": "string",
+      "readOnly": true
+    },
+    "employeeNumber": {
+      "type": "string"
+    },
+    "dateOfBirth": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "phoneNumberMobileCountry": {
+      "type": "Country"
+    },
+    "phoneNumberMobile": {
+      "type": "string"
+    },
+    "phoneNumberHome": {
+      "type": "string"
+    },
+    "phoneNumberWork": {
+      "type": "string"
+    },
+    "nationalIdentityNumber": {
+      "type": "string"
+    },
+    "dnumber": {
+      "type": "string"
+    },
+    "internationalId": {
+      "type": "InternationalId"
+    },
+    "bankAccountNumber": {
+      "type": "string"
+    },
+    "iban": {
+      "type": "string",
+      "desc": "IBAN field"
+    },
+    "bic": {
+      "type": "string",
+      "desc": "Bic (swift) field"
+    },
+    "creditorBankCountryId": {
+      "type": "integer",
+      "desc": "Country of creditor bank field"
+    },
+    "usesAbroadPayment": {
+      "type": "boolean"
+    },
+    "userType": {
+      "type": "string",
+      "enum": [
+        "STANDARD",
+        "EXTENDED",
+        "NO_ACCESS"
+      ]
+    },
+    "allowInformationRegistration": {
+      "type": "boolean",
+      "readOnly": true
+    },
+    "isContact": {
+      "type": "boolean",
+      "desc": "Determines if the employee is a contact (external) in the company."
+    },
+    "isProxy": {
+      "type": "boolean",
+      "readOnly": true,
+      "desc": "True if this Employee object represents an accounting or auditor office"
+    },
+    "comments": {
+      "type": "string"
+    },
+    "address": {
+      "type": "Address"
+    },
+    "department": {
+      "type": "Department"
+    },
+    "employments": {
+      "type": "array"
+    },
+    "holidayAllowanceEarned": {
+      "type": "HolidayAllowanceEarned"
+    },
+    "employeeCategory": {
+      "type": "EmployeeCategory"
+    },
+    "isAuthProjectOverviewURL": {
+      "type": "boolean",
+      "readOnly": true
+    },
+    "pictureId": {
+      "type": "integer",
+      "readOnly": true
+    },
+    "companyId": {
+      "type": "integer",
+      "readOnly": true
+    },
+    "vismaConnect2FAactive": {
+      "type": "boolean",
+      "readOnly": true
+    }
+  },
+  "Customer": {
+    "id": {
+      "type": "integer"
+    },
+    "version": {
+      "type": "integer"
+    },
+    "changes": {
+      "type": "array",
+      "readOnly": true
+    },
+    "url": {
+      "type": "string",
+      "readOnly": true
+    },
+    "name": {
+      "type": "string"
+    },
+    "organizationNumber": {
+      "type": "string"
+    },
+    "globalLocationNumber": {
+      "type": "integer"
+    },
+    "supplierNumber": {
+      "type": "integer"
+    },
+    "customerNumber": {
+      "type": "integer"
+    },
+    "isSupplier": {
+      "type": "boolean",
+      "desc": "Defines if the customer is also a supplier."
+    },
+    "isCustomer": {
+      "type": "boolean",
+      "readOnly": true
+    },
+    "isInactive": {
+      "type": "boolean"
+    },
+    "accountManager": {
+      "type": "Employee"
+    },
+    "department": {
+      "type": "Department"
+    },
+    "email": {
+      "type": "string"
+    },
+    "invoiceEmail": {
+      "type": "string"
+    },
+    "overdueNoticeEmail": {
+      "type": "string",
+      "desc": "The email address of the customer where the noticing emails are sent in case of an overdue"
+    },
+    "bankAccounts": {
+      "type": "array"
+    },
+    "phoneNumber": {
+      "type": "string"
+    },
+    "phoneNumberMobile": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "language": {
+      "type": "string",
+      "enum": [
+        "NO",
+        "EN"
+      ]
+    },
+    "displayName": {
+      "type": "string"
+    },
+    "isPrivateIndividual": {
+      "type": "boolean"
+    },
+    "singleCustomerInvoice": {
+      "type": "boolean",
+      "desc": "Enables various orders on one customer invoice."
+    },
+    "invoiceSendMethod": {
+      "type": "string",
+      "enum": [
+        "EMAIL",
+        "EHF",
+        "EFAKTURA",
+        "AVTALEGIRO",
+        "VIPPS",
+        "PAPER",
+        "MANUAL"
+      ]
+    },
+    "emailAttachmentType": {
+      "type": "string",
+      "enum": [
+        "LINK",
+        "ATTACHMENT"
+      ]
+    },
+    "postalAddress": {
+      "type": "Address"
+    },
+    "physicalAddress": {
+      "type": "Address"
+    },
+    "deliveryAddress": {
+      "type": "DeliveryAddress"
+    },
+    "category1": {
+      "type": "CustomerCategory"
+    },
+    "category2": {
+      "type": "CustomerCategory"
+    },
+    "category3": {
+      "type": "CustomerCategory"
+    },
+    "invoicesDueIn": {
+      "type": "integer",
+      "desc": "Number of days/months in which invoices created from this customer is due"
+    },
+    "invoicesDueInType": {
+      "type": "string",
+      "enum": [
+        "DAYS",
+        "MONTHS",
+        "RECURRING_DAY_OF_MONTH"
+      ]
+    },
+    "currency": {
+      "type": "Currency"
+    },
+    "bankAccountPresentation": {
+      "type": "array"
+    },
+    "ledgerAccount": {
+      "type": "Account"
+    },
+    "isFactoring": {
+      "type": "boolean",
+      "desc": "If true; send this customers invoices to factoring (if factoring is turned on in account)."
+    },
+    "invoiceSendSMSNotification": {
+      "type": "boolean",
+      "desc": "Is sms-notification on/off"
+    },
+    "invoiceSMSNotificationNumber": {
+      "type": "string",
+      "desc": "Send SMS-notification to this number. Must be a norwegian phone number"
+    },
+    "isAutomaticSoftReminderEnabled": {
+      "type": "boolean",
+      "desc": "Has automatic soft reminders enabled for this customer."
+    },
+    "isAutomaticReminderEnabled": {
+      "type": "boolean",
+      "desc": "Has automatic reminders enabled for this customer."
+    },
+    "isAutomaticNoticeOfDebtCollectionEnabled": {
+      "type": "boolean",
+      "desc": "Has automatic notice of debt collection enabled for this customer."
+    },
+    "discountPercentage": {
+      "type": "number",
+      "desc": "Default discount percentage for this customer."
+    },
+    "website": {
+      "type": "string"
+    }
+  },
+  "Product": {
+    "id": {
+      "type": "integer"
+    },
+    "version": {
+      "type": "integer"
+    },
+    "changes": {
+      "type": "array",
+      "readOnly": true
+    },
+    "url": {
+      "type": "string",
+      "readOnly": true
+    },
+    "name": {
+      "type": "string"
+    },
+    "number": {
+      "type": "string"
+    },
+    "displayNumber": {
+      "type": "string",
+      "readOnly": true
+    },
+    "description": {
+      "type": "string"
+    },
+    "orderLineDescription": {
+      "type": "string"
+    },
+    "ean": {
+      "type": "string"
+    },
+    "elNumber": {
+      "type": "string",
+      "readOnly": true
+    },
+    "nrfNumber": {
+      "type": "string",
+      "readOnly": true
+    },
+    "costExcludingVatCurrency": {
+      "type": "number",
+      "desc": "Price purchase (cost) excluding VAT in the product's currency"
+    },
+    "expenses": {
+      "type": "number"
+    },
+    "expensesInPercent": {
+      "type": "number",
+      "readOnly": true
+    },
+    "costPrice": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "Cost price of purchase"
+    },
+    "profit": {
+      "type": "number",
+      "readOnly": true
+    },
+    "profitInPercent": {
+      "type": "number",
+      "readOnly": true
+    },
+    "priceExcludingVatCurrency": {
+      "type": "number",
+      "desc": "Price of purchase excluding VAT in the product's currency"
+    },
+    "priceIncludingVatCurrency": {
+      "type": "number",
+      "desc": "Price of purchase including VAT in the product's currency"
+    },
+    "isInactive": {
+      "type": "boolean"
+    },
+    "discountGroup": {
+      "type": "DiscountGroup"
+    },
+    "productUnit": {
+      "type": "ProductUnit"
+    },
+    "isStockItem": {
+      "type": "boolean"
+    },
+    "stockOfGoods": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "Available only on demand"
+    },
+    "availableStock": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "Available only on demand"
+    },
+    "incomingStock": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "Available only on demand"
+    },
+    "outgoingStock": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "Available only on demand"
+    },
+    "vatType": {
+      "type": "VatType"
+    },
+    "currency": {
+      "type": "Currency"
+    },
+    "department": {
+      "type": "Department"
+    },
+    "account": {
+      "type": "Account"
+    },
+    "discountPrice": {
+      "type": "number",
+      "readOnly": true
+    },
+    "supplier": {
+      "type": "Supplier"
+    },
+    "resaleProduct": {
+      "type": "Product"
+    },
+    "isDeletable": {
+      "type": "boolean",
+      "desc": "For performance reasons, field is deprecated and it will always return false."
+    },
+    "hasSupplierProductConnected": {
+      "type": "boolean"
+    },
+    "weight": {
+      "type": "number"
+    },
+    "weightUnit": {
+      "type": "string",
+      "enum": [
+        "kg",
+        "g",
+        "hg"
+      ]
+    },
+    "volume": {
+      "type": "number"
+    },
+    "volumeUnit": {
+      "type": "string",
+      "enum": [
+        "cm3",
+        "dm3",
+        "m3"
+      ]
+    },
+    "hsnCode": {
+      "type": "string"
+    },
+    "image": {
+      "type": "Document"
+    },
+    "markupListPercentage": {
+      "type": "number",
+      "readOnly": true
+    },
+    "markupNetPercentage": {
+      "type": "number",
+      "readOnly": true
+    },
+    "displayName": {
+      "type": "string",
+      "readOnly": true
+    },
+    "mainSupplierProduct": {
+      "type": "SupplierProduct"
+    },
+    "isRoundPriceIncVat": {
+      "type": "boolean",
+      "readOnly": true,
+      "desc": "[BETA] Indicates whether the price incl. VAT is rounded off or not"
+    },
+    "priceInTargetCurrency": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "Purchase Price converted in specific currency."
+    },
+    "purchasePriceCurrency": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "Purchase Price in product currency. This affects only Supplier Products."
+    },
+    "minStockLevel": {
+      "type": "number"
+    }
+  },
+  "Order": {
+    "id": {
+      "type": "integer"
+    },
+    "version": {
+      "type": "integer"
+    },
+    "changes": {
+      "type": "array",
+      "readOnly": true
+    },
+    "url": {
+      "type": "string",
+      "readOnly": true
+    },
+    "customer": {
+      "type": "Customer"
+    },
+    "contact": {
+      "type": "Contact"
+    },
+    "attn": {
+      "type": "Contact"
+    },
+    "displayName": {
+      "type": "string",
+      "readOnly": true
+    },
+    "receiverEmail": {
+      "type": "string"
+    },
+    "overdueNoticeEmail": {
+      "type": "string"
+    },
+    "number": {
+      "type": "string"
+    },
+    "reference": {
+      "type": "string"
+    },
+    "ourContact": {
+      "type": "Contact"
+    },
+    "ourContactEmployee": {
+      "type": "Employee"
+    },
+    "department": {
+      "type": "Department"
+    },
+    "orderDate": {
+      "type": "string"
+    },
+    "project": {
+      "type": "Project"
+    },
+    "invoiceComment": {
+      "type": "string"
+    },
+    "currency": {
+      "type": "Currency"
+    },
+    "invoicesDueIn": {
+      "type": "integer",
+      "desc": "Number of days/months in which invoices created from this order is due"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "NOT_CHOSEN",
+        "NEW",
+        "CONFIRMATION_SENT",
+        "READY_FOR_PICKING",
+        "PICKED",
+        "PACKED",
+        "READY_FOR_SHIPPING",
+        "READY_FOR_INVOICING",
+        "INVOICED",
+        "CANCELLED"
+      ],
+      "desc": "Logistics only"
+    },
+    "invoicesDueInType": {
+      "type": "string",
+      "enum": [
+        "DAYS",
+        "MONTHS",
+        "RECURRING_DAY_OF_MONTH"
+      ]
+    },
+    "isShowOpenPostsOnInvoices": {
+      "type": "boolean",
+      "desc": "Show account statement - open posts on invoices created from this order"
+    },
+    "isClosed": {
+      "type": "boolean"
+    },
+    "deliveryDate": {
+      "type": "string"
+    },
+    "deliveryAddress": {
+      "type": "DeliveryAddress"
+    },
+    "deliveryComment": {
+      "type": "string"
+    },
+    "isPrioritizeAmountsIncludingVat": {
+      "type": "boolean"
+    },
+    "orderLineSorting": {
+      "type": "string",
+      "enum": [
+        "ID",
+        "PRODUCT",
+        "PRODUCT_DESCENDING",
+        "CUSTOM"
+      ]
+    },
+    "orderGroups": {
+      "type": "array",
+      "desc": "Order line groups"
+    },
+    "orderLines": {
+      "type": "array",
+      "desc": "Order lines tied to the order. New OrderLines may be embedded here, in some endpoints."
+    },
+    "isSubscription": {
+      "type": "boolean"
+    },
+    "subscriptionDuration": {
+      "type": "integer",
+      "desc": "Number of months/years the subscription shall run"
+    },
+    "subscriptionDurationType": {
+      "type": "string",
+      "enum": [
+        "MONTHS",
+        "YEAR"
+      ],
+      "desc": "The time unit of subscriptionDuration"
+    },
+    "subscriptionPeriodsOnInvoice": {
+      "type": "integer",
+      "desc": "Number of periods on each invoice"
+    },
+    "subscriptionPeriodsOnInvoiceType": {
+      "type": "string",
+      "enum": [
+        "MONTHS"
+      ],
+      "readOnly": true,
+      "desc": "The time unit of subscriptionPeriodsOnInvoice"
+    },
+    "subscriptionInvoicingTimeInAdvanceOrArrears": {
+      "type": "string",
+      "enum": [
+        "ADVANCE",
+        "ARREARS"
+      ],
+      "desc": "Invoicing in advance/in arrears"
+    },
+    "subscriptionInvoicingTime": {
+      "type": "integer",
+      "desc": "Number of days/months invoicing in advance/in arrears"
+    },
+    "subscriptionInvoicingTimeType": {
+      "type": "string",
+      "enum": [
+        "DAYS",
+        "MONTHS"
+      ],
+      "desc": "The time unit of subscriptionInvoicingTime"
+    },
+    "isSubscriptionAutoInvoicing": {
+      "type": "boolean",
+      "desc": "Automatic invoicing. Starts when the subscription is approved"
+    },
+    "preliminaryInvoice": {
+      "type": "Invoice"
+    },
+    "attachment": {
+      "type": "array",
+      "readOnly": true,
+      "desc": "[BETA] Attachments belonging to this order"
+    },
+    "sendMethodDescription": {
+      "type": "string",
+      "desc": "Description of how this invoice will be sent"
+    },
+    "canCreateBackorder": {
+      "type": "boolean",
+      "readOnly": true
+    },
+    "invoiceOnAccountVatHigh": {
+      "type": "boolean",
+      "desc": "Is the on account(a konto) amounts including vat "
+    },
+    "totalInvoicedOnAccountAmountAbsoluteCurrency": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "Amount paid on account(a konto)"
+    },
+    "invoiceSendSMSNotification": {
+      "type": "boolean",
+      "readOnly": true,
+      "desc": "Is sms-notification on/off"
+    },
+    "invoiceSMSNotificationNumber": {
+      "type": "string",
+      "desc": "The phone number of the receiver of sms notifications. Must be a norwegian phone number"
+    },
+    "markUpOrderLines": {
+      "type": "number",
+      "desc": "Set mark-up (%) for order lines."
+    },
+    "discountPercentage": {
+      "type": "number",
+      "desc": "Default discount percentage for order lines."
+    },
+    "customerName": {
+      "type": "string",
+      "readOnly": true
+    },
+    "projectManagerNameAndNumber": {
+      "type": "string",
+      "readOnly": true
+    },
+    "travelReports": {
+      "type": "array",
+      "readOnly": true,
+      "desc": "Travel reports connected to the order."
+    },
+    "accountingDimensionValues": {
+      "type": "array",
+      "readOnly": true,
+      "desc": "Free dimensions for the project connected to the order."
+    }
+  },
+  "OrderLine": {
+    "id": {
+      "type": "integer"
+    },
+    "version": {
+      "type": "integer"
+    },
+    "changes": {
+      "type": "array",
+      "readOnly": true
+    },
+    "url": {
+      "type": "string",
+      "readOnly": true
+    },
+    "product": {
+      "type": "Product"
+    },
+    "inventory": {
+      "type": "Inventory"
+    },
+    "inventoryLocation": {
+      "type": "InventoryLocation"
+    },
+    "description": {
+      "type": "string"
+    },
+    "displayName": {
+      "type": "string",
+      "readOnly": true,
+      "desc": "Display name of order line"
+    },
+    "count": {
+      "type": "number"
+    },
+    "unitCostCurrency": {
+      "type": "number",
+      "desc": "Unit price purchase (cost) excluding VAT in the order's currency"
+    },
+    "unitPriceExcludingVatCurrency": {
+      "type": "number"
+    },
+    "currency": {
+      "type": "Currency"
+    },
+    "markup": {
+      "type": "number",
+      "desc": "Markup given as a percentage (%)"
+    },
+    "discount": {
+      "type": "number",
+      "desc": "Discount given as a percentage (%)"
+    },
+    "vatType": {
+      "type": "VatType"
+    },
+    "amountExcludingVatCurrency": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "Total amount on order line excluding VAT in the order's currency"
+    },
+    "amountIncludingVatCurrency": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "Total amount on order line including VAT in the order's currency"
+    },
+    "vendor": {
+      "type": "Company"
+    },
+    "order": {
+      "type": "Order"
+    },
+    "unitPriceIncludingVatCurrency": {
+      "type": "number"
+    },
+    "isSubscription": {
+      "type": "boolean"
+    },
+    "subscriptionPeriodStart": {
+      "type": "string"
+    },
+    "subscriptionPeriodEnd": {
+      "type": "string"
+    },
+    "orderGroup": {
+      "type": "OrderGroup"
+    },
+    "sortIndex": {
+      "type": "integer"
+    },
+    "isPicked": {
+      "type": "boolean"
+    },
+    "pickedDate": {
+      "type": "string"
+    },
+    "orderedQuantity": {
+      "type": "number"
+    },
+    "isCharged": {
+      "type": "boolean",
+      "desc": "Flag indicating whether the order line is charged or not."
+    }
+  },
+  "Invoice": {
+    "id": {
+      "type": "integer"
+    },
+    "version": {
+      "type": "integer"
+    },
+    "changes": {
+      "type": "array",
+      "readOnly": true
+    },
+    "url": {
+      "type": "string",
+      "readOnly": true
+    },
+    "invoiceNumber": {
+      "type": "integer",
+      "desc": "If value is set to 0, the invoice number will be generated."
+    },
+    "invoiceDate": {
+      "type": "string"
+    },
+    "customer": {
+      "type": "Customer"
+    },
+    "creditedInvoice": {
+      "type": "integer",
+      "readOnly": true,
+      "desc": "The id of the original invoice if this is a credit note."
+    },
+    "isCredited": {
+      "type": "boolean",
+      "readOnly": true
+    },
+    "invoiceDueDate": {
+      "type": "string"
+    },
+    "kid": {
+      "type": "string",
+      "desc": "KID - Kundeidentifikasjonsnummer."
+    },
+    "invoiceComment": {
+      "type": "string",
+      "readOnly": true,
+      "desc": "Comment text for the invoice. This was specified on the order as invoiceComment."
+    },
+    "comment": {
+      "type": "string",
+      "desc": "Comment text for the specific invoice."
+    },
+    "orders": {
+      "type": "array",
+      "desc": "Related orders. Only one order per invoice is supported at the moment."
+    },
+    "orderLines": {
+      "type": "array",
+      "readOnly": true,
+      "desc": "Orderlines connected to the invoice."
+    },
+    "travelReports": {
+      "type": "array",
+      "readOnly": true,
+      "desc": "Travel reports connected to the invoice."
+    },
+    "projectInvoiceDetails": {
+      "type": "array",
+      "readOnly": true
+    },
+    "voucher": {
+      "type": "Voucher"
+    },
+    "deliveryDate": {
+      "type": "string",
+      "readOnly": true,
+      "desc": "The delivery date."
+    },
+    "amount": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "In the company\u2019s currency, typically NOK."
+    },
+    "amountCurrency": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "In the specified currency."
+    },
+    "amountExcludingVat": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "Amount excluding VAT (NOK)."
+    },
+    "amountExcludingVatCurrency": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "Amount excluding VAT in the specified currency."
+    },
+    "amountRoundoff": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "Amount of round off to nearest integer."
+    },
+    "amountRoundoffCurrency": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "Amount of round off to nearest integer in the specified currency."
+    },
+    "amountOutstanding": {
+      "type": "number",
+      "readOnly": true
+    },
+    "amountCurrencyOutstanding": {
+      "type": "number",
+      "readOnly": true
+    },
+    "amountOutstandingTotal": {
+      "type": "number",
+      "readOnly": true
+    },
+    "amountCurrencyOutstandingTotal": {
+      "type": "number",
+      "readOnly": true
+    },
+    "sumRemits": {
+      "type": "number",
+      "readOnly": true
+    },
+    "currency": {
+      "type": "Currency"
+    },
+    "isCreditNote": {
+      "type": "boolean",
+      "readOnly": true
+    },
+    "isCharged": {
+      "type": "boolean",
+      "readOnly": true
+    },
+    "isApproved": {
+      "type": "boolean",
+      "readOnly": true
+    },
+    "postings": {
+      "type": "array",
+      "readOnly": true
+    },
+    "reminders": {
+      "type": "array",
+      "readOnly": true,
+      "desc": "Invoice debt collection and reminders."
+    },
+    "invoiceRemarks": {
+      "type": "string",
+      "desc": "Deprecated Invoice remarks - please use the 'invoiceRemark' instead."
+    },
+    "invoiceRemark": {
+      "type": "InvoiceRemark"
+    },
+    "paymentTypeId": {
+      "type": "integer"
+    },
+    "paidAmount": {
+      "type": "number"
+    },
+    "isPeriodizationPossible": {
+      "type": "boolean",
+      "readOnly": true
+    },
+    "documentId": {
+      "type": "integer",
+      "readOnly": true
+    },
+    "ehfSendStatus": {
+      "type": "string",
+      "enum": [
+        "DO_NOT_SEND",
+        "SEND",
+        "SENT",
+        "SEND_FAILURE_RECIPIENT_NOT_FOUND"
+      ],
+      "desc": "[Deprecated] EHF (Peppol) send status. This only shows status for historic EHFs."
+    }
+  },
+  "TravelExpense": {
+    "id": {
+      "type": "integer"
+    },
+    "version": {
+      "type": "integer"
+    },
+    "changes": {
+      "type": "array",
+      "readOnly": true
+    },
+    "url": {
+      "type": "string",
+      "readOnly": true
+    },
+    "attestationSteps": {
+      "type": "array"
+    },
+    "attestation": {
+      "type": "Attestation"
+    },
+    "project": {
+      "type": "Project"
+    },
+    "employee": {
+      "type": "Employee"
+    },
+    "approvedBy": {
+      "type": "Employee"
+    },
+    "completedBy": {
+      "type": "Employee"
+    },
+    "rejectedBy": {
+      "type": "Employee"
+    },
+    "department": {
+      "type": "Department"
+    },
+    "freeDimension1": {
+      "type": "AccountingDimensionValue"
+    },
+    "freeDimension2": {
+      "type": "AccountingDimensionValue"
+    },
+    "freeDimension3": {
+      "type": "AccountingDimensionValue"
+    },
+    "payslip": {
+      "type": "Payslip"
+    },
+    "vatType": {
+      "type": "VatType"
+    },
+    "paymentCurrency": {
+      "type": "Currency"
+    },
+    "travelDetails": {
+      "type": "TravelDetails"
+    },
+    "voucher": {
+      "type": "Voucher"
+    },
+    "attachment": {
+      "type": "Document"
+    },
+    "isCompleted": {
+      "type": "boolean",
+      "readOnly": true
+    },
+    "isApproved": {
+      "type": "boolean",
+      "readOnly": true
+    },
+    "rejectedComment": {
+      "type": "string",
+      "readOnly": true
+    },
+    "isChargeable": {
+      "type": "boolean"
+    },
+    "isFixedInvoicedAmount": {
+      "type": "boolean"
+    },
+    "isMarkupInvoicedPercent": {
+      "type": "boolean"
+    },
+    "isIncludeAttachedReceiptsWhenReinvoicing": {
+      "type": "boolean"
+    },
+    "completedDate": {
+      "type": "string",
+      "readOnly": true
+    },
+    "approvedDate": {
+      "type": "string",
+      "readOnly": true
+    },
+    "date": {
+      "type": "string",
+      "readOnly": true
+    },
+    "travelAdvance": {
+      "type": "number"
+    },
+    "fixedInvoicedAmount": {
+      "type": "number"
+    },
+    "markupInvoicedPercent": {
+      "type": "number"
+    },
+    "amount": {
+      "type": "number",
+      "readOnly": true
+    },
+    "chargeableAmountCurrency": {
+      "type": "number",
+      "readOnly": true
+    },
+    "paymentAmount": {
+      "type": "number",
+      "readOnly": true
+    },
+    "chargeableAmount": {
+      "type": "number",
+      "readOnly": true
+    },
+    "lowRateVAT": {
+      "type": "number",
+      "readOnly": true
+    },
+    "mediumRateVAT": {
+      "type": "number",
+      "readOnly": true
+    },
+    "highRateVAT": {
+      "type": "number",
+      "readOnly": true
+    },
+    "paymentAmountCurrency": {
+      "type": "number",
+      "readOnly": true
+    },
+    "number": {
+      "type": "integer",
+      "readOnly": true
+    },
+    "numberAsString": {
+      "type": "string",
+      "readOnly": true
+    },
+    "invoice": {
+      "type": "Invoice"
+    },
+    "title": {
+      "type": "string"
+    },
+    "displayName": {
+      "type": "string",
+      "readOnly": true
+    },
+    "displayNameWithoutNumber": {
+      "type": "string",
+      "readOnly": true
+    },
+    "perDiemCompensations": {
+      "type": "array",
+      "desc": "Link to individual per diem compensations."
+    },
+    "mileageAllowances": {
+      "type": "array",
+      "readOnly": true,
+      "desc": "Link to individual mileage allowances."
+    },
+    "accommodationAllowances": {
+      "type": "array",
+      "readOnly": true,
+      "desc": "Link to individual accommodation allowances."
+    },
+    "costs": {
+      "type": "array",
+      "desc": "Link to individual costs."
+    },
+    "attachmentCount": {
+      "type": "integer",
+      "readOnly": true
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "ALL",
+        "REJECTED",
+        "OPEN",
+        "APPROVED",
+        "SALARY_PAID",
+        "DELIVERED"
+      ],
+      "readOnly": true
+    },
+    "stateName": {
+      "type": "string",
+      "readOnly": true
+    },
+    "actions": {
+      "type": "array",
+      "readOnly": true
+    },
+    "isSalaryAdmin": {
+      "type": "boolean",
+      "readOnly": true
+    },
+    "showPayslip": {
+      "type": "boolean",
+      "readOnly": true
+    },
+    "accountingPeriodClosed": {
+      "type": "boolean",
+      "readOnly": true
+    },
+    "accountingPeriodVATClosed": {
+      "type": "boolean",
+      "readOnly": true
+    },
+    "type": {
+      "type": "integer",
+      "readOnly": true
+    }
+  },
+  "Voucher": {
+    "id": {
+      "type": "integer"
+    },
+    "version": {
+      "type": "integer"
+    },
+    "changes": {
+      "type": "array",
+      "readOnly": true
+    },
+    "url": {
+      "type": "string",
+      "readOnly": true
+    },
+    "date": {
+      "type": "string"
+    },
+    "number": {
+      "type": "integer",
+      "readOnly": true,
+      "desc": "System generated number that cannot be changed."
+    },
+    "tempNumber": {
+      "type": "integer",
+      "readOnly": true,
+      "desc": "Temporary voucher number."
+    },
+    "year": {
+      "type": "integer",
+      "readOnly": true,
+      "desc": "System generated number that cannot be changed."
+    },
+    "description": {
+      "type": "string"
+    },
+    "voucherType": {
+      "type": "VoucherType"
+    },
+    "reverseVoucher": {
+      "type": "Voucher"
+    },
+    "postings": {
+      "type": "array"
+    },
+    "document": {
+      "type": "Document"
+    },
+    "attachment": {
+      "type": "Document"
+    },
+    "externalVoucherNumber": {
+      "type": "string",
+      "desc": "External voucher number. Maximum 70 characters."
+    },
+    "ediDocument": {
+      "type": "Document"
+    },
+    "supplierVoucherType": {
+      "type": "string",
+      "enum": [
+        "TYPE_SUPPLIER_INVOICE_SIMPLE",
+        "TYPE_SUPPLIER_INVOICE_DETAILED"
+      ],
+      "readOnly": true,
+      "desc": "Supplier voucher type - simple and detailed."
+    },
+    "wasAutoMatched": {
+      "type": "boolean",
+      "readOnly": true,
+      "desc": "Voucher was auto matched"
+    },
+    "vendorInvoiceNumber": {
+      "type": "string",
+      "desc": "Vendor invoice number."
+    },
+    "displayName": {
+      "type": "string",
+      "readOnly": true
+    },
+    "numberAsString": {
+      "type": "string",
+      "readOnly": true
+    }
+  },
+  "Department": {
+    "id": {
+      "type": "integer"
+    },
+    "version": {
+      "type": "integer"
+    },
+    "changes": {
+      "type": "array",
+      "readOnly": true
+    },
+    "url": {
+      "type": "string",
+      "readOnly": true
+    },
+    "name": {
+      "type": "string"
+    },
+    "departmentNumber": {
+      "type": "string"
+    },
+    "departmentManager": {
+      "type": "Employee"
+    },
+    "displayName": {
+      "type": "string",
+      "readOnly": true
+    },
+    "isInactive": {
+      "type": "boolean"
+    },
+    "businessActivityTypeId": {
+      "type": "integer",
+      "readOnly": true
+    }
+  },
+  "Project": {
+    "id": {
+      "type": "integer"
+    },
+    "version": {
+      "type": "integer"
+    },
+    "changes": {
+      "type": "array",
+      "readOnly": true
+    },
+    "url": {
+      "type": "string",
+      "readOnly": true
+    },
+    "name": {
+      "type": "string"
+    },
+    "number": {
+      "type": "string",
+      "desc": "If NULL, a number is generated automatically."
+    },
+    "displayName": {
+      "type": "string",
+      "readOnly": true
+    },
+    "description": {
+      "type": "string"
+    },
+    "projectManager": {
+      "type": "Employee"
+    },
+    "department": {
+      "type": "Department"
+    },
+    "mainProject": {
+      "type": "Project"
+    },
+    "startDate": {
+      "type": "string"
+    },
+    "endDate": {
+      "type": "string"
+    },
+    "customer": {
+      "type": "Customer"
+    },
+    "isClosed": {
+      "type": "boolean"
+    },
+    "isReadyForInvoicing": {
+      "type": "boolean"
+    },
+    "isInternal": {
+      "type": "boolean"
+    },
+    "isOffer": {
+      "type": "boolean",
+      "desc": "If is Project Offer set to true, if is Project set to false. The default value is false."
+    },
+    "isFixedPrice": {
+      "type": "boolean",
+      "desc": "Project is fixed price if set to true, hourly rate if set to false."
+    },
+    "projectCategory": {
+      "type": "ProjectCategory"
+    },
+    "deliveryAddress": {
+      "type": "Address"
+    },
+    "boligmappaAddress": {
+      "type": "Address"
+    },
+    "displayNameFormat": {
+      "type": "string",
+      "enum": [
+        "NAME_STANDARD",
+        "NAME_INCL_CUSTOMER_NAME",
+        "NAME_INCL_PARENT_NAME",
+        "NAME_INCL_PARENT_NUMBER",
+        "NAME_INCL_PARENT_NAME_AND_NUMBER"
+      ],
+      "desc": "Defines project name presentation in overviews."
+    },
+    "reference": {
+      "type": "string"
+    },
+    "externalAccountsNumber": {
+      "type": "string"
+    },
+    "discountPercentage": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "Project discount percentage."
+    },
+    "vatType": {
+      "type": "VatType"
+    },
+    "fixedprice": {
+      "type": "number",
+      "desc": "Fixed price amount, in the project's currency."
+    },
+    "contributionMarginPercent": {
+      "type": "number",
+      "readOnly": true
+    },
+    "numberOfSubProjects": {
+      "type": "integer",
+      "readOnly": true
+    },
+    "numberOfProjectParticipants": {
+      "type": "integer",
+      "readOnly": true
+    },
+    "orderLines": {
+      "type": "array",
+      "readOnly": true,
+      "desc": "Order lines tied to the order"
+    },
+    "currency": {
+      "type": "Currency"
+    },
+    "markUpOrderLines": {
+      "type": "number",
+      "desc": "Set mark-up (%) for order lines."
+    },
+    "markUpFeesEarned": {
+      "type": "number",
+      "desc": "Set mark-up (%) for fees earned."
+    },
+    "isPriceCeiling": {
+      "type": "boolean",
+      "desc": "Set to true if an hourly rate project has a price ceiling."
+    },
+    "priceCeilingAmount": {
+      "type": "number",
+      "desc": "Price ceiling amount, in the project's currency."
+    },
+    "projectHourlyRates": {
+      "type": "array",
+      "desc": "Project Rate Types tied to the project."
+    },
+    "forParticipantsOnly": {
+      "type": "boolean",
+      "desc": "Set to true if only project participants can register information on the project"
+    },
+    "participants": {
+      "type": "array",
+      "desc": "Link to individual project participants."
+    },
+    "contact": {
+      "type": "Contact"
+    },
+    "attention": {
+      "type": "Contact"
+    },
+    "invoiceComment": {
+      "type": "string",
+      "desc": "Comment for project invoices"
+    },
+    "invoicingPlan": {
+      "type": "array",
+      "readOnly": true,
+      "desc": "Invoicing plans tied to the project"
+    },
+    "preliminaryInvoice": {
+      "type": "Invoice"
+    },
+    "generalProjectActivitiesPerProjectOnly": {
+      "type": "boolean",
+      "desc": "Set to true if a general project activity must be linked to project to allow time tracking."
+    },
+    "projectActivities": {
+      "type": "array",
+      "desc": "Project Activities"
+    },
+    "hierarchyNameAndNumber": {
+      "type": "string",
+      "readOnly": true
+    },
+    "invoiceDueDate": {
+      "type": "integer",
+      "desc": "invoice due date"
+    },
+    "invoiceDueDateType": {
+      "type": "string",
+      "enum": [
+        "DAYS",
+        "MONTHS",
+        "RECURRING_DAY_OF_MONTH"
+      ]
+    },
+    "invoiceReceiverEmail": {
+      "type": "string"
+    },
+    "overdueNoticeEmail": {
+      "type": "string"
+    },
+    "accessType": {
+      "type": "string",
+      "enum": [
+        "NONE",
+        "READ",
+        "WRITE"
+      ],
+      "desc": "READ/WRITE access on project"
+    },
+    "useProductNetPrice": {
+      "type": "boolean"
+    },
+    "ignoreCompanyProductDiscountAgreement": {
+      "type": "boolean"
+    },
+    "customerName": {
+      "type": "string",
+      "readOnly": true
+    },
+    "hierarchyLevel": {
+      "type": "integer",
+      "readOnly": true
+    },
+    "projectManagerNameAndNumber": {
+      "type": "string",
+      "readOnly": true
+    },
+    "totalInvoicedOnAccountAmountAbsoluteCurrency": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "Amount paid on account(a konto)"
+    },
+    "invoiceOnAccountVatHigh": {
+      "type": "boolean",
+      "desc": "The on account(a konto) amounts including VAT"
+    },
+    "invoiceReserveTotalAmountCurrency": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "Total invoice reserve"
+    },
+    "accountingDimensionValues": {
+      "type": "array",
+      "desc": "[BETA - Requires pilot feature] Free dimensions for the project."
+    }
+  },
+  "Activity": {
+    "id": {
+      "type": "integer"
+    },
+    "version": {
+      "type": "integer"
+    },
+    "changes": {
+      "type": "array",
+      "readOnly": true
+    },
+    "url": {
+      "type": "string",
+      "readOnly": true
+    },
+    "name": {
+      "type": "string"
+    },
+    "number": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "activityType": {
+      "type": "string",
+      "enum": [
+        "GENERAL_ACTIVITY",
+        "PROJECT_GENERAL_ACTIVITY",
+        "PROJECT_SPECIFIC_ACTIVITY",
+        "TASK"
+      ],
+      "desc": "PROJECT_SPECIFIC_ACTIVITY are made via project/projectActivity, as they must be part of a project."
+    },
+    "isProjectActivity": {
+      "type": "boolean",
+      "readOnly": true,
+      "desc": "Manipulate these with ActivityType"
+    },
+    "isGeneral": {
+      "type": "boolean",
+      "readOnly": true,
+      "desc": "Manipulate these with ActivityType"
+    },
+    "isTask": {
+      "type": "boolean",
+      "readOnly": true,
+      "desc": "Manipulate these with ActivityType"
+    },
+    "isDisabled": {
+      "type": "boolean",
+      "readOnly": true
+    },
+    "isChargeable": {
+      "type": "boolean"
+    },
+    "rate": {
+      "type": "number"
+    },
+    "costPercentage": {
+      "type": "number"
+    },
+    "displayName": {
+      "type": "string"
+    },
+    "deletable": {
+      "type": "boolean",
+      "readOnly": true
+    }
+  },
+  "Asset": {
+    "id": {
+      "type": "integer"
+    },
+    "version": {
+      "type": "integer"
+    },
+    "changes": {
+      "type": "array",
+      "readOnly": true
+    },
+    "url": {
+      "type": "string",
+      "readOnly": true
+    },
+    "name": {
+      "type": "string"
+    },
+    "displayName": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "dateOfAcquisition": {
+      "type": "string"
+    },
+    "acquisitionCost": {
+      "type": "number",
+      "desc": "Acquisition cost."
+    },
+    "account": {
+      "type": "Account"
+    },
+    "incomingBalance": {
+      "type": "number",
+      "desc": "Incoming balance for the asset."
+    },
+    "lifetime": {
+      "type": "integer",
+      "desc": "Lifetime in months for the asset."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "MANUAL",
+        "NO_DEPRECIATION",
+        "INVALID_DATE",
+        "MISSING_TRANS_TYPE",
+        "MISSING_INFO",
+        "READY_TO_DEPRECIATE",
+        "CORRECTION_NEEDED",
+        "COMPLETED",
+        "REST_VALUE",
+        "NOTHING_TO_DEPRECIATE"
+      ],
+      "readOnly": true,
+      "desc": "Status"
+    },
+    "depreciationRemainingValue": {
+      "type": "number"
+    },
+    "depreciationAccount": {
+      "type": "Account"
+    },
+    "hasHistoryFromExternalSystem": {
+      "type": "boolean"
+    },
+    "externalLastDepreciation": {
+      "type": "string"
+    },
+    "externalLastAccountedValue": {
+      "type": "number"
+    },
+    "externalAccumulatedDepreciation": {
+      "type": "number"
+    },
+    "depreciationMethod": {
+      "type": "string",
+      "enum": [
+        "MANUAL",
+        "TAX_RELATED",
+        "STRAIGHT_LINE",
+        "CUSTOMIZED_AMOUNT",
+        "NO_DEPRECIATION"
+      ],
+      "desc": "Depreciation method"
+    },
+    "depreciationFrom": {
+      "type": "string"
+    },
+    "accumulatedDepreciation": {
+      "type": "number"
+    },
+    "depreciationRate": {
+      "type": "number"
+    },
+    "department": {
+      "type": "Department"
+    },
+    "project": {
+      "type": "Project"
+    },
+    "startingBalance": {
+      "type": "number",
+      "readOnly": true
+    },
+    "balanceIn": {
+      "type": "number",
+      "readOnly": true
+    },
+    "balanceOut": {
+      "type": "number",
+      "readOnly": true
+    },
+    "balanceChange": {
+      "type": "number",
+      "readOnly": true
+    },
+    "depreciationBasis": {
+      "type": "number",
+      "readOnly": true
+    },
+    "numberOfMonths": {
+      "type": "integer",
+      "readOnly": true
+    },
+    "annualDepreciation": {
+      "type": "number",
+      "readOnly": true
+    },
+    "depreciationDiscrepancy": {
+      "type": "number",
+      "readOnly": true
+    },
+    "depreciationAmount": {
+      "type": "number",
+      "readOnly": true
+    },
+    "totalDepreciationAmount": {
+      "type": "number",
+      "readOnly": true
+    },
+    "improvements": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "Improvements"
+    },
+    "newHires": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "New hires"
+    },
+    "salesAndOtherRealizations": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "Sales and other realizations"
+    },
+    "saleDate": {
+      "type": "string"
+    },
+    "accountingRelatedProfitOrLoss": {
+      "type": "number",
+      "readOnly": true,
+      "desc": "Accounting related profit or loss"
+    }
+  },
+  "BankReconciliation": {
+    "id": {
+      "type": "integer"
+    },
+    "version": {
+      "type": "integer"
+    },
+    "changes": {
+      "type": "array",
+      "readOnly": true
+    },
+    "url": {
+      "type": "string",
+      "readOnly": true
+    },
+    "account": {
+      "type": "Account"
+    },
+    "accountingPeriod": {
+      "type": "AccountingPeriod"
+    },
+    "voucher": {
+      "type": "Voucher"
+    },
+    "transactions": {
+      "type": "array",
+      "readOnly": true
+    },
+    "isClosed": {
+      "type": "boolean"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "MANUAL",
+        "AUTOMATIC"
+      ],
+      "desc": "Type of Bank Reconciliation."
+    },
+    "bankAccountClosingBalanceCurrency": {
+      "type": "number"
+    },
+    "closedDate": {
+      "type": "string",
+      "readOnly": true
+    },
+    "closedByContact": {
+      "type": "Contact"
+    },
+    "closedByEmployee": {
+      "type": "Employee"
+    },
+    "approvable": {
+      "type": "boolean",
+      "readOnly": true
+    },
+    "autoPayReconciliation": {
+      "type": "boolean",
+      "readOnly": true
+    },
+    "attachment": {
+      "type": "Document"
+    }
+  },
+  "Supplier": {
+    "id": {
+      "type": "integer"
+    },
+    "version": {
+      "type": "integer"
+    },
+    "changes": {
+      "type": "array",
+      "readOnly": true
+    },
+    "url": {
+      "type": "string",
+      "readOnly": true
+    },
+    "name": {
+      "type": "string"
+    },
+    "organizationNumber": {
+      "type": "string"
+    },
+    "supplierNumber": {
+      "type": "integer"
+    },
+    "customerNumber": {
+      "type": "integer"
+    },
+    "isSupplier": {
+      "type": "boolean",
+      "readOnly": true
+    },
+    "isCustomer": {
+      "type": "boolean",
+      "desc": "Determine if the supplier is also a customer"
+    },
+    "isInactive": {
+      "type": "boolean"
+    },
+    "email": {
+      "type": "string"
+    },
+    "bankAccounts": {
+      "type": "array"
+    },
+    "invoiceEmail": {
+      "type": "string"
+    },
+    "overdueNoticeEmail": {
+      "type": "string",
+      "desc": "The email address of the customer where the noticing emails are sent in case of an overdue"
+    },
+    "phoneNumber": {
+      "type": "string"
+    },
+    "phoneNumberMobile": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "isPrivateIndividual": {
+      "type": "boolean"
+    },
+    "showProducts": {
+      "type": "boolean"
+    },
+    "accountManager": {
+      "type": "Employee"
+    },
+    "postalAddress": {
+      "type": "Address"
+    },
+    "physicalAddress": {
+      "type": "Address"
+    },
+    "deliveryAddress": {
+      "type": "DeliveryAddress"
+    },
+    "category1": {
+      "type": "CustomerCategory"
+    },
+    "category2": {
+      "type": "CustomerCategory"
+    },
+    "category3": {
+      "type": "CustomerCategory"
+    },
+    "bankAccountPresentation": {
+      "type": "array",
+      "desc": "List of bankAccount for this supplier"
+    },
+    "currency": {
+      "type": "Currency"
+    },
+    "ledgerAccount": {
+      "type": "Account"
+    },
+    "language": {
+      "type": "string",
+      "enum": [
+        "NO",
+        "EN"
+      ]
+    },
+    "isWholesaler": {
+      "type": "boolean",
+      "readOnly": true
+    },
+    "displayName": {
+      "type": "string",
+      "readOnly": true
+    },
+    "locale": {
+      "type": "string",
+      "readOnly": true
+    },
+    "website": {
+      "type": "string"
+    }
+  },
+  "PerDiemCompensation": {
+    "id": {
+      "type": "integer"
+    },
+    "version": {
+      "type": "integer"
+    },
+    "changes": {
+      "type": "array",
+      "readOnly": true
+    },
+    "url": {
+      "type": "string",
+      "readOnly": true
+    },
+    "travelExpense": {
+      "type": "TravelExpense"
+    },
+    "rateType": {
+      "type": "TravelExpenseRate"
+    },
+    "rateCategory": {
+      "type": "TravelExpenseRateCategory"
+    },
+    "countryCode": {
+      "type": "string"
+    },
+    "travelExpenseZoneId": {
+      "type": "integer",
+      "desc": "Optional travel expense zone id. If not specified, the value from field zone will be used."
+    },
+    "overnightAccommodation": {
+      "type": "string",
+      "enum": [
+        "NONE",
+        "HOTEL",
+        "BOARDING_HOUSE_WITHOUT_COOKING",
+        "BOARDING_HOUSE_WITH_COOKING"
+      ],
+      "desc": "Set what sort of accommodation was had overnight."
+    },
+    "location": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "count": {
+      "type": "integer"
+    },
+    "rate": {
+      "type": "number"
+    },
+    "amount": {
+      "type": "number"
+    },
+    "isDeductionForBreakfast": {
+      "type": "boolean"
+    },
+    "isDeductionForLunch": {
+      "type": "boolean"
+    },
+    "isDeductionForDinner": {
+      "type": "boolean"
+    }
+  }
+}

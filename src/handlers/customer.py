@@ -28,6 +28,11 @@ class CreateCustomerHandler(BaseHandler):
             if params.get(field):
                 body[field] = params[field]
 
+        # Boolean flags
+        for flag in ("isSupplier", "isPrivateIndividual"):
+            if flag in params:
+                body[flag] = bool(params[flag])
+
         if params.get("deliveryAddress"):
             body["deliveryAddress"] = params["deliveryAddress"]
 

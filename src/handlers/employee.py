@@ -26,15 +26,16 @@ class CreateEmployeeHandler(BaseHandler):
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         today = dt_date.today().isoformat()
 
-        # Determine userType: STANDARD needs email, NO_ACCESS doesn't
-        # Map ADMINISTRATOR -> STANDARD (admin is set via allowInformationRegistration)
+        # Determine userType: valid API values are STANDARD, EXTENDED, NO_ACCESS
+        # ADMINISTRATOR/ADMIN -> EXTENDED (full admin access per OpenAPI spec)
+        # STANDARD/EXTENDED require email for Visma Connect login
         has_email = bool(params.get("email"))
         raw_type = params.get("userType", "STANDARD" if has_email else "NO_ACCESS")
-        is_admin = raw_type in ("ADMINISTRATOR", "ADMIN")
-        user_type = "STANDARD" if is_admin or raw_type == "STANDARD" else "NO_ACCESS"
+        is_admin = raw_type in ("ADMINISTRATOR", "ADMIN", "EXTENDED")
+        user_type = "EXTENDED" if is_admin else ("STANDARD" if has_email else "NO_ACCESS")
 
-        # STANDARD requires email — if we need STANDARD but have no email, use NO_ACCESS
-        if user_type == "STANDARD" and not has_email:
+        # STANDARD and EXTENDED require email
+        if user_type in ("STANDARD", "EXTENDED") and not has_email:
             user_type = "NO_ACCESS"
 
         body: dict[str, Any] = {
