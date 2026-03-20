@@ -11,7 +11,7 @@ import secrets
 
 import pytest
 
-from src.api_client import TripletexClient, TripletexApiError
+from src.api_client import TripletexClient
 
 SANDBOX_URL = os.environ.get("SANDBOX_URL", "")
 SANDBOX_TOKEN = os.environ.get("SANDBOX_TOKEN", "")
@@ -70,9 +70,7 @@ class TestCreateEmployee:
         # Employment
         emps = v.get("employments", [])
         assert len(emps) >= 1, "No employment created"
-        emp_detail = client.get(
-            f"/employee/employment/{emps[0]['id']}", fields="*"
-        )
+        emp_detail = client.get(f"/employee/employment/{emps[0]['id']}", fields="*")
         ev = emp_detail["value"]
         assert ev["startDate"] == "2026-03-01"
 
@@ -180,12 +178,18 @@ class TestCreateInvoiceWithPayment:
             "customer": {"name": f"Integ InvKunde {tag}", "organizationNumber": "111222333"},
             "orderLines": [
                 {
-                    "product": {"name": f"Integ Prod A {tag}", "number": str(secrets.randbelow(90000) + 10000)},
+                    "product": {
+                        "name": f"Integ Prod A {tag}",
+                        "number": str(secrets.randbelow(90000) + 10000),
+                    },
                     "count": 1,
                     "unitPriceExcludingVatCurrency": 15000,
                 },
                 {
-                    "product": {"name": f"Integ Prod B {tag}", "number": str(secrets.randbelow(90000) + 10000)},
+                    "product": {
+                        "name": f"Integ Prod B {tag}",
+                        "number": str(secrets.randbelow(90000) + 10000),
+                    },
                     "count": 2,
                     "unitPriceExcludingVatCurrency": 7500,
                 },
@@ -255,7 +259,11 @@ class TestCreateTravelExpense:
 
         tag = uid()
         params = {
-            "employee": {"firstName": f"Reise-{tag}", "lastName": "Ansatt", "email": f"reise-{tag}@example.com"},
+            "employee": {
+                "firstName": f"Reise-{tag}",
+                "lastName": "Ansatt",
+                "email": f"reise-{tag}@example.com",
+            },
             "title": f"Reise {tag}",
             "costs": [
                 {"description": "Fly", "amount": 5000},
