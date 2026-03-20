@@ -242,13 +242,53 @@ class TestLedgerCorrectionHandler:
 
 
 class TestYearEndClosingHandler:
-    def test_year_end_happy_path(self) -> None:
+    def test_year_end_with_explicit_postings(self) -> None:
         handler = get_handler("year_end_closing")
         assert handler is not None
-        client = _mock_client(post_response=sample_api_response(value={"id": 30}))
-        result = handler.execute(client, {"year": 2025})
+        client = _mock_client(
+            get_response=sample_api_response(values=[{"id": 100}]),
+            post_response=sample_api_response(value={"id": 30}),
+        )
+        result = handler.execute(
+            client,
+            {
+                "year": 2025,
+                "postings": [
+                    {"account": 3000, "amountGross": -10000},
+                    {"account": 8800, "amountGross": 10000},
+                ],
+            },
+        )
         assert result["id"] == 30
         assert result["year"] == 2025
+        assert result["action"] == "year_end_closed"
+
+    def test_year_end_no_balances(self) -> None:
+        handler = get_handler("year_end_closing")
+        assert handler is not None
+        client = _mock_client(get_response=sample_api_response(values=[]))
+        result = handler.execute(client, {"year": 2025})
+        assert result["year"] == 2025
+        assert result["action"] == "no_postings_needed"
+
+    def test_year_end_auto_generates_postings(self) -> None:
+        handler = get_handler("year_end_closing")
+        assert handler is not None
+
+        def mock_get(path, **kwargs):
+            if "balanceSheet" in path:
+                return sample_api_response(
+                    values=[
+                        {"account": {"id": 10}, "closingBalance": 5000},
+                        {"account": {"id": 11}, "closingBalance": -2000},
+                    ]
+                )
+            return sample_api_response(values=[{"id": 99}])
+
+        client = _mock_client(post_response=sample_api_response(value={"id": 31}))
+        client.get.side_effect = mock_get
+        result = handler.execute(client, {"year": 2025})
+        assert result["id"] == 31
         assert result["action"] == "year_end_closed"
 
 

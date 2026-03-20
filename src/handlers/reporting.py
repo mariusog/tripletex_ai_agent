@@ -69,8 +69,9 @@ class LedgerCorrectionHandler(BaseHandler):
 class YearEndClosingHandler(BaseHandler):
     """Execute year-end closing via Tripletex API.
 
-    Creates closing vouchers for the specified year.
-    API: POST /ledger/voucher with year-end closing entries.
+    If postings are provided by the LLM, uses those directly.
+    Otherwise, reads the result budget and generates closing entries
+    that zero out revenue/expense accounts to equity (8800).
     """
 
     def get_task_type(self) -> str:
@@ -86,23 +87,100 @@ class YearEndClosingHandler(BaseHandler):
 
         body: dict[str, Any] = {
             "date": date,
-            "description": params.get("description", f"Year-end closing {year}"),
+            "description": params.get("description", f"Årsoppgjør {year}"),
         }
 
         if "voucherType" in params:
             body["typeId"] = int(params["voucherType"])
 
-        # Build closing postings if provided
         postings = params.get("postings", [])
         if postings:
             body["postings"] = [
                 _build_posting(api_client, p, row=i + 1) for i, p in enumerate(postings)
             ]
+        else:
+            body["postings"] = self._generate_closing_postings(api_client, year, date)
 
-        result = api_client.post("/ledger/voucher", data=body)
+        if not body.get("postings"):
+            return {"year": year, "action": "no_postings_needed"}
+
+        result = api_client.post(
+            "/ledger/voucher",
+            data=body,
+            params={"sendToLedger": "true"},
+        )
         value = result.get("value", {})
-        logger.info("Created year-end closing voucher id=%s for year %d", value.get("id"), year)
+        logger.info(
+            "Created year-end closing voucher id=%s for year %d",
+            value.get("id"),
+            year,
+        )
         return {"id": value.get("id"), "year": year, "action": "year_end_closed"}
+
+    def _generate_closing_postings(
+        self, api_client: TripletexClient, year: int, date: str
+    ) -> list[dict[str, Any]]:
+        """Auto-generate closing entries from the balance sheet.
+
+        Revenue/expense accounts (3000-8999) are closed to
+        annual result account (8800).
+        """
+        try:
+            resp = api_client.get(
+                "/balanceSheet",
+                params={
+                    "dateFrom": f"{year}-01-01",
+                    "dateTo": f"{year}-12-31",
+                    "accountNumberFrom": 3000,
+                    "accountNumberTo": 8999,
+                },
+            )
+        except TripletexApiError:
+            logger.warning("Could not fetch balance sheet for year %d", year)
+            return []
+
+        entries = resp.get("values", [])
+        postings: list[dict[str, Any]] = []
+        total = 0.0
+        row = 1
+
+        for entry in entries:
+            balance = entry.get("closingBalance", 0) or 0
+            if abs(balance) < 0.01:
+                continue
+            acct = entry.get("account", {})
+            acct_id = acct.get("id")
+            if not acct_id:
+                continue
+            postings.append(
+                {
+                    "row": row,
+                    "account": {"id": acct_id},
+                    "amountGross": -balance,
+                    "amountGrossCurrency": -balance,
+                }
+            )
+            total += balance
+            row += 1
+
+        if abs(total) >= 0.01:
+            equity_resp = api_client.get(
+                "/ledger/account",
+                params={"number": "2050", "count": 1},
+                fields="id",
+            )
+            equity_vals = equity_resp.get("values", [])
+            if equity_vals:
+                postings.append(
+                    {
+                        "row": row,
+                        "account": {"id": equity_vals[0]["id"]},
+                        "amountGross": total,
+                        "amountGrossCurrency": total,
+                    }
+                )
+
+        return postings
 
 
 @register_handler
