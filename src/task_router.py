@@ -40,6 +40,7 @@ class TaskRouter:
             classification = self._classify(request)
             task_type = classification.task_type
             params = classification.params
+            logger.info("Classified as task_type=%s params=%s", task_type, params)
 
             handler = self._registry.get(task_type)
             if handler is None:
