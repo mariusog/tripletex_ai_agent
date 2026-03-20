@@ -68,7 +68,7 @@ LLM_TIMEOUT = 30
 LLM_MAX_RETRIES = 1
 
 # Maximum tokens for LLM response
-LLM_MAX_TOKENS = 2048
+LLM_MAX_TOKENS = 1024
 
 # Model identifiers
 LLM_CLAUDE_MODEL = "claude-sonnet-4-20250514"
@@ -109,6 +109,7 @@ TIER_2_TASKS = [
     "create_travel_expense",
     "deliver_travel_expense",
     "approve_travel_expense",
+    "delete_travel_expense",
     "link_project_customer",
     "create_activity",
     "update_project",
@@ -120,6 +121,7 @@ TIER_2_TASKS = [
 TIER_3_TASKS = [
     "create_voucher",
     "reverse_voucher",
+    "delete_voucher",
     "bank_reconciliation",
     "ledger_correction",
     "year_end_closing",
@@ -154,6 +156,7 @@ OPTIMAL_CALL_COUNTS: dict[str, int] = {
     "create_travel_expense": 1,  # POST /travelExpense
     "deliver_travel_expense": 1,  # PUT /travelExpense/{id}/:deliver
     "approve_travel_expense": 1,  # PUT /travelExpense/{id}/:approve
+    "delete_travel_expense": 2,  # GET /travelExpense + DELETE /travelExpense/{id}
     "link_project_customer": 2,  # GET /project/{id} + PUT /project/{id}
     "create_activity": 1,  # POST /activity
     "update_project": 2,  # GET /project/{id} + PUT /project/{id}
@@ -162,6 +165,7 @@ OPTIMAL_CALL_COUNTS: dict[str, int] = {
     # Tier 3: complex workflows (1-2 calls)
     "create_voucher": 1,  # POST /ledger/voucher (postings inline)
     "reverse_voucher": 1,  # PUT /ledger/voucher/{id}/:reverse
+    "delete_voucher": 2,  # GET /ledger/voucher + DELETE /ledger/voucher/{id}
     "bank_reconciliation": 1,  # POST /bank/reconciliation (+ 1 per adjustment)
     "ledger_correction": 1,  # POST /ledger/voucher (correction postings)
     "year_end_closing": 1,  # POST /ledger/voucher (closing entries)

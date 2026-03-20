@@ -1,0 +1,15 @@
+{
+  "task_type": "delete_travel_expense",
+  "prompts": {
+    "no": "Slett reiseregningen til Kari Nordmann",
+    "en": "Delete the travel expense for Kari Nordmann",
+    "es": "Elimine el gasto de viaje de Kari Nordmann",
+    "pt": "Exclua a despesa de viagem de Kari Nordmann",
+    "nn": "Slett reiserekninga til Kari Nordmann",
+    "de": "Löschen Sie die Reisekostenabrechnung von Kari Nordmann",
+    "fr": "Supprimez la note de frais de Kari Nordmann"
+  },
+  "expected_params": {
+    "employee": "Kari Nordmann"
+  }
+}

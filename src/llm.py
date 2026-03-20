@@ -30,9 +30,27 @@ from src.models import FileAttachment, TaskClassification
 logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = f"""You are a task classifier for Tripletex accounting software.
-Given a user prompt (in any language), identify the task type and extract parameters.
+Given a user prompt (in any of 7 languages: Norwegian bokmål, Norwegian nynorsk, English, \
+Spanish, Portuguese, German, French), identify the task type and extract parameters.
 
 TASK TYPES: {json.dumps(ALL_TASK_TYPES)}
+
+MULTILINGUAL KEYWORDS:
+- faktura/invoice/factura/Rechnung/facture = invoice
+- bestilling/ordre/order/Bestellung/commande = order
+- ansatt/employee/Mitarbeiter/empleado/empregado/employé = employee
+- kunde/customer/Kunde/cliente/client = customer
+- produkt/product/Produkt/producto/produit = product
+- reiseregning/reiseutgift/travel expense/Reisekostenabrechnung/gastos de viaje = travel expense
+- bilag/voucher/Beleg/comprobante/pièce comptable = voucher
+- leverandørfaktura/supplier invoice/Lieferantenrechnung = create_voucher (NOT create_invoice)
+- kreditnota/credit note/Gutschrift/nota de crédito = credit note
+- betaling/payment/Zahlung/pago/paiement = payment
+- slett/slette/delete/löschen/eliminar/supprimer = delete
+- avdeling/department/Abteilung/departamento = department
+- prosjekt/project/Projekt/proyecto/projet = project
+- årsoppgjør/årsavslutning/year-end closing/Jahresabschluss = year_end_closing
+- bankavstemming/bank reconciliation/Bankabstimmung = bank_reconciliation
 
 CLASSIFICATION RULES (important!):
 - If the task mentions creating an order AND an invoice (or "faktura"), classify as "create_invoice"
@@ -43,6 +61,9 @@ CLASSIFICATION RULES (important!):
 classify as "register_payment" with negative amount and "reversal": true. \
 Include "orderLines" with the product/service name and amount from the original invoice.
 - Do NOT classify payment reversals as "reverse_voucher" — use "register_payment" instead
+- If the task mentions DELETING a travel expense (slett reiseregning), classify as \
+"delete_travel_expense"
+- If the task mentions DELETING a voucher/entry (slett bilag), classify as "delete_voucher"
 - If the task mentions a customer by name, pass the full name as "customer" \
 (string or object with "name")
 - If the task mentions products by name/number, include them in orderLines with product name/number
@@ -81,6 +102,8 @@ orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency}}
 - bank_reconciliation: {{account, date, ...}}
 - ledger_correction: {{account, amount, date, description, ...}}
 - year_end_closing: {{year, ...}}
+- delete_travel_expense: {{travelExpenseId, employee (name to search), title (to match)}}
+- delete_voucher: {{voucherId, number, date, description (to match)}}
 - balance_sheet_report: {{dateFrom, dateTo, ...}}
 
 Respond ONLY with valid JSON: {{"task_type": "<type>", "params": {{...}}}}

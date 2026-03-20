@@ -272,6 +272,50 @@ class CreateTravelExpenseHandler(BaseHandler):
 
 
 @register_handler
+class DeleteTravelExpenseHandler(BaseHandler):
+    """GET /travelExpense (search) then DELETE /travelExpense/{id}."""
+
+    def get_task_type(self) -> str:
+        return "delete_travel_expense"
+
+    @property
+    def required_params(self) -> list[str]:
+        return []
+
+    def execute(
+        self, api_client: TripletexClient, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        te_id = params.get("travelExpenseId") or params.get("id")
+        if not te_id:
+            # Search by employee or get most recent
+            search_params: dict[str, Any] = {"count": 10}
+            if params.get("employee"):
+                emp_ref = _resolve_employee(api_client, params["employee"])
+                if emp_ref["id"]:
+                    search_params["employeeId"] = str(emp_ref["id"])
+            resp = api_client.get(
+                "/travelExpense", params=search_params, fields="id,title"
+            )
+            values = resp.get("values", [])
+            if not values:
+                logger.warning("No travel expenses found to delete")
+                return {"error": "not_found"}
+            # Match by title if given
+            title = params.get("title", "")
+            if title:
+                for v in values:
+                    if title.lower() in (v.get("title") or "").lower():
+                        te_id = v["id"]
+                        break
+            if not te_id:
+                te_id = values[0]["id"]
+
+        api_client.delete(f"/travelExpense/{int(te_id)}")
+        logger.info("Deleted travel expense id=%s", te_id)
+        return {"id": int(te_id), "action": "deleted"}
+
+
+@register_handler
 class DeliverTravelExpenseHandler(BaseHandler):
     """POST /travelExpense/:deliver."""
 

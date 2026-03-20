@@ -159,6 +159,51 @@ class CreateVoucherHandler(BaseHandler):
 
 
 @register_handler
+class DeleteVoucherHandler(BaseHandler):
+    """GET /ledger/voucher (search) then DELETE /ledger/voucher/{id}."""
+
+    def get_task_type(self) -> str:
+        return "delete_voucher"
+
+    @property
+    def required_params(self) -> list[str]:
+        return []
+
+    def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
+        voucher_id = params.get("voucherId") or params.get("id")
+        if not voucher_id:
+            # Search for voucher
+            search_params: dict[str, Any] = {"count": 10}
+            if params.get("date"):
+                date_val = self.validate_date(params["date"], "date")
+                if date_val:
+                    search_params["dateFrom"] = date_val
+                    search_params["dateTo"] = date_val
+            if params.get("number"):
+                search_params["number"] = str(params["number"])
+            resp = api_client.get(
+                "/ledger/voucher", params=search_params, fields="id,number,description"
+            )
+            values = resp.get("values", [])
+            if not values:
+                logger.warning("No vouchers found to delete")
+                return {"error": "not_found"}
+            # Match by description if given
+            desc = params.get("description", "")
+            if desc:
+                for v in values:
+                    if desc.lower() in (v.get("description") or "").lower():
+                        voucher_id = v["id"]
+                        break
+            if not voucher_id:
+                voucher_id = values[0]["id"]
+
+        api_client.delete(f"/ledger/voucher/{int(voucher_id)}")
+        logger.info("Deleted voucher id=%s", voucher_id)
+        return {"id": int(voucher_id), "action": "deleted"}
+
+
+@register_handler
 class ReverseVoucherHandler(BaseHandler):
     """POST /ledger/voucher/{id}/:reverse. 1 API call."""
 

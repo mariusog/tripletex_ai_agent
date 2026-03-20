@@ -1,0 +1,15 @@
+{
+  "task_type": "delete_voucher",
+  "prompts": {
+    "no": "Slett bilag nummer 12345",
+    "en": "Delete voucher number 12345",
+    "es": "Elimine el comprobante número 12345",
+    "pt": "Exclua o comprovante número 12345",
+    "nn": "Slett bilag nummer 12345",
+    "de": "Löschen Sie den Beleg Nummer 12345",
+    "fr": "Supprimez la pièce comptable numéro 12345"
+  },
+  "expected_params": {
+    "number": 12345
+  }
+}
