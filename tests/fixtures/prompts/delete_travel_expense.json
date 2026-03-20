@@ -1,0 +1,15 @@
+{
+  "task_type": "delete_travel_expense",
+  "prompts": {
+    "no": "Slett reiseregningen med tittel Kundebesok Oslo",
+    "en": "Delete the travel expense titled Customer Visit Oslo",
+    "es": "Elimine el informe de viaje titulado Visita Cliente Oslo",
+    "pt": "Exclua o relatorio de viagem intitulado Visita Cliente Oslo",
+    "nn": "Slett reiserekninga med tittel Kundebesok Oslo",
+    "de": "Loschen Sie die Reisekostenabrechnung Kundenbesuch Oslo",
+    "fr": "Supprimez la note de frais intitulee Visite Client Oslo"
+  },
+  "expected_params": {
+    "title": "Kundebesok Oslo"
+  }
+}

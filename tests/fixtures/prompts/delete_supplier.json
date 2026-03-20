@@ -1,0 +1,15 @@
+{
+  "task_type": "delete_supplier",
+  "prompts": {
+    "no": "Slett leverandoren Nord Consulting AS",
+    "en": "Delete the supplier Nord Consulting AS",
+    "es": "Elimine el proveedor Nord Consulting AS",
+    "pt": "Exclua o fornecedor Nord Consulting AS",
+    "nn": "Slett leverandoren Nord Consulting AS",
+    "de": "Loschen Sie den Lieferanten Nord Consulting AS",
+    "fr": "Supprimez le fournisseur Nord Consulting AS"
+  },
+  "expected_params": {
+    "name": "Nord Consulting AS"
+  }
+}

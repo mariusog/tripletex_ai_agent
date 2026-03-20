@@ -1,0 +1,15 @@
+{
+  "task_type": "delete_project",
+  "prompts": {
+    "no": "Slett prosjektet Nettbutikk",
+    "en": "Delete the project Online Store",
+    "es": "Elimine el proyecto Tienda Online",
+    "pt": "Exclua o projeto Loja Online",
+    "nn": "Slett prosjektet Nettbutikk",
+    "de": "Loschen Sie das Projekt Online-Shop",
+    "fr": "Supprimez le projet Boutique en Ligne"
+  },
+  "expected_params": {
+    "name": "Nettbutikk"
+  }
+}

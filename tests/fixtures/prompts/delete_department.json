@@ -1,0 +1,15 @@
+{
+  "task_type": "delete_department",
+  "prompts": {
+    "no": "Slett avdelingen Salg",
+    "en": "Delete the Sales department",
+    "es": "Elimine el departamento de Ventas",
+    "pt": "Exclua o departamento de Vendas",
+    "nn": "Slett avdelinga Sal",
+    "de": "Loschen Sie die Abteilung Vertrieb",
+    "fr": "Supprimez le departement Ventes"
+  },
+  "expected_params": {
+    "name": "Salg"
+  }
+}

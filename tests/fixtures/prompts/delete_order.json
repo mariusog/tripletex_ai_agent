@@ -1,0 +1,15 @@
+{
+  "task_type": "delete_order",
+  "prompts": {
+    "no": "Slett ordre nummer 12345",
+    "en": "Delete order number 12345",
+    "es": "Elimine el pedido numero 12345",
+    "pt": "Exclua o pedido numero 12345",
+    "nn": "Slett ordre nummer 12345",
+    "de": "Loschen Sie die Bestellung Nummer 12345",
+    "fr": "Supprimez la commande numero 12345"
+  },
+  "expected_params": {
+    "id": 12345
+  }
+}

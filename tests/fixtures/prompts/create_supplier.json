@@ -1,0 +1,16 @@
+{
+  "task_type": "create_supplier",
+  "prompts": {
+    "no": "Opprett en ny leverandor med navn Nord Consulting AS og organisasjonsnummer 987654321",
+    "en": "Create a new supplier named Nord Consulting AS with organization number 987654321",
+    "es": "Cree un nuevo proveedor llamado Nord Consulting AS con numero 987654321",
+    "pt": "Crie um novo fornecedor chamado Nord Consulting AS com numero 987654321",
+    "nn": "Opprett ein ny leverandor med namn Nord Consulting AS og organisasjonsnummer 987654321",
+    "de": "Erstellen Sie einen neuen Lieferanten namens Nord Consulting AS mit Nummer 987654321",
+    "fr": "Creez un nouveau fournisseur nomme Nord Consulting AS avec le numero 987654321"
+  },
+  "expected_params": {
+    "name": "Nord Consulting AS",
+    "organizationNumber": "987654321"
+  }
+}
