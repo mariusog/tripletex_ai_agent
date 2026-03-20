@@ -150,21 +150,35 @@ def resolve_product(api_client: TripletexClient, product: Any, price: Any = None
             logger.info("Created product '%s' id=%s", name, prod_id)
             return {"id": prod_id}
         except TripletexApiError:
-            # Product number might already exist — search for it
+            # Product number might already exist — update it with correct name/price
             if number:
                 try:
                     resp = api_client.get(
-                        "/product", params={"number": str(number), "count": 1}, fields="id"
+                        "/product",
+                        params={"number": str(number), "count": 1},
+                        fields="*",
                     )
                     values = resp.get("values", [])
                     if values:
-                        return {"id": values[0]["id"]}
+                        existing = values[0]
+                        existing["name"] = name or existing.get("name", "")
+                        if price is not None:
+                            existing["priceExcludingVatCurrency"] = price
+                        try:
+                            api_client.put(f"/product/{existing['id']}", data=existing)
+                            logger.info(
+                                "Updated existing product '%s' id=%s",
+                                name,
+                                existing["id"],
+                            )
+                        except TripletexApiError:
+                            pass
+                        return {"id": existing["id"]}
                 except TripletexApiError:
                     pass
-            # Retry without number/price
+            # Retry without number
             try:
                 prod_body.pop("number", None)
-                prod_body.pop("priceExcludingVatCurrency", None)
                 result = api_client.post("/product", data=prod_body)
                 prod_id = result.get("value", {}).get("id")
                 logger.info("Created product '%s' (no number) id=%s", name, prod_id)
