@@ -3,20 +3,19 @@
 from __future__ import annotations
 
 import logging
+from datetime import date as dt_date
 from typing import Any
 
 from src.api_client import TripletexClient
 from src.handlers.base import BaseHandler, register_handler
+from src.handlers.invoice import _resolve_customer, _resolve_product
 
 logger = logging.getLogger(__name__)
 
 
 @register_handler
 class CreateOrderHandler(BaseHandler):
-    """POST /order then POST /order/orderline/list for line items.
-
-    Optimal: 1 call (no lines) or 2 calls (with lines, always batch).
-    """
+    """POST /order then POST /order/orderline/list for line items."""
 
     def get_task_type(self) -> str:
         return "create_order"
@@ -26,19 +25,17 @@ class CreateOrderHandler(BaseHandler):
         return ["customer"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
+        customer_ref = _resolve_customer(api_client, params.get("customer"))
+        today = dt_date.today().isoformat()
+
         body: dict[str, Any] = {
-            "customer": self.ensure_ref(params["customer"], "customer"),
+            "customer": customer_ref,
+            "orderDate": params.get("orderDate") or today,
         }
-
-        for date_field in ("orderDate", "deliveryDate"):
-            if date_field in params:
-                date_val = self.validate_date(params[date_field], date_field)
-                if date_val:
-                    body[date_field] = date_val
-
-        for field in ("receiver", "deliveryComment"):
-            if params.get(field):
-                body[field] = params[field]
+        if "deliveryDate" in params:
+            date_val = self.validate_date(params["deliveryDate"], "deliveryDate")
+            if date_val:
+                body["deliveryDate"] = date_val
 
         for ref_field in ("department", "project"):
             if ref_field in params:
@@ -50,34 +47,28 @@ class CreateOrderHandler(BaseHandler):
         order_id = order.get("id")
         logger.info("Created order id=%s", order_id)
 
-        # Add order lines if provided — always use batch endpoint
+        # Add order lines if provided
         lines = params.get("orderLines", params.get("lines", []))
-        line_ids = _create_order_lines(api_client, order_id, lines)
+        if lines and order_id:
+            payloads = []
+            for line in lines:
+                ol: dict[str, Any] = {"order": {"id": order_id}}
+                if "product" in line:
+                    ol["product"] = _resolve_product(api_client, line["product"])
+                if "description" in line:
+                    ol["description"] = line["description"]
+                ol["count"] = line.get("count", line.get("quantity", 1))
+                if "unitPriceExcludingVatCurrency" in line:
+                    ol["unitPriceExcludingVatCurrency"] = line[
+                        "unitPriceExcludingVatCurrency"
+                    ]
+                elif "amount" in line:
+                    ol["unitPriceExcludingVatCurrency"] = line["amount"]
+                elif "price" in line:
+                    ol["unitPriceExcludingVatCurrency"] = line["price"]
+                payloads.append(self.strip_none_values(ol))
+            if payloads:
+                api_client.post("/order/orderline/list", data=payloads)
+                logger.info("Added %d order lines", len(payloads))
 
-        return {"id": order_id, "action": "created", "orderLineIds": line_ids}
-
-
-def _build_order_line(line: dict[str, Any], order_id: int) -> dict[str, Any]:
-    """Build a single order line payload from extracted params."""
-    ol: dict[str, Any] = {"order": {"id": order_id}}
-    if "product" in line:
-        ol["product"] = BaseHandler.ensure_ref(line["product"], "product")
-    for field in ("description", "count", "unitPriceExcludingVatCurrency", "unitCostCurrency"):
-        if field in line and line[field] is not None:
-            ol[field] = line[field]
-    if "vatType" in line:
-        ol["vatType"] = BaseHandler.ensure_ref(line["vatType"], "vatType")
-    return {k: v for k, v in ol.items() if v is not None}
-
-
-def _create_order_lines(
-    api_client: TripletexClient, order_id: int, lines: list[dict[str, Any]]
-) -> list[int]:
-    """Create order lines using batch endpoint. 1 API call for any number of lines."""
-    if not lines or not order_id:
-        return []
-    payloads = [_build_order_line(line, order_id) for line in lines]
-    # Always use batch endpoint — works for 1 or more lines, saves a conditional call
-    resp = api_client.post("/order/orderline/list", data=payloads)
-    values = resp.get("values", [])
-    return [v.get("id") for v in values if v.get("id")]
+        return {"id": order_id, "action": "created"}
