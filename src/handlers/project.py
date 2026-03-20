@@ -7,6 +7,8 @@ from typing import Any
 
 from src.api_client import TripletexClient
 from src.handlers.base import BaseHandler, register_handler
+from src.handlers.invoice import _resolve_customer
+from src.handlers.travel import _resolve_employee
 
 logger = logging.getLogger(__name__)
 
@@ -20,28 +22,51 @@ class CreateProjectHandler(BaseHandler):
 
     @property
     def required_params(self) -> list[str]:
-        return ["name", "number", "projectManager"]
+        return ["name"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
+        from datetime import date as dt_date
+
+        # Resolve projectManager — search/create employee if name given
+        pm = params.get("projectManager")
+        if pm and isinstance(pm, dict) and "id" not in pm:
+            pm_ref = _resolve_employee(api_client, pm)
+        elif pm:
+            pm_ref = self.ensure_ref(pm, "projectManager")
+        else:
+            emp_search = api_client.get("/employee", params={"count": 1}, fields="id")
+            emp_values = emp_search.get("values", [])
+            pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
+
         body: dict[str, Any] = {
             "name": params["name"],
-            "number": params["number"],
-            "projectManager": self.ensure_ref(params["projectManager"], "projectManager"),
+            "number": str(params.get("number", "1")),
+            "projectManager": pm_ref,
         }
 
+        # startDate is required — default to today
         for date_field in ("startDate", "endDate"):
             if date_field in params:
                 date_val = self.validate_date(params[date_field], date_field)
                 if date_val:
                     body[date_field] = date_val
+        if "startDate" not in body:
+            body["startDate"] = dt_date.today().isoformat()
 
         for bool_field in ("isInternal", "isClosed"):
             if bool_field in params:
                 body[bool_field] = params[bool_field]
 
-        for ref_field in ("department", "customer"):
-            if ref_field in params:
-                body[ref_field] = self.ensure_ref(params[ref_field], ref_field)
+        # Resolve customer by name if needed
+        if "customer" in params:
+            cust = params["customer"]
+            if isinstance(cust, dict) and "id" not in cust:
+                body["customer"] = _resolve_customer(api_client, cust)
+            else:
+                body["customer"] = self.ensure_ref(cust, "customer")
+
+        if "department" in params:
+            body["department"] = self.ensure_ref(params["department"], "department")
 
         body = self.strip_none_values(body)
         result = api_client.post("/project", data=body)
