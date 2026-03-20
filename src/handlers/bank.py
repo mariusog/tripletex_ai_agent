@@ -64,19 +64,37 @@ class BankReconciliationHandler(BaseHandler):
             values = resp.get("values", [])
             account_id = values[0]["id"] if values else 0
 
+        from datetime import date as dt_date
+
         body: dict[str, Any] = {"account": {"id": int(account_id)}}
 
         if "accountingPeriodId" in params:
             body["accountingPeriod"] = {"id": int(params["accountingPeriodId"])}
+        else:
+            # Look up the current accounting period
+            try:
+                today = dt_date.today().isoformat()
+                period_resp = api_client.get(
+                    "/ledger/accountingPeriod",
+                    params={"dateFrom": today, "dateTo": today, "count": 1},
+                    fields="id",
+                )
+                period_vals = period_resp.get("values", [])
+                if period_vals:
+                    body["accountingPeriod"] = {"id": period_vals[0]["id"]}
+            except Exception:
+                logger.warning("Could not find accounting period")
 
         if "reconciliationDate" in params:
             date_val = self.validate_date(params["reconciliationDate"], "reconciliationDate")
             if date_val:
                 body["reconciliationDate"] = date_val
 
-        for field in ("type", "isClosed"):
-            if field in params and params[field] is not None:
-                body[field] = params[field]
+        # type is required — default to MANUAL_RECONCILIATION
+        body["type"] = params.get("type", "MANUAL_RECONCILIATION")
+
+        if "isClosed" in params and params["isClosed"] is not None:
+            body["isClosed"] = params["isClosed"]
 
         body = self.strip_none_values(body)
         result = api_client.post("/bank/reconciliation", data=body)

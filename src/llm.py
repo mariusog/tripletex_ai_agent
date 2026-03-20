@@ -95,6 +95,7 @@ reconciliationDate, adjustments: [{{amount, description, date}}]}}
 - delete_order: {{id}}
 - delete_travel_expense: {{id or title}}
 - delete_supplier: {{name or id}}
+- delete_voucher: {{voucherId or number or voucherNumber}}
 
 Respond ONLY with valid JSON: {{"task_type": "<type>", "params": {{...}}}}
 Extract ALL relevant parameters from the prompt. Use field names matching the Tripletex API.

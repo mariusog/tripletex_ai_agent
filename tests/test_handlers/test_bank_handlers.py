@@ -80,4 +80,5 @@ class TestBankReconciliation:
         result = handler.execute(client, {"accountId": 1920})
         assert result["id"] == 52
         body = client.post.call_args[1]["data"]
-        assert body == {"account": {"id": 1920}}
+        assert body["account"] == {"id": 1920}
+        assert body["type"] == "MANUAL_RECONCILIATION"

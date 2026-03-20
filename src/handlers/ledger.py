@@ -216,6 +216,8 @@ class ReverseVoucherHandler(BaseHandler):
         return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
+        from datetime import date as dt_date
+
         # If no voucherId, fall back to register_payment with reversal
         if "voucherId" not in params and params.get("customer"):
             from src.handlers.invoice import RegisterPaymentHandler
@@ -227,15 +229,53 @@ class ReverseVoucherHandler(BaseHandler):
             handler = RegisterPaymentHandler()
             return handler.execute(api_client, pay_params)
 
-        voucher_id = int(params.get("voucherId", 0))
+        voucher_id = params.get("voucherId")
+
+        # Search for voucher by number if ID seems like a voucher number
+        if voucher_id:
+            voucher_id = int(voucher_id)
+            # Verify the voucher exists; if not, search by number
+            try:
+                api_client.get(f"/ledger/voucher/{voucher_id}")
+            except TripletexApiError:
+                found = self._search_voucher(api_client, params)
+                if found:
+                    voucher_id = found
+                else:
+                    return {"error": "voucher_not_found"}
+        else:
+            voucher_id = self._search_voucher(api_client, params)
+
         if not voucher_id:
             return {"error": "no_voucher_id"}
+
         body: dict[str, Any] = {"id": voucher_id}
-        if "date" in params:
-            date_val = self.validate_date(params["date"], "date")
-            if date_val:
-                body["date"] = date_val
+        date_val = self.validate_date(params.get("date"), "date") or dt_date.today().isoformat()
+        body["date"] = date_val
 
         api_client.put(f"/ledger/voucher/{voucher_id}/:reverse", data=body)
         logger.info("Reversed voucher id=%s", voucher_id)
         return {"id": voucher_id, "action": "reversed"}
+
+    def _search_voucher(self, api_client: TripletexClient, params: dict[str, Any]) -> int | None:
+        """Search for a voucher by number or description."""
+        from datetime import date as dt_date
+
+        today = dt_date.today()
+        search: dict[str, Any] = {
+            "dateFrom": f"{today.year}-01-01",
+            "dateTo": today.isoformat(),
+            "count": 10,
+        }
+        if params.get("voucherNumber"):
+            search["number"] = str(params["voucherNumber"])
+        elif params.get("voucherId"):
+            search["number"] = str(params["voucherId"])
+        try:
+            resp = api_client.get("/ledger/voucher", params=search, fields="id,number")
+            values = resp.get("values", [])
+            if values:
+                return values[0]["id"]
+        except TripletexApiError:
+            pass
+        return None

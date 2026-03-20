@@ -178,3 +178,41 @@ class DeleteSupplierHandler(BaseHandler):
         if not eid:
             return {"error": "not_found"}
         return _do_delete(api_client, "/supplier", eid, "supplier")
+
+
+@register_handler
+class DeleteVoucherHandler(BaseHandler):
+    def get_task_type(self) -> str:
+        return "delete_voucher"
+
+    @property
+    def required_params(self) -> list[str]:
+        return []
+
+    def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
+        from datetime import date as dt_date
+
+        eid = None
+        if "id" in params or "voucherId" in params:
+            eid = int(params.get("id") or params["voucherId"])
+        if not eid:
+            # Search by voucher number
+            today = dt_date.today()
+            search: dict[str, Any] = {
+                "dateFrom": f"{today.year}-01-01",
+                "dateTo": today.isoformat(),
+                "count": 10,
+            }
+            number = params.get("number") or params.get("voucherNumber")
+            if number:
+                search["number"] = str(number)
+            try:
+                resp = api_client.get("/ledger/voucher", params=search, fields="id,number")
+                values = resp.get("values", [])
+                if values:
+                    eid = values[0]["id"]
+            except TripletexApiError:
+                pass
+        if not eid:
+            return {"error": "not_found"}
+        return _do_delete(api_client, "/ledger/voucher", eid, "voucher")
