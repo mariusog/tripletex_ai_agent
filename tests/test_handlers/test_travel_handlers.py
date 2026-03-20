@@ -79,7 +79,7 @@ class TestCreateTravelExpense:
 
 
 class TestDeliverTravelExpense:
-    def test_happy_path(self):
+    def test_happy_path_by_id(self):
         client = _mock_client()
         handler = get_handler("deliver_travel_expense")
         assert handler is not None
@@ -88,9 +88,30 @@ class TestDeliverTravelExpense:
         assert result["action"] == "delivered"
         client.put.assert_called_once()
 
+    def test_search_by_employee_name(self):
+        client = _mock_client()
+        client.get.return_value = sample_api_response(
+            values=[
+                {"id": 42, "title": "Trip", "employee": {"id": 1, "firstName": "Ola", "lastName": "N"}},
+            ]
+        )
+        handler = get_handler("deliver_travel_expense")
+        assert handler is not None
+        result = handler.execute(client, {"employee": "Ola N"})
+        assert result["id"] == 42
+        assert result["action"] == "delivered"
+
+    def test_not_found_returns_error(self):
+        client = _mock_client()
+        client.get.return_value = sample_api_response(values=[])
+        handler = get_handler("deliver_travel_expense")
+        assert handler is not None
+        result = handler.execute(client, {})
+        assert result.get("error") == "travel_expense_not_found"
+
 
 class TestApproveTravelExpense:
-    def test_happy_path(self):
+    def test_happy_path_by_id(self):
         client = _mock_client()
         handler = get_handler("approve_travel_expense")
         assert handler is not None
@@ -98,3 +119,16 @@ class TestApproveTravelExpense:
         assert result["id"] == 10
         assert result["action"] == "approved"
         client.put.assert_called_once()
+
+    def test_search_by_title(self):
+        client = _mock_client()
+        client.get.return_value = sample_api_response(
+            values=[
+                {"id": 55, "title": "Oslo trip", "employee": {"id": 2, "firstName": "A", "lastName": "B"}},
+            ]
+        )
+        handler = get_handler("approve_travel_expense")
+        assert handler is not None
+        result = handler.execute(client, {"title": "Oslo trip"})
+        assert result["id"] == 55
+        assert result["action"] == "approved"

@@ -71,8 +71,7 @@ class TestBankReconciliation:
     def test_required_params(self):
         handler = get_handler("bank_reconciliation")
         assert handler is not None
-        assert handler.validate_params({}) == ["accountId"]
-        assert handler.validate_params({"accountId": 1}) == []
+        assert handler.validate_params({}) == []
 
     def test_minimal_params(self):
         client = _mock_client(post_response=sample_api_response(value={"id": 52}))

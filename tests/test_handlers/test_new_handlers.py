@@ -153,11 +153,23 @@ class TestUpdateAssetHandler:
         assert result["id"] == 10
         assert result["action"] == "updated"
 
+    def test_update_asset_by_name(self) -> None:
+        handler = get_handler("update_asset")
+        assert handler is not None
+        asset = {"id": 10, "name": "Printer"}
+        client = _mock_client(
+            get_response=sample_api_response(values=[asset]),
+            put_response=sample_api_response(value={"id": 10, "name": "Printer"}),
+        )
+        result = handler.execute(client, {"name": "Printer", "description": "Updated"})
+        assert result["id"] == 10
+        assert result["action"] == "updated"
+
     def test_update_asset_not_found(self) -> None:
         handler = get_handler("update_asset")
         assert handler is not None
-        client = _mock_client(get_response=sample_api_response(value={}))
-        result = handler.execute(client, {"assetId": 999})
+        client = _mock_client(get_response=sample_api_response(values=[]))
+        result = handler.execute(client, {"name": "Nonexistent"})
         assert result["error"] == "asset_not_found"
 
 
@@ -179,11 +191,23 @@ class TestUpdateProjectHandler:
         assert result["id"] == 1
         assert result["action"] == "updated"
 
+    def test_update_project_by_name(self) -> None:
+        handler = get_handler("update_project")
+        assert handler is not None
+        proj = {"id": 3, "name": "Alpha", "number": "P003", "projectManager": {"id": 1}}
+        client = _mock_client(
+            get_response=sample_api_response(values=[proj]),
+            put_response=sample_api_response(value={**proj, "isClosed": True}),
+        )
+        result = handler.execute(client, {"name": "Alpha", "isClosed": True})
+        assert result["id"] == 3
+        assert result["action"] == "updated"
+
     def test_update_project_not_found(self) -> None:
         handler = get_handler("update_project")
         assert handler is not None
-        client = _mock_client(get_response=sample_api_response(value={}))
-        result = handler.execute(client, {"projectId": 999})
+        client = _mock_client(get_response=sample_api_response(values=[]))
+        result = handler.execute(client, {"name": "Nonexistent"})
         assert result["error"] == "project_not_found"
 
 

@@ -49,18 +49,29 @@ class TestLinkProjectCustomer:
         put_body = client.put.call_args[1]["data"]
         assert put_body["customer"] == {"id": 10}
 
-    def test_project_not_found(self):
-        client = _mock_client(get_response=sample_api_response(value={}))
+    def test_search_by_name(self):
+        proj = make_project(project_id=7)
+        proj["name"] = "Alpha"
+        client = _mock_client(
+            get_response=sample_api_response(values=[proj]),
+        )
         handler = get_handler("link_project_customer")
         assert handler is not None
-        result = handler.execute(client, {"projectId": 999, "customer": 1})
+        result = handler.execute(client, {"name": "Alpha", "customer": 10})
+        assert result["id"] == 7
+        assert result["action"] == "customer_linked"
+
+    def test_project_not_found(self):
+        client = _mock_client(get_response=sample_api_response(values=[]))
+        handler = get_handler("link_project_customer")
+        assert handler is not None
+        result = handler.execute(client, {"customer": 1})
         assert result.get("error") == "project_not_found"
 
     def test_required_params(self):
         handler = get_handler("link_project_customer")
         assert handler is not None
         missing = handler.validate_params({})
-        assert "projectId" in missing
         assert "customer" in missing
 
 
