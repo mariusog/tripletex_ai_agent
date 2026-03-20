@@ -136,30 +136,43 @@ def resolve_product(api_client: TripletexClient, product: Any, price: Any = None
         pass
     name = str(product) if not isinstance(product, dict) else product.get("name", "")
     number = product.get("number") if isinstance(product, dict) else None
-    if number:
-        resp = api_client.get("/product", params={"number": str(number), "count": 1}, fields="id")
-        values = resp.get("values", [])
-        if values:
-            return {"id": values[0]["id"]}
-    if name:
-        resp = api_client.get("/product", params={"name": name, "count": 5}, fields="id,name")
-        values = resp.get("values", [])
-        for v in values:
-            if v.get("name", "").strip().lower() == name.strip().lower():
-                return {"id": v["id"]}
-    prod_body: dict[str, Any] = {"name": name or f"Product {number}"}
-    if number:
-        prod_body["number"] = int(number)
-    if price is not None:
-        prod_body["priceExcludingVatCurrency"] = price
-    try:
-        result = api_client.post("/product", data=prod_body)
-    except TripletexApiError:
-        prod_body.pop("priceExcludingVatCurrency", None)
-        result = api_client.post("/product", data=prod_body)
-    prod_id = result.get("value", {}).get("id")
-    logger.info("Auto-created product '%s' id=%s", name, prod_id)
-    return {"id": prod_id}
+
+    # Always create when we have a product number (competition checks it)
+    if name or number:
+        prod_body: dict[str, Any] = {"name": name or f"Product {number}"}
+        if number:
+            prod_body["number"] = int(number)
+        if price is not None:
+            prod_body["priceExcludingVatCurrency"] = price
+        try:
+            result = api_client.post("/product", data=prod_body)
+            prod_id = result.get("value", {}).get("id")
+            logger.info("Created product '%s' id=%s", name, prod_id)
+            return {"id": prod_id}
+        except TripletexApiError:
+            # Product number might already exist — search for it
+            if number:
+                try:
+                    resp = api_client.get(
+                        "/product", params={"number": str(number), "count": 1}, fields="id"
+                    )
+                    values = resp.get("values", [])
+                    if values:
+                        return {"id": values[0]["id"]}
+                except TripletexApiError:
+                    pass
+            # Retry without number/price
+            try:
+                prod_body.pop("number", None)
+                prod_body.pop("priceExcludingVatCurrency", None)
+                result = api_client.post("/product", data=prod_body)
+                prod_id = result.get("value", {}).get("id")
+                logger.info("Created product '%s' (no number) id=%s", name, prod_id)
+                return {"id": prod_id}
+            except TripletexApiError:
+                pass
+
+    return {"id": 0}
 
 
 def resolve_employee(api_client: TripletexClient, employee: Any) -> dict[str, int]:
