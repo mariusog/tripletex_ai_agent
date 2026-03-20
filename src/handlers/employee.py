@@ -51,6 +51,31 @@ class CreateEmployeeHandler(BaseHandler):
             if date_val:
                 body["dateOfBirth"] = date_val
 
+        # dateOfBirth is required when creating with employment — default if missing
+        if "dateOfBirth" not in body:
+            body["dateOfBirth"] = "1990-01-01"
+
+        # Add employment with start date if provided
+        from datetime import date as dt_date
+
+        start_date = None
+        if "startDate" in params:
+            start_date = self.validate_date(params["startDate"], "startDate")
+
+        employment: dict[str, Any] = {
+            "startDate": start_date or dt_date.today().isoformat(),
+            "employmentDetails": [
+                {
+                    "date": start_date or dt_date.today().isoformat(),
+                    "employmentType": params.get("employmentType", "ORDINARY"),
+                    "percentageOfFullTimeEquivalent": params.get(
+                        "percentageOfFullTimeEquivalent", 100
+                    ),
+                }
+            ],
+        }
+        body["employments"] = [employment]
+
         body = self.strip_none_values(body)
         result = api_client.post("/employee", data=body)
         value = result.get("value", {})
