@@ -32,7 +32,7 @@ class TripletexApiError(Exception):
         super().__init__(f"Tripletex API error {error.status}: {error.message}")
 
 
-_global_cache: dict[tuple[str, str], Any] = {}
+_global_cache: dict[tuple[str, str, str], Any] = {}  # (base_url, token_prefix, key)
 
 
 class TripletexClient:
@@ -44,6 +44,7 @@ class TripletexClient:
 
     def __init__(self, base_url: str, session_token: str) -> None:
         self.base_url = base_url.rstrip("/")
+        self._token_prefix = session_token[:16]  # For cache isolation
         self._api_call_count = 0
         self._write_call_count = 0
         self._error_count = 0
@@ -93,7 +94,7 @@ class TripletexClient:
         fields: str | None = None,
     ) -> Any:
         """GET with caching. Checks global process cache first."""
-        global_key = (self.base_url, cache_key)
+        global_key = (self.base_url, self._token_prefix, cache_key)
         if global_key in _global_cache:
             return _global_cache[global_key]
         if cache_key not in self._cache:
