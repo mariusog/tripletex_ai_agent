@@ -210,7 +210,7 @@ OPTIMAL_CALL_COUNTS = OPTIMAL_WRITE_COUNTS
 SERVER_PORT = 8080
 
 # Host binding
-SERVER_HOST = "0.0.0.0"  # noqa: S104  # Bind all interfaces for container deployment
+SERVER_HOST = "0.0.0.0"  # nosec B104  # noqa: S104  # Bind all interfaces for container deployment
 
 # ---------------------------------------------------------------------------
 # Logging

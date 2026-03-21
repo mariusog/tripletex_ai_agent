@@ -39,34 +39,36 @@ def resolve_account(
         vat = values[0].get("vatType")
         vat_ref = {"id": vat["id"]} if vat and vat.get("id") else None
         return {"id": values[0]["id"]}, vat_ref
-    # Account not found — search by number range (e.g. 6010 → 6000-6099)
-    range_start = (number // 100) * 100
-    range_end = range_start + 99
-    try:
-        range_resp = api_client.get(
-            "/ledger/account",
-            params={
-                "numberFrom": str(range_start),
-                "numberTo": str(range_end),
-                "count": 1,
-            },
-            fields="id,number,vatType(id)",
-        )
-        range_vals = range_resp.get("values", [])
-        if range_vals:
-            found_num = range_vals[0].get("number", 0)
-            # Verify the found account is actually in the requested range
-            if range_start <= found_num <= range_end:
-                vat = range_vals[0].get("vatType")
-                vat_ref = {"id": vat["id"]} if vat and vat.get("id") else None
-                logger.info(
-                    "Account %d not found, using %d instead",
-                    number,
-                    found_num,
-                )
-                return {"id": range_vals[0]["id"]}, vat_ref
-    except TripletexApiError:
-        pass
+    # Account not found — search by wider ranges
+    # First try exact 100-range, then 1000-range
+    for range_start, range_end in [
+        ((number // 100) * 100, (number // 100) * 100 + 99),
+        ((number // 1000) * 1000, (number // 1000) * 1000 + 999),
+    ]:
+        try:
+            range_resp = api_client.get(
+                "/ledger/account",
+                params={
+                    "numberFrom": str(range_start),
+                    "numberTo": str(range_end),
+                    "count": 1,
+                },
+                fields="id,number,vatType(id)",
+            )
+            range_vals = range_resp.get("values", [])
+            if range_vals:
+                found_num = range_vals[0].get("number", 0)
+                if range_start <= found_num <= range_end:
+                    vat = range_vals[0].get("vatType")
+                    vat_ref = {"id": vat["id"]} if vat and vat.get("id") else None
+                    logger.info(
+                        "Account %d not found, using %d instead",
+                        number,
+                        found_num,
+                    )
+                    return {"id": range_vals[0]["id"]}, vat_ref
+        except TripletexApiError:
+            pass
     logger.warning("Account %d not found in range %d-%d", number, range_start, range_end)
     return {"id": 0}, None
 
