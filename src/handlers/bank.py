@@ -1,4 +1,10 @@
-"""Bank reconciliation handlers via Tripletex API."""
+"""Bank reconciliation handler via Tripletex API.
+
+Handles the full bank reconciliation flow:
+1. Process customer payments (create customer, invoice, register payment)
+2. Process supplier payments (create supplier, voucher)
+3. Process bank fees (voucher postings)
+"""
 
 from __future__ import annotations
 
@@ -6,117 +12,201 @@ import logging
 from typing import Any
 
 from src.api_client import TripletexClient
+from src.handlers.api_helpers import ensure_bank_account
 from src.handlers.base import BaseHandler, register_handler
+from src.handlers.entity_resolver import resolve as _resolve
+from src.services.invoice_service import create_full_invoice
 
 logger = logging.getLogger(__name__)
 
 
 @register_handler
 class BankReconciliationHandler(BaseHandler):
-    """POST /bank/reconciliation, optionally add adjustments.
-
-    Resolves account by number if no ID provided.
-    """
+    """Process bank statement: match payments to invoices and suppliers."""
 
     tier = 3
-    description = "Perform bank reconciliation"
+    description = "Perform bank reconciliation from bank statement"
 
     def get_task_type(self) -> str:
         return "bank_reconciliation"
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        # Resolve account: by ID, or by account number
-        account_id = params.get("accountId")
-        if not account_id and params.get("accountNumber"):
-            resp = api_client.get(
-                "/ledger/account",
-                params={"number": str(params["accountNumber"]), "count": 1},
-                fields="id",
-            )
-            values = resp.get("values", [])
-            if values:
-                account_id = values[0]["id"]
-        if not account_id and params.get("account"):
-            acct = params["account"]
-            if isinstance(acct, dict) and "id" in acct:
-                account_id = int(acct["id"])
-            elif isinstance(acct, (int, str)):
-                try:
-                    acct_num = int(acct)
-                    resp = api_client.get(
-                        "/ledger/account",
-                        params={"number": str(acct_num), "count": 1},
-                        fields="id",
-                    )
-                    values = resp.get("values", [])
-                    if values:
-                        account_id = values[0]["id"]
-                except (TypeError, ValueError):
-                    pass
-        if not account_id:
-            # Default to account 1920 (bank)
-            resp = api_client.get(
-                "/ledger/account",
-                params={"number": "1920", "count": 1},
-                fields="id",
-            )
-            values = resp.get("values", [])
-            account_id = values[0]["id"] if values else 0
+        ensure_bank_account(api_client)
+        results: dict[str, Any] = {"action": "reconciled", "payments": []}
 
+        # Process customer payments (incoming)
+        for cp in params.get("customerPayments", []):
+            self._process_customer_payment(api_client, cp, results)
+
+        # Process supplier payments (outgoing)
+        for sp in params.get("supplierPayments", []):
+            self._process_supplier_payment(api_client, sp, results)
+
+        # Process bank fees
+        for fee in params.get("bankFees", []):
+            self._process_bank_fee(api_client, fee, results)
+
+        # If no structured data, fall back to basic reconciliation
+        if not any(params.get(k) for k in (
+            "customerPayments", "supplierPayments", "bankFees"
+        )):
+            return self._basic_reconciliation(api_client, params)
+
+        return results
+
+    def _process_customer_payment(
+        self, api_client: TripletexClient, cp: dict[str, Any], results: dict
+    ) -> None:
+        """Create customer, invoice, and register payment."""
+        try:
+            customer_name = cp.get("customer", "")
+            amount = cp.get("amount", 0)
+            date = cp.get("date", "")
+            inv_num = cp.get("invoiceNumber", "")
+
+            inv_result = create_full_invoice(
+                api_client,
+                {
+                    "customer": {"name": customer_name},
+                    "orderLines": [
+                        {
+                            "description": f"Faktura {inv_num}" if inv_num else "Faktura",
+                            "unitPriceExcludingVatCurrency": amount,
+                            "count": 1,
+                        }
+                    ],
+                    "register_payment": {"amount": amount, "paymentDate": date},
+                },
+            )
+            results["payments"].append({
+                "customer": customer_name,
+                "invoice_id": inv_result.invoice_id,
+                "amount": amount,
+                "status": "paid",
+            })
+        except Exception as e:
+            logger.warning("Customer payment failed for %s: %s", cp.get("customer"), e)
+
+    def _process_supplier_payment(
+        self, api_client: TripletexClient, sp: dict[str, Any], results: dict
+    ) -> None:
+        """Create supplier and voucher for supplier payment."""
+        try:
+            supplier_name = sp.get("supplier", "")
+            amount = abs(sp.get("amount", 0))
+            date = sp.get("date", "")
+
+            # Resolve supplier
+            supplier_ref = _resolve(api_client, "supplier", {"name": supplier_name})
+
+            # Create voucher: debit AP (2400), credit bank (1920)
+            from src.handlers.ledger import _resolve_account
+
+            bank_acct, _ = _resolve_account(api_client, 1920)
+            ap_acct, _ = _resolve_account(api_client, 2400)
+
+            body: dict[str, Any] = {
+                "date": date,
+                "description": f"Betaling {supplier_name}",
+                "postings": [
+                    {
+                        "row": 1,
+                        "account": ap_acct,
+                        "amountGross": amount,
+                        "amountGrossCurrency": amount,
+                        "supplier": supplier_ref,
+                    },
+                    {
+                        "row": 2,
+                        "account": bank_acct,
+                        "amountGross": -amount,
+                        "amountGrossCurrency": -amount,
+                    },
+                ],
+            }
+            result = api_client.post(
+                "/ledger/voucher", data=body, params={"sendToLedger": "true"}
+            )
+            results["payments"].append({
+                "supplier": supplier_name,
+                "voucher_id": result.get("value", {}).get("id"),
+                "amount": amount,
+                "status": "paid",
+            })
+        except Exception as e:
+            logger.warning("Supplier payment failed for %s: %s", sp.get("supplier"), e)
+
+    def _process_bank_fee(
+        self, api_client: TripletexClient, fee: dict[str, Any], results: dict
+    ) -> None:
+        """Create voucher for bank fee."""
+        try:
+            amount = fee.get("amount", 0)
+            date = fee.get("date", "")
+            desc = fee.get("description", "Bankgebyr")
+
+            from src.handlers.ledger import _resolve_account
+
+            bank_acct, _ = _resolve_account(api_client, 1920)
+            fee_acct, _ = _resolve_account(api_client, 7770)
+
+            # Positive fee = income, negative fee = expense
+            body: dict[str, Any] = {
+                "date": date,
+                "description": desc,
+                "postings": [
+                    {
+                        "row": 1,
+                        "account": fee_acct,
+                        "amountGross": -amount,
+                        "amountGrossCurrency": -amount,
+                    },
+                    {
+                        "row": 2,
+                        "account": bank_acct,
+                        "amountGross": amount,
+                        "amountGrossCurrency": amount,
+                    },
+                ],
+            }
+            api_client.post(
+                "/ledger/voucher", data=body, params={"sendToLedger": "true"}
+            )
+        except Exception as e:
+            logger.warning("Bank fee voucher failed: %s", e)
+
+    def _basic_reconciliation(
+        self, api_client: TripletexClient, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Fallback: create basic bank reconciliation record."""
         from datetime import date as dt_date
 
-        body: dict[str, Any] = {"account": {"id": int(account_id)}}
+        resp = api_client.get(
+            "/ledger/account",
+            params={"number": str(params.get("accountNumber", "1920")), "count": 1},
+            fields="id",
+        )
+        values = resp.get("values", [])
+        account_id = values[0]["id"] if values else 0
 
-        if "accountingPeriodId" in params:
-            body["accountingPeriod"] = {"id": int(params["accountingPeriodId"])}
-        else:
-            # Look up the current accounting period
-            try:
-                today = dt_date.today().isoformat()
-                period_resp = api_client.get(
-                    "/ledger/accountingPeriod",
-                    params={"dateFrom": today, "dateTo": today, "count": 1},
-                    fields="id",
-                )
-                period_vals = period_resp.get("values", [])
-                if period_vals:
-                    body["accountingPeriod"] = {"id": period_vals[0]["id"]}
-            except Exception:
-                logger.warning("Could not find accounting period")
+        body: dict[str, Any] = {
+            "account": {"id": int(account_id)},
+            "type": params.get("type", "MANUAL"),
+        }
 
-        if "reconciliationDate" in params:
-            date_val = self.validate_date(params["reconciliationDate"], "reconciliationDate")
-            if date_val:
-                body["reconciliationDate"] = date_val
+        try:
+            today = dt_date.today().isoformat()
+            period_resp = api_client.get(
+                "/ledger/accountingPeriod",
+                params={"dateFrom": today, "dateTo": today, "count": 1},
+                fields="id",
+            )
+            period_vals = period_resp.get("values", [])
+            if period_vals:
+                body["accountingPeriod"] = {"id": period_vals[0]["id"]}
+        except Exception:
+            logger.warning("Could not find accounting period")
 
-        # type is required — valid values: MANUAL, AUTOMATIC
-        body["type"] = params.get("type", "MANUAL")
-
-        if "isClosed" in params and params["isClosed"] is not None:
-            body["isClosed"] = params["isClosed"]
-
-        body = self.strip_none_values(body)
         result = api_client.post("/bank/reconciliation", data=body)
         value = result.get("value", {})
-        recon_id = value.get("id")
-        logger.info("Created bank reconciliation id=%s", recon_id)
-
-        for adj in params.get("adjustments", []):
-            self._add_adjustment(api_client, recon_id, adj)
-
-        return {"id": recon_id, "action": "created"}
-
-    def _add_adjustment(
-        self, api_client: TripletexClient, recon_id: int, adj: dict[str, Any]
-    ) -> None:
-        adj_body: dict[str, Any] = {}
-        for field in ("amount", "description", "paymentType"):
-            if field in adj and adj[field] is not None:
-                adj_body[field] = adj[field]
-        if "date" in adj:
-            date_val = self.validate_date(adj["date"], "adjustment.date")
-            if date_val:
-                adj_body["date"] = date_val
-        if adj_body:
-            api_client.put(f"/bank/reconciliation/{recon_id}/:adjustment", data=adj_body)
-            logger.info("Added adjustment to reconciliation id=%s", recon_id)
+        return {"id": value.get("id"), "action": "created"}

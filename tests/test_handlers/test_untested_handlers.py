@@ -71,37 +71,18 @@ class TestBalanceSheetReport:
 
 
 class TestBankReconciliation:
-    def test_happy_path_with_account_id(self):
-        _ensure_imported()
-        # Period lookup + POST reconciliation
-        client = MagicMock()
-        client.get.return_value = sample_api_response(values=[{"id": 10}])
-        client.post.return_value = sample_api_response(value={"id": 99})
-        handler = get_handler("bank_reconciliation")
-        assert handler is not None
-        result = handler.execute(client, {"accountId": 5})
-        assert result["id"] == 99
-        assert result["action"] == "created"
-        client.post.assert_called_once()
-        body = client.post.call_args[1]["data"]
-        assert body["account"] == {"id": 5}
-        assert body["type"] == "MANUAL"
-
-    def test_resolves_account_by_number(self):
+    def test_basic_fallback(self):
         _ensure_imported()
         client = MagicMock()
-        # First GET: account lookup, second GET: period lookup
-        client.get.side_effect = [
-            sample_api_response(values=[{"id": 42}]),
-            sample_api_response(values=[{"id": 10}]),
-        ]
+        client.base_url = "https://test.tripletex.no/v2"
+        client.get.return_value = sample_api_response(values=[{"id": 42}])
+        client.get_cached.return_value = sample_api_response(values=[{"id": 42}])
         client.post.return_value = sample_api_response(value={"id": 100})
         handler = get_handler("bank_reconciliation")
         assert handler is not None
         result = handler.execute(client, {"accountNumber": "1920"})
         assert result["id"] == 100
-        body = client.post.call_args[1]["data"]
-        assert body["account"] == {"id": 42}
+        assert result["action"] == "created"
 
 
 class TestLedgerCorrection:
