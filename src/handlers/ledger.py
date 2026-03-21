@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
-from src.handlers.base import BaseHandler, register_handler
+from src.handlers.base import BaseHandler, ParamSpec, register_handler
 from src.handlers.entity_resolver import _resolve_supplier
 
 logger = logging.getLogger(__name__)
@@ -16,12 +16,19 @@ logger = logging.getLogger(__name__)
 class CreateSupplierHandler(BaseHandler):
     """POST /supplier with extracted fields. 1 API call."""
 
+    tier = 2
+    description = "Create a new supplier"
+    param_schema = {
+        "name": ParamSpec(description="Supplier name"),
+        "organizationNumber": ParamSpec(required=False),
+        "email": ParamSpec(required=False),
+        "phoneNumber": ParamSpec(required=False),
+        "postalAddress": ParamSpec(required=False, type="object"),
+    }
+    disambiguation = "Suppliers provide goods/services TO us. NOT create_customer."
+
     def get_task_type(self) -> str:
         return "create_supplier"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["name"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         body: dict[str, Any] = {"name": params["name"]}
@@ -119,12 +126,12 @@ def _build_posting(
 class CreateVoucherHandler(BaseHandler):
     """POST /ledger/voucher with debit/credit postings. 1 API call."""
 
+    tier = 3
+    description = "Create a voucher with debit/credit postings"
+    disambiguation = "For supplier invoices (leverandørfaktura), use this."
+
     def get_task_type(self) -> str:
         return "create_voucher"
-
-    @property
-    def required_params(self) -> list[str]:
-        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         from datetime import date as dt_date
@@ -189,25 +196,24 @@ class CreateVoucherHandler(BaseHandler):
 class ReverseVoucherHandler(BaseHandler):
     """POST /ledger/voucher/{id}/:reverse. 1 API call."""
 
+    tier = 3
+    description = "Reverse an existing voucher"
+
     def get_task_type(self) -> str:
         return "reverse_voucher"
-
-    @property
-    def required_params(self) -> list[str]:
-        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         from datetime import date as dt_date
 
         # If no voucherId, fall back to register_payment with reversal
         if "voucherId" not in params and params.get("customer"):
-            from src.handlers.invoice import RegisterPaymentHandler
+            from src.handlers.base import HANDLER_REGISTRY
 
             pay_params = dict(params)
             amount = params.get("amount", 0)
             pay_params["amount"] = -abs(amount) if amount > 0 else amount
             pay_params["reversal"] = True
-            handler = RegisterPaymentHandler()
+            handler = HANDLER_REGISTRY["register_payment"]
             return handler.execute(api_client, pay_params)
 
         voucher_id = params.get("voucherId")
