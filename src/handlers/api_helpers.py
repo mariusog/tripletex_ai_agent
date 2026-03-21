@@ -160,7 +160,7 @@ def find_invoice_id(api_client: TripletexClient, params: dict[str, Any]) -> int 
     """Resolve invoice ID: direct ID avoids a GET call, otherwise search."""
     if "invoiceId" in params:
         return int(params["invoiceId"])
-    search_params: dict[str, Any] = {"count": 1}
+    search_params: dict[str, Any] = {"count": 5}
     if "invoiceNumber" in params:
         search_params["invoiceNumber"] = params["invoiceNumber"]
     elif "customer" in params:
@@ -169,7 +169,23 @@ def find_invoice_id(api_client: TripletexClient, params: dict[str, Any]) -> int 
             if "id" in cust:
                 search_params["customerId"] = int(cust["id"])
             else:
-                return None
+                # Resolve customer by name to get ID
+                cust_name = cust.get("name", "")
+                if cust_name:
+                    try:
+                        cust_resp = api_client.get(
+                            "/customer",
+                            params={"name": cust_name, "count": 5},
+                            fields="id,name",
+                        )
+                        for cv in cust_resp.get("values", []):
+                            if cv.get("name", "").strip().lower() == cust_name.strip().lower():
+                                search_params["customerId"] = cv["id"]
+                                break
+                    except TripletexApiError:
+                        pass
+                if "customerId" not in search_params:
+                    return None
         else:
             try:
                 search_params["customerId"] = int(cust)
