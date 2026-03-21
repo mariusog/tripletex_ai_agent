@@ -153,16 +153,15 @@ class UpdateProjectHandler(BaseHandler):
         if "department" in params:
             project["department"] = self.ensure_ref(params["department"], "department")
 
-        # Strip readOnly/rate fields that cause 422 on PUT
-        for readonly_field in (
-            "projectRateTypes",
-            "hourlyRates",
-            "changes",
-            "url",
-            "displayName",
-            "displayNameWithoutNumber",
-        ):
-            project.pop(readonly_field, None)
+        # Whitelist mutable fields only — GET returns many readOnly fields
+        # that cause 422 on PUT (e.g. projectRateTypes, hourlyRates)
+        mutable_fields = {
+            "id", "version", "name", "number", "startDate", "endDate",
+            "customer", "projectManager", "department", "isInternal",
+            "isClosed", "fixedprice", "isFixedPrice", "description",
+            "isPriceCeiling", "priceCeilingAmount", "mainProject",
+        }
+        project = {k: v for k, v in project.items() if k in mutable_fields}
 
         result = api_client.put(f"/project/{proj_id}", data=project)
         logger.info("Updated project id=%s", proj_id)

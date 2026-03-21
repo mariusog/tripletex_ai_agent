@@ -159,6 +159,8 @@ def _build_posting(
         amount = -abs(credit)
     elif "amountGross" in posting and posting["amountGross"] is not None:
         amount = posting["amountGross"]
+    elif "amount" in posting and posting["amount"] is not None:
+        amount = posting["amount"]
     else:
         amount = 0
     result["amountGross"] = amount
