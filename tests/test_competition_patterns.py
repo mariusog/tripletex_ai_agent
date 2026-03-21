@@ -418,8 +418,9 @@ class TestLateFeeFlow:
                 )
 
     def test_send_invoice_with_default_sendtype(self, client):
-        """send_invoice should use EMAIL as default sendType."""
+        """send_invoice should use EMAIL as default sendType, zero errors."""
         tag = uid()
+        errors_before = client.error_count
         result = run_handler(
             client,
             "send_invoice",
@@ -436,6 +437,69 @@ class TestLateFeeFlow:
         )
         assert result.get("id")
         assert result.get("action") == "sent"
+        errors_after = client.error_count
+        assert errors_after == errors_before, (
+            f"send_invoice caused {errors_after - errors_before} errors"
+        )
+
+    def test_full_late_fee_flow(self, client):
+        """End-to-end: voucher + invoice + send + partial payment.
+
+        Mirrors exact competition pattern:
+        1) Create late fee voucher (debit 1500, credit 3400)
+        2) Create invoice for the fee
+        3) Send invoice
+        4) Register partial payment on original invoice
+        """
+        tag = uid()
+        # Create customer (simulates pre-existing)
+        cust_result = run_handler(
+            client, "create_customer",
+            {"name": f"LateFull-{tag}", "organizationNumber": "880860666"},
+        )
+        assert cust_result["id"]
+
+        # Step 1: Late fee voucher
+        v_result = run_handler(
+            client,
+            "create_voucher",
+            {
+                "description": f"Purregebyr {tag}",
+                "postings": [
+                    {"account": 1500, "debit": 35, "description": "Kundefordringer"},
+                    {"account": 3400, "credit": 35, "description": "Purregebyr"},
+                ],
+                "customer": {"name": f"LateFull-{tag}"},
+            },
+        )
+        assert v_result["id"]
+
+        # Step 2: Invoice for fee
+        inv_result = run_handler(
+            client,
+            "create_invoice",
+            {
+                "customer": {"name": f"LateFull-{tag}"},
+                "orderLines": [
+                    {"description": "Purregebyr", "unitPriceExcludingVatCurrency": 35, "count": 1}
+                ],
+            },
+        )
+        assert inv_result["id"]
+
+        # Step 3: Send invoice
+        send_result = run_handler(
+            client, "send_invoice", {"invoiceId": inv_result["id"]}
+        )
+        assert send_result.get("action") == "sent"
+
+        # Step 4: Partial payment
+        pay_result = run_handler(
+            client,
+            "register_payment",
+            {"invoiceId": inv_result["id"], "amount": 5000},
+        )
+        assert pay_result.get("action") == "payment_registered"
 
     def test_partial_payment(self, client):
         """Register partial payment on an invoice (not full amount)."""
