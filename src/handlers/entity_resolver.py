@@ -97,7 +97,7 @@ def _try_direct_id(value: Any) -> dict[str, int] | None:
 
 
 def _resolve_customer(api_client: TripletexClient, value: Any) -> dict[str, int]:
-    """Resolve customer: create-first with org/email, else search-then-create."""
+    """Resolve customer: search first, create only if not found."""
     if value is None:
         return {"id": 0}
     direct = _try_direct_id(value)
@@ -106,25 +106,28 @@ def _resolve_customer(api_client: TripletexClient, value: Any) -> dict[str, int]
     name = str(value) if not isinstance(value, dict) else value.get("name", "")
     if not name:
         return {"id": 0}
+    # Search first (GET is free, avoids duplicate creation + 4xx errors)
+    try:
+        resp = api_client.get("/customer", params={"name": name, "count": 5}, fields="id,name")
+        for v in resp.get("values", []):
+            if v.get("name", "").strip().lower() == name.strip().lower():
+                return {"id": v["id"]}
+    except TripletexApiError:
+        pass
+    # Not found — create with all available fields
     org_nr = value.get("organizationNumber") if isinstance(value, dict) else None
     email = value.get("email") if isinstance(value, dict) else None
-    if org_nr or email:
-        body: dict[str, Any] = {"name": name}
-        if org_nr:
-            body["organizationNumber"] = str(org_nr)
-        if email:
-            body["email"] = email
-        try:
-            res = api_client.post("/customer", data=body)
-            return {"id": res.get("value", {}).get("id")}
-        except TripletexApiError:
-            pass
-    resp = api_client.get("/customer", params={"name": name, "count": 5}, fields="id,name")
-    for v in resp.get("values", []):
-        if v.get("name", "").strip().lower() == name.strip().lower():
-            return {"id": v["id"]}
-    res = api_client.post("/customer", data={"name": name})
-    return {"id": res.get("value", {}).get("id")}
+    body: dict[str, Any] = {"name": name}
+    if org_nr:
+        body["organizationNumber"] = str(org_nr)
+    if email:
+        body["email"] = email
+    try:
+        res = api_client.post("/customer", data=body)
+        return {"id": res.get("value", {}).get("id")}
+    except TripletexApiError:
+        pass
+    return {"id": 0}
 
 
 def _resolve_supplier(api_client: TripletexClient, value: Any) -> dict[str, int] | None:

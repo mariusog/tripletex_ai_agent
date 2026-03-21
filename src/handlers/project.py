@@ -34,8 +34,6 @@ class CreateProjectHandler(BaseHandler):
         import secrets
         from datetime import date as dt_date
 
-        from src.api_client import TripletexApiError
-
         # Use account owner as PM (guaranteed to have PM access)
         emp_search = api_client.get_cached(
             "account_owner", "/employee", params={"count": 1}, fields="id"
@@ -80,23 +78,10 @@ class CreateProjectHandler(BaseHandler):
 
         # fixedPrice is not a direct field on ProjectDTO — ignore for now
 
-        # Always create customer if specified (competition checks attributes)
+        # Resolve customer (search first, create if not found)
         if "customer" in params:
             cust = params["customer"]
-            if isinstance(cust, dict) and "id" not in cust:
-                cust_name = cust.get("name", "")
-                cust_body: dict[str, Any] = {"name": cust_name}
-                if cust.get("organizationNumber"):
-                    cust_body["organizationNumber"] = str(cust["organizationNumber"])
-                if cust.get("email"):
-                    cust_body["email"] = cust["email"]
-                try:
-                    cust_result = api_client.post("/customer", data=cust_body)
-                    body["customer"] = {"id": cust_result.get("value", {}).get("id")}
-                except TripletexApiError:
-                    body["customer"] = _resolve(api_client, "customer", cust)
-            else:
-                body["customer"] = self.ensure_ref(cust, "customer")
+            body["customer"] = _resolve(api_client, "customer", cust)
 
         if "department" in params:
             body["department"] = self.ensure_ref(params["department"], "department")
@@ -230,7 +215,7 @@ class CreateActivityHandler(BaseHandler):
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         body: dict[str, Any] = {
             "name": params["name"],
-            "activityType": params.get("activityType", "GENERAL_ACTIVITY"),
+            "activityType": params.get("activityType", "PROJECT_GENERAL_ACTIVITY"),
         }
 
         for field in ("number", "description"):

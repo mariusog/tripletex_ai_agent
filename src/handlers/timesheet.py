@@ -45,10 +45,18 @@ def _create_project(
     pm_ref: dict[str, int] | None = None,
     entry_date: str | None = None,
 ) -> dict[str, int]:
-    """Always create a project by name."""
+    """Search for project by name first, create only if not found."""
     import secrets
 
-    # Use entry date or Jan 1st of current year as start (so past entries work)
+    # Search first (GET is free)
+    try:
+        resp = api_client.get("/project", params={"name": name, "count": 5}, fields="id,name")
+        for v in resp.get("values", []):
+            if (v.get("name") or "").strip().lower() == name.strip().lower():
+                return {"id": v["id"]}
+    except TripletexApiError:
+        pass
+    # Not found — create
     start = entry_date or f"{dt_date.today().year}-01-01"
     body: dict[str, Any] = {
         "name": name,
@@ -64,11 +72,7 @@ def _create_project(
         logger.info("Created project '%s' id=%s", name, proj_id)
         return {"id": proj_id}
     except TripletexApiError:
-        # Search as fallback
-        resp = api_client.get("/project", params={"name": name, "count": 5}, fields="id,name")
-        for v in resp.get("values", []):
-            if (v.get("name") or "").strip().lower() == name.strip().lower():
-                return {"id": v["id"]}
+        pass
     return {"id": 0}
 
 

@@ -99,4 +99,4 @@ class TestCreateActivity:
         assert result["id"] == 21
         body = client.post.call_args[1]["data"]
         assert body["name"] == "Meeting"
-        assert body["activityType"] == "GENERAL_ACTIVITY"
+        assert body["activityType"] == "PROJECT_GENERAL_ACTIVITY"
