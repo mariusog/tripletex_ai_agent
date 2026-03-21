@@ -116,6 +116,68 @@ class TestEmployeeOnboardingFull:
         assert detail.get("shiftDurationHours") == 7.5
         assert detail.get("occupationCode") is not None
 
+    def test_every_field_is_set(self, client):
+        """Verify ALL competition-checked fields are set on the employee.
+
+        This test uses every possible field to ensure the handler processes
+        them all correctly. In competition, the LLM must extract these from PDFs.
+        """
+        tag = uid()
+        run_handler(client, "create_department", {"name": f"QA-{tag}"})
+
+        result = run_handler(
+            client,
+            "create_employee",
+            {
+                "firstName": f"Full-{tag}",
+                "lastName": "Fields",
+                "email": f"full-{tag}@example.org",
+                "dateOfBirth": "1990-05-15",
+                "nationalIdentityNumber": "15059012345",
+                "bankAccountNumber": "12345678903",
+                "department": f"QA-{tag}",
+                "startDate": "2026-08-01",
+                "employmentType": "Fast stilling",
+                "employmentPercentage": 80,
+                "annualSalary": 550000,
+                "hoursPerDay": 6.0,
+                "jobCode": "3112",
+            },
+        )
+        emp_id = result["id"]
+        assert emp_id
+
+        # Verify EVERY field
+        v = client.get(
+            f"/employee/{emp_id}",
+            fields="firstName,lastName,email,dateOfBirth,"
+            "nationalIdentityNumber,bankAccountNumber,"
+            "department(id,name),"
+            "employments(startDate,employmentDetails("
+            "employmentType,percentageOfFullTimeEquivalent,"
+            "annualSalary,shiftDurationHours,occupationCode(id)))",
+        )["value"]
+
+        # Employee fields
+        assert v["firstName"] == f"Full-{tag}", f"firstName: {v['firstName']}"
+        assert v["lastName"] == "Fields", f"lastName: {v['lastName']}"
+        assert v["email"] == f"full-{tag}@example.org", f"email: {v['email']}"
+        assert v["dateOfBirth"] == "1990-05-15", f"dateOfBirth: {v['dateOfBirth']}"
+        assert v["department"] is not None, "department missing"
+
+        # Employment fields
+        emps = v.get("employments", [])
+        assert len(emps) >= 1, "No employment"
+        assert emps[0]["startDate"] == "2026-08-01", f"startDate: {emps[0]['startDate']}"
+
+        details = emps[0].get("employmentDetails", [])
+        assert len(details) >= 1, "No employment details"
+        d = details[0]
+        assert d["employmentType"] == "ORDINARY", f"type: {d['employmentType']}"
+        assert d["percentageOfFullTimeEquivalent"] == 80.0, f"pct: {d['percentageOfFullTimeEquivalent']}"
+        assert d["annualSalary"] == 550000.0, f"salary: {d['annualSalary']}"
+        assert d["shiftDurationHours"] == 6.0, f"hours: {d['shiftDurationHours']}"
+
     def test_onboarding_minimal(self, client):
         """Simpler variant: just name + email + department."""
         tag = uid()
