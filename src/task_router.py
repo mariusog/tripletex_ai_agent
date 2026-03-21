@@ -49,6 +49,7 @@ def _inject_context(params: dict[str, Any], context: dict[str, Any]) -> dict[str
         "projectId",
         "voucherId",
         "travelExpenseId",
+        "_overdue_invoice_id",
     ):
         if key not in merged and key in context:
             merged[key] = context[key]
@@ -82,6 +83,10 @@ def _update_context(
         context["orderId"] = result["orderId"]
     if result.get("entryId"):
         context["entryId"] = result["entryId"]
+
+    # Carry overdue invoice ID from voucher step (for late fee tasks)
+    if params.get("_overdue_invoice_id"):
+        context["_overdue_invoice_id"] = params["_overdue_invoice_id"]
 
 
 class TaskRouter:

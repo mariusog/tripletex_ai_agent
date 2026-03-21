@@ -69,6 +69,13 @@ def normalize_params(params: dict[str, Any]) -> dict[str, Any]:
     if "invoiceId" in result and result.get("invoiceId") == result.get("id"):
         result.pop("invoiceId", None)
 
+    # Strip placeholder customer names the LLM generates
+    if "customer" in result:
+        cust = result["customer"]
+        name = cust.get("name", "") if isinstance(cust, dict) else str(cust)
+        if name and ("<" in name or "UNKNOWN" in name.upper() or "OVERDUE" in name.upper()):
+            result.pop("customer", None)
+
     return result
 
 

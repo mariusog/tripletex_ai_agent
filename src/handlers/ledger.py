@@ -101,16 +101,43 @@ class CreateVoucherHandler(BaseHandler):
             customer_ref = _resolve_entity(api_client, "customer", params["customer"])
 
         # If postings use account 1500 (receivable) but no customer, find one
+        # Prefer customer with overdue invoices (for late fee tasks)
         if not customer_ref:
             needs_customer = any(
                 1500 <= self._acct_num(p) <= 1599 for p in params.get("postings", [])
             )
             if needs_customer:
                 try:
-                    resp = api_client.get("/customer", params={"count": 1}, fields="id")
-                    vals = resp.get("values", [])
-                    if vals:
-                        customer_ref = {"id": vals[0]["id"]}
+                    # Search for invoices with outstanding amount (overdue)
+                    from datetime import date as _dt
+
+                    inv_resp = api_client.get(
+                        "/invoice",
+                        params={
+                            "count": 5,
+                            "invoiceDateFrom": f"{_dt.today().year}-01-01",
+                            "invoiceDateTo": _dt.today().isoformat(),
+                        },
+                        fields="id,customer(id),amountOutstanding",
+                    )
+                    for inv in inv_resp.get("values", []):
+                        if (inv.get("amountOutstanding") or 0) > 0:
+                            cust = inv.get("customer")
+                            if cust and cust.get("id"):
+                                customer_ref = {"id": cust["id"]}
+                                # Store overdue invoice ID in context
+                                params["_overdue_invoice_id"] = inv["id"]
+                                logger.info(
+                                    "Found overdue invoice id=%s customer=%s",
+                                    inv["id"],
+                                    cust["id"],
+                                )
+                                break
+                    if not customer_ref:
+                        resp = api_client.get("/customer", params={"count": 1}, fields="id")
+                        vals = resp.get("values", [])
+                        if vals:
+                            customer_ref = {"id": vals[0]["id"]}
                 except Exception:
                     logger.warning("Could not find customer for receivable posting")
 

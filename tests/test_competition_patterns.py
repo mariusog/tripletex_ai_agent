@@ -445,24 +445,37 @@ class TestLateFeeFlow:
             f"send_invoice caused {errors_after - errors_before} errors"
         )
 
-    def test_full_late_fee_flow(self, client):
-        """End-to-end: voucher + invoice + send + partial payment.
+    def test_full_late_fee_flow_with_overdue_invoice(self, client):
+        """End-to-end: find overdue invoice, voucher, fee invoice, send, partial pay.
 
         Mirrors exact competition pattern:
-        1) Create late fee voucher (debit 1500, credit 3400)
-        2) Create invoice for the fee
-        3) Send invoice
-        4) Register partial payment on original invoice
+        1) Pre-existing customer + overdue invoice in sandbox
+        2) Late fee voucher (debit 1500, credit 3400) — finds overdue customer
+        3) Create invoice for the fee
+        4) Send invoice
+        5) Partial payment on the ORIGINAL overdue invoice (not the fee)
         """
         tag = uid()
-        # Create customer (simulates pre-existing)
+        # Simulate pre-existing customer + overdue invoice
         cust_result = run_handler(
             client, "create_customer",
             {"name": f"LateFull-{tag}", "organizationNumber": "880860666"},
         )
-        assert cust_result["id"]
+        # Create an "overdue" invoice (unpaid)
+        overdue_inv = run_handler(
+            client,
+            "create_invoice",
+            {
+                "customer": {"name": f"LateFull-{tag}"},
+                "orderLines": [
+                    {"description": "Original service", "unitPriceExcludingVatCurrency": 20000, "count": 1}
+                ],
+            },
+        )
+        overdue_id = overdue_inv["id"]
+        assert overdue_id
 
-        # Step 1: Late fee voucher
+        # Step 1: Late fee voucher — should auto-find the overdue customer
         v_result = run_handler(
             client,
             "create_voucher",
@@ -472,13 +485,13 @@ class TestLateFeeFlow:
                     {"account": 1500, "debit": 35, "description": "Kundefordringer"},
                     {"account": 3400, "credit": 35, "description": "Purregebyr"},
                 ],
-                "customer": {"name": f"LateFull-{tag}"},
+                # No customer — should find from overdue invoice
             },
         )
         assert v_result["id"]
 
-        # Step 2: Invoice for fee
-        inv_result = run_handler(
+        # Step 2: Fee invoice
+        fee_inv = run_handler(
             client,
             "create_invoice",
             {
@@ -488,21 +501,26 @@ class TestLateFeeFlow:
                 ],
             },
         )
-        assert inv_result["id"]
+        assert fee_inv["id"]
 
-        # Step 3: Send invoice
+        # Step 3: Send fee invoice
         send_result = run_handler(
-            client, "send_invoice", {"invoiceId": inv_result["id"]}
+            client, "send_invoice", {"invoiceId": fee_inv["id"]}
         )
         assert send_result.get("action") == "sent"
 
-        # Step 4: Partial payment
+        # Step 4: Partial payment on OVERDUE invoice (not the fee)
         pay_result = run_handler(
             client,
             "register_payment",
-            {"invoiceId": inv_result["id"], "amount": 5000},
+            {"invoiceId": overdue_id, "amount": 5000},
         )
         assert pay_result.get("action") == "payment_registered"
+
+        # Verify overdue invoice has partial payment (outstanding > 0 but < original)
+        inv = client.get(f"/invoice/{overdue_id}", fields="amount,amountOutstanding")["value"]
+        assert inv["amountOutstanding"] > 0, "Should still have outstanding"
+        assert inv["amountOutstanding"] < inv["amount"], "Payment should reduce outstanding"
 
     def test_partial_payment(self, client):
         """Register partial payment on an invoice (not full amount)."""
