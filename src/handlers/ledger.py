@@ -259,26 +259,27 @@ class CreateVoucherHandler(BaseHandler):
             else:
                 expanded.append(p)
 
-        # Auto-balance: if only one side provided, add contra entry
-        # But skip if postings already have explicit debit/credit pairs
+        # Auto-balance: compute net total and add contra if unbalanced
         if expanded:
-            has_credits = any(p.get("credit") for p in expanded)
-            has_debits = any(
-                p.get("debit") or p.get("amountGross", p.get("amount", 0)) > 0 for p in expanded
-            )
-            if not has_credits and has_debits:
-                # Only debit postings — add balancing credit on bank (1920)
-                total_debit = sum(
-                    p.get("amountGross", p.get("amount", p.get("debit", 0) or 0)) for p in expanded
+            total = 0.0
+            for p in expanded:
+                credit = p.get("credit", 0) or 0
+                debit = p.get("debit", 0) or 0
+                gross = p.get("amountGross", p.get("amount", 0)) or 0
+                if credit and not debit:
+                    total -= abs(credit)
+                elif debit and not credit:
+                    total += abs(debit)
+                else:
+                    total += gross
+            if abs(total) > 0.01:
+                expanded.append(
+                    {
+                        "account": 1920 if total > 0 else 3000,
+                        "amountGross": -total,
+                        "description": body.get("description", ""),
+                    }
                 )
-                if total_debit > 0:
-                    expanded.append(
-                        {
-                            "account": 1920,
-                            "amountGross": -total_debit,
-                            "description": body.get("description", ""),
-                        }
-                    )
 
             body["postings"] = [
                 _build_posting(

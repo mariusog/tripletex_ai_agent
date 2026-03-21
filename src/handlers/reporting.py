@@ -46,8 +46,43 @@ class LedgerCorrectionHandler(BaseHandler):
 
         supplier_ref = _resolve_supplier(api_client, params.get("supplier"))
 
-        # Build correction postings
+        # Build correction postings from explicit postings or corrections list
         postings = params.get("postings", [])
+
+        # Expand corrections list into debit/credit posting pairs
+        corrections = params.get("corrections", [])
+        if corrections and not postings:
+            for corr in corrections:
+                wrong = corr.get("wrongAccount")
+                correct = corr.get("correctAccount")
+                amount = corr.get("amount", 0)
+                desc = corr.get("description", "Korreksjon")
+                if wrong and correct and amount:
+                    # Reverse the wrong posting
+                    postings.append(
+                        {
+                            "account": wrong,
+                            "amountGross": -amount,
+                            "description": desc,
+                        }
+                    )
+                    # Add the correct posting
+                    postings.append(
+                        {
+                            "account": correct,
+                            "amountGross": amount,
+                            "description": desc,
+                        }
+                    )
+                elif correct and amount:
+                    postings.append(
+                        {
+                            "account": correct,
+                            "amountGross": amount,
+                            "description": desc,
+                        }
+                    )
+
         if postings:
             body["postings"] = [
                 _build_posting(api_client, p, row=i + 1, supplier=supplier_ref)

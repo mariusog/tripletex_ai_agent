@@ -116,7 +116,23 @@ def _resolve_product(
     prod_body: dict[str, Any] = {"name": name or f"Product {number}"}
     if number:
         prod_body["number"] = str(number)
-    result = api_client.post("/product", data=prod_body)
+    try:
+        result = api_client.post("/product", data=prod_body)
+    except TripletexApiError:
+        # Product number collision — retry without number, or search by name
+        if number:
+            prod_body.pop("number", None)
+            try:
+                result = api_client.post("/product", data=prod_body)
+            except TripletexApiError:
+                # Last resort: search by name
+                resp = api_client.get("/product", params={"name": name, "count": 1}, fields="id")
+                vals = resp.get("values", [])
+                if vals:
+                    return {"id": vals[0]["id"]}
+                return {"id": 0}
+        else:
+            return {"id": 0}
     prod_id = result.get("value", {}).get("id")
     logger.info("Auto-created product '%s' id=%s", name, prod_id)
     return {"id": prod_id}
