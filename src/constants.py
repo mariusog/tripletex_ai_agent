@@ -57,6 +57,9 @@ API_REQUEST_TIMEOUT = 30
 # Default content type for API requests
 API_CONTENT_TYPE = "application/json"
 
+# Default bank account number for ledger account 1920
+DEFAULT_BANK_ACCOUNT_NUMBER = "12345678903"
+
 # ---------------------------------------------------------------------------
 # LLM configuration
 # ---------------------------------------------------------------------------
