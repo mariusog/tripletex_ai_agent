@@ -76,12 +76,20 @@ def _register_payment_on_invoice(
     api_client: TripletexClient,
     invoice_id: int,
     payment_date: str | None = None,
+    amount_override: float | None = None,
 ) -> bool:
-    """Register full payment on an invoice using its actual amount."""
+    """Register payment on an invoice.
+
+    Uses amount_override if provided (e.g. for partial/currency payments),
+    otherwise pays the full invoice amount.
+    """
     try:
-        inv_data = api_client.get(f"/invoice/{invoice_id}", fields="amount")
-        actual_amount = inv_data.get("value", {}).get("amount")
-        if not actual_amount:
+        if amount_override is not None:
+            pay_amount = amount_override
+        else:
+            inv_data = api_client.get(f"/invoice/{invoice_id}", fields="amount")
+            pay_amount = inv_data.get("value", {}).get("amount")
+        if not pay_amount:
             return False
         pt_resp = api_client.get_cached(
             "invoice_payment_type",
@@ -97,10 +105,10 @@ def _register_payment_on_invoice(
             params={
                 "paymentDate": payment_date or dt_date.today().isoformat(),
                 "paymentTypeId": pt_values[0]["id"],
-                "paidAmount": actual_amount,
+                "paidAmount": pay_amount,
             },
         )
-        logger.info("Registered payment %s on invoice %s", actual_amount, invoice_id)
+        logger.info("Registered payment %s on invoice %s", pay_amount, invoice_id)
         return True
     except TripletexApiError as e:
         logger.warning("Payment failed: %s", e)
@@ -166,6 +174,20 @@ def create_full_invoice(
     # Step 5: Register payment if requested
     payment = params.get("register_payment", params.get("payment"))
     if payment and result.invoice_id:
-        result.payment_registered = _register_payment_on_invoice(api_client, result.invoice_id)
+        pay_date = None
+        pay_amount_override = None
+        if isinstance(payment, dict):
+            pay_date = payment.get("paymentDate")
+            llm_amount = payment.get("amount")
+            # Check if this is a partial/currency payment
+            # (LLM amount differs from invoice amount → use LLM amount)
+            if llm_amount and params.get("currency"):
+                pay_amount_override = llm_amount
+        result.payment_registered = _register_payment_on_invoice(
+            api_client,
+            result.invoice_id,
+            payment_date=pay_date,
+            amount_override=pay_amount_override,
+        )
 
     return result
