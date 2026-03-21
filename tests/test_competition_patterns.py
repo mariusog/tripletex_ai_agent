@@ -60,7 +60,7 @@ class TestEmployeeOnboardingFull:
         tag = uid()
         # Step 1: Create department
         dept_result = run_handler(
-            client, "create_department", {"name": f"Innkjøp-{tag}"}
+            client, "create_department", {"name": f"Logistikk-{tag}"}
         )
         assert dept_result["id"]
 
@@ -69,17 +69,18 @@ class TestEmployeeOnboardingFull:
             client,
             "create_employee",
             {
-                "firstName": f"Hilde-{tag}",
-                "lastName": "Bakken",
-                "email": f"hilde-{tag}@example.org",
-                "dateOfBirth": "1987-02-08",
-                "nationalIdentityNumber": "08028777990",
-                "department": f"Innkjøp-{tag}",
-                "startDate": "2026-07-22",
-                "employmentType": "fast",
-                "employmentPercentage": 80,
-                "annualSalary": 570000,
-                "hoursPerDay": 6.0,
+                "firstName": f"Brita-{tag}",
+                "lastName": "Stølsvik",
+                "email": f"brita-{tag}@example.org",
+                "dateOfBirth": "1993-03-16",
+                "nationalIdentityNumber": "01019012345",
+                "bankAccountNumber": "12345678903",
+                "department": f"Logistikk-{tag}",
+                "startDate": "2026-05-31",
+                "employmentType": "Fast stilling",
+                "employmentPercentage": 100,
+                "annualSalary": 660000,
+                "hoursPerDay": 7.5,
             },
         )
         assert emp_result["id"]
@@ -87,24 +88,30 @@ class TestEmployeeOnboardingFull:
         # Verify ALL fields the competition checks
         v = client.get(
             f"/employee/{emp_result['id']}",
-            fields="firstName,lastName,email,dateOfBirth,nationalIdentityNumber,"
-            "department(id,name),employments(startDate,employmentDetails(*))",
+            fields="firstName,lastName,email,dateOfBirth,"
+            "nationalIdentityNumber,bankAccountNumber,"
+            "department(id,name),"
+            "employments(startDate,employmentDetails(*))",
         )["value"]
-        assert v["firstName"] == f"Hilde-{tag}"
-        assert v["lastName"] == "Bakken"
-        assert v["email"] == f"hilde-{tag}@example.org"
-        assert v["dateOfBirth"] == "1987-02-08"
+        assert v["firstName"] == f"Brita-{tag}"
+        assert v["lastName"] == "Stølsvik"
+        assert v["email"] == f"brita-{tag}@example.org"
+        assert v["dateOfBirth"] == "1993-03-16"
+        # nationalIdentityNumber may be stripped if format is invalid
+        if v.get("nationalIdentityNumber"):
+            assert len(v["nationalIdentityNumber"]) == 11
         assert v["department"] is not None
 
         emps = v.get("employments", [])
         assert len(emps) >= 1, "No employment record"
-        assert emps[0]["startDate"] == "2026-07-22"
+        assert emps[0]["startDate"] == "2026-05-31"
 
         details = emps[0].get("employmentDetails", [])
         assert len(details) >= 1, "No employment details"
         detail = details[0]
-        assert detail.get("percentageOfFullTimeEquivalent") == 80.0
+        assert detail.get("percentageOfFullTimeEquivalent") == 100.0
         assert detail.get("employmentType") == "ORDINARY"
+        assert detail.get("annualSalary") == 660000.0
 
     def test_onboarding_minimal(self, client):
         """Simpler variant: just name + email + department."""

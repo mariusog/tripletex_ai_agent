@@ -118,16 +118,12 @@ class CreateEmployeeHandler(BaseHandler):
         if annual_salary:
             emp_detail["annualSalary"] = float(annual_salary)
 
-        # Job code (stillingskode) — occupationCode is on employment, not details
-        job_code = params.get("jobCode") or params.get("occupationCode")
-
-        employment: dict[str, Any] = {
-            "startDate": start_date,
-            "employmentDetails": [emp_detail],
-        }
-        if job_code:
-            employment["occupationCode"] = str(job_code)
-        body["employments"] = [employment]
+        body["employments"] = [
+            {
+                "startDate": start_date,
+                "employmentDetails": [emp_detail],
+            }
+        ]
 
         body = self.strip_none_values(body)
 
