@@ -24,8 +24,10 @@ class CreateEmployeeHandler(BaseHandler):
         "email, nationalIdentityNumber (personnummer/fødselsnummer, 11 digits), "
         "bankAccountNumber (kontonummer), dateOfBirth, startDate, "
         "annualSalary (årslønn), employmentPercentage (stillingsprosent), "
-        "hoursPerDay (arbeidstid per dag), department name (avdeling), "
-        "and jobCode (stillingskode, 4-digit STYRK code)."
+        "hoursPerDay (arbeidstid per dag, typically 7.5 for 100%), "
+        "department name (avdeling), "
+        "and jobCode (stillingskode, 4-digit STYRK code). "
+        "If hoursPerDay is not in the PDF, use 7.5 for 100% or 6.0 for 80%."
     )
     param_schema = {
         "firstName": ParamSpec(description="Employee first name"),
@@ -140,21 +142,26 @@ class CreateEmployeeHandler(BaseHandler):
         job_code = params.get("jobCode") or params.get("occupationCode")
         if job_code:
             try:
+                code_str = str(job_code)
                 occ_resp = api_client.get(
                     "/employee/employment/occupationCode",
-                    params={"code": str(job_code), "count": 1},
-                    fields="id",
+                    params={"code": code_str, "count": 20},
+                    fields="id,code",
                 )
-                occ_vals = occ_resp.get("values", [])
-                if occ_vals:
-                    emp_detail["occupationCode"] = {"id": occ_vals[0]["id"]}
+                # Filter: code must START with our query (API does substring match)
+                for occ in occ_resp.get("values", []):
+                    if occ.get("code", "").startswith(code_str):
+                        emp_detail["occupationCode"] = {"id": occ["id"]}
+                        break
             except TripletexApiError:
                 pass
 
         # Working hours per day → shiftDurationHours on employmentDetails
         hours_per_day = params.get("hoursPerDay")
-        if hours_per_day:
-            emp_detail["shiftDurationHours"] = float(hours_per_day)
+        if not hours_per_day:
+            # Default based on employment percentage (7.5h for 100%)
+            hours_per_day = round(7.5 * pct / 100, 1) if pct else 7.5
+        emp_detail["shiftDurationHours"] = float(hours_per_day)
 
         body["employments"] = [
             {
