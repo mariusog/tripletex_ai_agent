@@ -83,6 +83,18 @@ def _normalize_posting(posting: dict[str, Any]) -> dict[str, Any]:
     """Normalize a single voucher posting from LLM output."""
     p = dict(posting)
 
+    # Nested debit/credit objects → flatten
+    # e.g. {"debit": {"account": 1500, "amount": 100}} → {"account": 1500, "debit": 100}
+    for side in ("debit", "credit"):
+        if isinstance(p.get(side), dict):
+            nested = p.pop(side)
+            if "account" in nested and "account" not in p:
+                p["account"] = nested["account"]
+            amt = nested.get("amount") or nested.get("amountGross") or 0
+            p[side] = abs(amt)
+            if "description" in nested and "description" not in p:
+                p["description"] = nested["description"]
+
     # Boolean debit/credit → use amount field
     if isinstance(p.get("debit"), bool):
         is_debit = p.pop("debit")
