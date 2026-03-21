@@ -45,6 +45,14 @@ class CreateEmployeeHandler(BaseHandler):
 
         if "department" in params:
             body["department"] = self.ensure_ref(params["department"], "department")
+        else:
+            # Pre-fetch department (required field) to avoid a wasted 422
+            dept = api_client.get_cached(
+                "default_dept", "/department", params={"count": 1}, fields="id"
+            )
+            dept_vals = dept.get("values", [])
+            if dept_vals:
+                body["department"] = {"id": dept_vals[0]["id"]}
 
         # Employment record
         start_date = self.validate_date(params.get("startDate"), "startDate") or today
@@ -65,23 +73,22 @@ class CreateEmployeeHandler(BaseHandler):
 
         body = self.strip_none_values(body)
 
-        # Try creating — if it fails due to missing department, add one and retry
         try:
             result = api_client.post("/employee", data=body)
         except TripletexApiError as e:
-            err_fields = [m.get("field", "") for m in e.error.validation_messages]
-            if "department.id" in err_fields and "department" not in body:
-                dept = api_client.get("/department", params={"count": 1}, fields="id")
-                dept_vals = dept.get("values", [])
-                if dept_vals:
-                    body["department"] = {"id": dept_vals[0]["id"]}
-                else:
-                    # Create a default department
-                    new_dept = api_client.post("/department", data={"name": "Avdeling"})
-                    body["department"] = {"id": new_dept.get("value", {}).get("id")}
-                result = api_client.post("/employee", data=body)
-            else:
-                raise
+            err_msgs = [m.get("message", "") for m in e.error.validation_messages]
+            # If email already exists, find the employee and return
+            if any("e-post" in m.lower() or "email" in m.lower() for m in err_msgs):
+                email = body.get("email")
+                if email:
+                    resp = api_client.get(
+                        "/employee", params={"email": email, "count": 1}, fields="id"
+                    )
+                    vals = resp.get("values", [])
+                    if vals:
+                        logger.info("Employee with email %s exists id=%s", email, vals[0]["id"])
+                        return {"id": vals[0]["id"], "action": "already_exists"}
+            raise
 
         value = result.get("value", {})
         logger.info("Created employee id=%s", value.get("id"))
