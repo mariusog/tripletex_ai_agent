@@ -822,19 +822,41 @@ class TestCreditNoteFlow:
 # ============================================================
 
 
-class TestUpdateProjectFixedPrice:
-    """Simulates: 'Set fixed price on project'"""
+class TestProjectFixedPriceAndMilestone:
+    """Simulates: 'Create project with fixed price, invoice 25% milestone'
 
-    def test_create_then_update(self, client):
+    Based on real competition prompt:
+    'Fixez un prix forfaitaire de 328650 NOK sur le projet
+    Développement e-commerce pour Cascade SARL.
+    Facturez au client 25% du prix fixe.'
+    """
+
+    def test_create_project_with_pm_string(self, client):
+        """PM as string name should be resolved to employee."""
         tag = uid()
-        run_handler(client, "create_project", {"name": f"FixP-{tag}"})
+        result = run_handler(
+            client,
+            "create_project",
+            {
+                "name": f"FixP-{tag}",
+                "customer": {"name": f"FixCust-{tag}"},
+                "projectManager": f"PM-{tag} Leader",
+            },
+        )
+        assert result["id"]
+        # PM employee should exist
+        emps = client.get(
+            "/employee", params={"firstName": f"PM-{tag}", "count": 1}, fields="id"
+        )
+        assert len(emps["values"]) > 0, "PM employee not created from string name"
+
+    def test_update_project_fixed_price(self, client):
+        tag = uid()
+        run_handler(client, "create_project", {"name": f"UpdFP-{tag}"})
         result = run_handler(
             client,
             "update_project",
-            {
-                "name": f"FixP-{tag}",
-                "fixedPrice": 200000,
-            },
+            {"name": f"UpdFP-{tag}", "fixedPrice": 200000},
         )
         assert result.get("action") == "updated"
 

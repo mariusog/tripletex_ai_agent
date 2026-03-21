@@ -45,11 +45,18 @@ class CreateProjectHandler(BaseHandler):
 
         # Also create the requested PM employee (competition checks they exist)
         pm = params.get("projectManager")
-        if pm and isinstance(pm, dict) and "id" not in pm:
-            try:
-                _resolve(api_client, "employee", pm)
-            except Exception:
-                logger.warning("PM employee creation failed")
+        if pm:
+            if isinstance(pm, str):
+                parts = pm.strip().split()
+                if len(parts) >= 2:
+                    pm = {"firstName": parts[0], "lastName": " ".join(parts[1:])}
+                else:
+                    pm = {"firstName": pm}
+            if isinstance(pm, dict) and "id" not in pm:
+                try:
+                    _resolve(api_client, "employee", pm)
+                except Exception:
+                    logger.warning("PM employee creation failed")
 
         proj_num = str(params.get("number", secrets.randbelow(90000) + 10000))
 
@@ -70,6 +77,8 @@ class CreateProjectHandler(BaseHandler):
         for bool_field in ("isInternal", "isClosed"):
             if bool_field in params:
                 body[bool_field] = params[bool_field]
+
+        # fixedPrice is not a direct field on ProjectDTO — ignore for now
 
         # Always create customer if specified (competition checks attributes)
         if "customer" in params:
