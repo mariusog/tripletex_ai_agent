@@ -59,73 +59,53 @@ tests/
 
 ---
 
-## Open Tasks
+## Day 2 Game Plan (Saturday March 21)
 
-### PRIORITY 1: Foundation (must complete first)
+Based on 80 competition runs. **16/30 task types seen, 14 never tested.**
 
-| ID | Agent | Title | Details | Depends on |
-|----|-------|-------|---------|------------|
-| T10 | lead-agent | Server + models | FastAPI POST /solve endpoint, Pydantic models, Dockerfile, deployment config | - |
-| T11 | core-agent | Tripletex API client | HTTP client with Basic Auth, retry on 429, field selection, error parsing | - |
-| T12 | core-agent | LLM integration | Claude/Gemini integration for task classification and parameter extraction | - |
-| T13 | core-agent | Task router | Classify prompt into task type, extract params, dispatch to handler | T11, T12 |
-| T14 | feature-agent | Handler base + registry | Base handler class, registry pattern, handler interface | - |
-| T15 | qa-agent | Test infrastructure | Fixtures for mock API responses, mock LLM, fake credentials | - |
+### PRIORITY 1: Fix Broken Scoring [CRITICAL]
 
-### PRIORITY 2: Tier 1 Handlers (simple CRUD, x1 multiplier)
+| ID | Agent | Task | Issue | Tier |
+|----|-------|------|-------|------|
+| T100 | core-agent | Fix payment reversal | 2/8 score — try paying then reversing with negative amount vs leaving unpaid | T2 x2 |
+| T101 | core-agent | Verify product search-first fix | Was 0/8 when products pre-exist, now searches first | T2 x2 |
+| T102 | core-agent | Verify timesheet + salary fixes | projectChargeableHours removed, employment check added | T2 x2 |
 
-| ID | Agent | Title | Details | Depends on |
-|----|-------|-------|---------|------------|
-| T20 | feature-agent | Employee handlers | Create employee (with roles), update contact info | T14 |
-| T21 | feature-agent | Customer handlers | Create customer, update customer | T14 |
-| T22 | feature-agent | Product handlers | Create product with VAT type | T14 |
-| T23 | feature-agent | Department handlers | Create department, assign manager | T14 |
-| T24 | feature-agent | Project handlers | Create project, link to customer/department | T14 |
+### PRIORITY 2: Reduce API Calls [EFFICIENCY]
 
-### PRIORITY 3: Tier 2 Handlers (multi-step, x2 multiplier)
+| ID | Agent | Task | Current → Target | How |
+|----|-------|------|------------------|-----|
+| T110 | feature-agent | Optimize create_invoice | 7-10 → 4 calls | Use get_cached for bank acct + payment type |
+| T111 | feature-agent | Optimize register_payment | 6-10 → 4 calls | Same as invoice optimization |
+| T112 | feature-agent | Optimize create_project | 4-7 → 2 calls | Cache employee, skip redundant lookups |
+| T113 | feature-agent | Optimize create_voucher | 4-5 → 2 calls | Cache account lookups with get_cached |
 
-| ID | Agent | Title | Details | Depends on |
-|----|-------|-------|---------|------------|
-| T30 | feature-agent | Order + invoice handlers | Create order with lines, create invoice from order | T14, T20, T21, T22 |
-| T31 | feature-agent | Payment handlers | Register payment on invoice, credit notes | T30 |
-| T32 | feature-agent | Travel expense handlers | Create travel expense with costs, deliver, approve | T14, T20 |
-| T33 | feature-agent | Project linking handlers | Link project to customer, assign activities | T24 |
+### PRIORITY 3: Test Untested Task Types [14 NEVER SEEN]
 
-### PRIORITY 4: Tier 3 Handlers (complex, x3 multiplier, opens Saturday)
+| ID | Agent | Task Types | Tier | Action |
+|----|-------|------------|------|--------|
+| T120 | qa-agent | balance_sheet_report, bank_reconciliation, ledger_correction, year_end_closing, reverse_voucher, delete_voucher | T3 x3 | Write sandbox integration tests |
+| T121 | qa-agent | create_order, create_asset, update_asset, approve_travel_expense, deliver_travel_expense | T2 x2 | Write sandbox integration tests |
+| T122 | qa-agent | assign_role, enable_module, update_customer, update_employee | T1 x1 | Write sandbox integration tests |
 
-| ID | Agent | Title | Details | Depends on |
-|----|-------|-------|---------|------------|
-| T40 | feature-agent | Ledger/voucher handlers | Create voucher, reverse voucher, ledger corrections | T14 |
-| T41 | feature-agent | Bank reconciliation handlers | Bank reconciliation workflow | T14 |
-| T42 | feature-agent | Advanced workflows | Year-end closing, multi-step accounting tasks | T14, T40 |
+### PRIORITY 4: Cross-Service Optimization
 
-### PRIORITY 5: Testing + Quality
+| ID | Agent | Task | Action |
+|----|-------|------|--------|
+| T130 | lead-agent | Compare handlers across services | Use runs/handler_snapshots/, cherry-pick best per task |
+| T131 | lead-agent | Merge Magnus branch improvements | Port remaining improvements (if any) |
 
-| ID | Agent | Title | Details | Depends on |
-|----|-------|-------|---------|------------|
-| T50 | qa-agent | Unit tests for core modules | Tests for api_client, llm, task_router | T11, T12, T13 |
-| T51 | qa-agent | Unit tests for Tier 1 handlers | Tests for employee, customer, product, department, project | T20-T24 |
-| T52 | qa-agent | Unit tests for Tier 2 handlers | Tests for invoice, payment, travel, project linking | T30-T33 |
-| T53 | qa-agent | Integration test harness | End-to-end test with sandbox credentials | T10, T13 |
+## Completed (Day 1)
 
-### PRIORITY 6: Exploration + Hardening
-
-| ID | Agent | Title | Details | Depends on |
-|----|-------|-------|---------|------------|
-| T60 | core-agent | Efficiency optimization | Audit API call counts, remove unnecessary GETs, use batch endpoints | T50, T51 |
-| T61 | core-agent | Error elimination | Pre-validate all inputs, eliminate 4xx errors | T50, T51 |
-| T70 | core-agent | Sandbox exploration scripts | Programmatically discover required/optional fields per API endpoint using sandbox. Output a field manifest (JSON) per endpoint. | T11 |
-| T71 | qa-agent | Task-prompt test harness | Collect example prompts in all 7 languages for each task type. Build a test suite verifying classification accuracy across languages. | T12, T13 |
-| T72 | feature-agent | Expand Tier 2/3 handler coverage | Build handlers for ALL 30 task types. Each Tier 2 handler = ~4 pts, each Tier 3 = ~6 pts. Prioritize by point value. | T14, T70 |
-
-## In Progress
-
-| ID | Agent | Title | Status | Notes |
-|----|-------|-------|--------|-------|
-| - | - | - | - | - |
-
-## Done
-
-| ID | Agent | Title | Result |
-|----|-------|-------|--------|
-| - | - | - | - |
+| What | Result |
+|------|--------|
+| All 30+ handlers implemented | ✅ |
+| Tool use for LLM (structured output) | ✅ |
+| get_cached for API response caching | ✅ |
+| PUT /order/:invoice (single call) | ✅ |
+| Create-first pattern for entities | ✅ |
+| Bank account cache per-sandbox | ✅ |
+| Credit note PUT (not POST) | ✅ |
+| Placeholder stripping | ✅ |
+| Run capture + analysis pipeline | ✅ |
+| COMPETITION_RUN logging | ✅ |
