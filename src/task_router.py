@@ -132,31 +132,41 @@ class TaskRouter:
                     )
 
                 # Handle batch "items" for handlers without native support
-                items = params.get("items", [])
-                if items and not hasattr(handler, "_create_one"):
-                    results = []
-                    for item in items:
-                        merged = {**params, **item}
-                        merged.pop("items", None)
-                        results.append(handler.execute(api_client, merged))
-                    result = {"results": results, "count": len(results)}
-                else:
-                    result = handler.execute(api_client, params)
+                try:
+                    items = params.get("items", [])
+                    if items and not hasattr(handler, "_create_one"):
+                        results = []
+                        for item in items:
+                            merged = {**params, **item}
+                            merged.pop("items", None)
+                            results.append(handler.execute(api_client, merged))
+                        result = {"results": results, "count": len(results)}
+                    else:
+                        result = handler.execute(api_client, params)
 
-                # Update context for next step
-                _update_context(context, result, params)
+                    # Update context for next step
+                    _update_context(context, result, params)
 
-                elapsed = time.monotonic() - start
-                logger.info(
-                    "Handler result step=%d task_type=%s handler=%s "
-                    "api_calls=%d duration=%.2fs result=%s",
-                    i + 1,
-                    task_type,
-                    type(handler).__name__,
-                    api_client.api_call_count,
-                    elapsed,
-                    result,
-                )
+                    elapsed = time.monotonic() - start
+                    logger.info(
+                        "Handler result step=%d task_type=%s handler=%s "
+                        "api_calls=%d duration=%.2fs result=%s",
+                        i + 1,
+                        task_type,
+                        type(handler).__name__,
+                        api_client.api_call_count,
+                        elapsed,
+                        result,
+                    )
+                except Exception:
+                    elapsed = time.monotonic() - start
+                    logger.exception(
+                        "Step %d/%d failed (task_type=%s) after %.2fs, continuing",
+                        i + 1,
+                        len(classifications),
+                        task_type,
+                        elapsed,
+                    )
 
         except Exception:
             elapsed = time.monotonic() - start

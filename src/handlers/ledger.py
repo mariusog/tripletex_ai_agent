@@ -47,7 +47,11 @@ class CreateSupplierHandler(BaseHandler):
             body["invoiceEmail"] = body["email"]
         for addr_field in ("postalAddress", "physicalAddress"):
             if params.get(addr_field):
-                body[addr_field] = params[addr_field]
+                addr = params[addr_field]
+                if isinstance(addr, str):
+                    body[addr_field] = {"addressLine1": addr}
+                elif isinstance(addr, dict):
+                    body[addr_field] = addr
         body = self.strip_none_values(body)
         result = api_client.post("/supplier", data=body)
         value = result.get("value", {})

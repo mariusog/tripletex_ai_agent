@@ -48,7 +48,11 @@ class CreateCustomerHandler(BaseHandler):
         # Address fields — Tripletex has postalAddress, physicalAddress, deliveryAddress
         for addr_field in ("postalAddress", "physicalAddress", "deliveryAddress"):
             if params.get(addr_field):
-                body[addr_field] = params[addr_field]
+                addr = params[addr_field]
+                if isinstance(addr, str):
+                    body[addr_field] = {"addressLine1": addr}
+                elif isinstance(addr, dict):
+                    body[addr_field] = addr
 
         # Sometimes LLM extracts a flat "address" — map to postalAddress
         if params.get("address") and "postalAddress" not in body:
