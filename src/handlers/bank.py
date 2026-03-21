@@ -89,8 +89,8 @@ class BankReconciliationHandler(BaseHandler):
             if date_val:
                 body["reconciliationDate"] = date_val
 
-        # type is required — default to MANUAL_RECONCILIATION
-        body["type"] = params.get("type", "MANUAL_RECONCILIATION")
+        # type is required — valid values: MANUAL, AUTOMATIC
+        body["type"] = params.get("type", "MANUAL")
 
         if "isClosed" in params and params["isClosed"] is not None:
             body["isClosed"] = params["isClosed"]

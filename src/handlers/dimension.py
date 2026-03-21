@@ -17,11 +17,11 @@ def _find_or_create_dimension(api_client: TripletexClient, name: str) -> tuple[i
     """Find or create an accounting dimension by name. Returns (id, index)."""
     resp = api_client.get(
         "/ledger/accountingDimensionName",
-        fields="id,dimensionName,number",
+        fields="id,dimensionName",
     )
-    for dim in resp.get("values", []):
+    for i, dim in enumerate(resp.get("values", []), start=1):
         if (dim.get("dimensionName") or "").strip().lower() == name.strip().lower():
-            return dim["id"], dim.get("number", 1)
+            return dim["id"], i
 
     result = api_client.post(
         "/ledger/accountingDimensionName",
@@ -29,7 +29,13 @@ def _find_or_create_dimension(api_client: TripletexClient, name: str) -> tuple[i
     )
     value = result.get("value", {})
     dim_id = value.get("id", 0)
-    dim_index = value.get("number", 1)
+    # Re-fetch to determine the index position
+    all_dims = api_client.get("/ledger/accountingDimensionName", fields="id")
+    dim_index = 1
+    for i, d in enumerate(all_dims.get("values", []), start=1):
+        if d.get("id") == dim_id:
+            dim_index = i
+            break
     logger.info("Created dimension '%s' id=%s index=%s", name, dim_id, dim_index)
     return dim_id, dim_index
 

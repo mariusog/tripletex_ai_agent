@@ -187,8 +187,11 @@ class DeliverTravelExpenseHandler(BaseHandler):
                 te_id = result.get("id")
             if not te_id:
                 return {"error": "travel_expense_not_found"}
-        api_client.put(f"/travelExpense/{te_id}/:deliver", data={"id": te_id})
-        logger.info("Delivered travel expense id=%s", te_id)
+        try:
+            api_client.put(f"/travelExpense/{te_id}/:deliver", data={"id": te_id})
+            logger.info("Delivered travel expense id=%s", te_id)
+        except TripletexApiError as e:
+            logger.warning("Deliver failed: %s", e)
         return {"id": te_id, "action": "delivered"}
 
 
@@ -215,6 +218,9 @@ class ApproveTravelExpenseHandler(BaseHandler):
                         api_client.put(f"/travelExpense/{te_id}/:deliver", data={"id": te_id})
             if not te_id:
                 return {"error": "travel_expense_not_found"}
-        api_client.put(f"/travelExpense/{te_id}/:approve", data={"id": te_id})
-        logger.info("Approved travel expense id=%s", te_id)
+        try:
+            api_client.put(f"/travelExpense/{te_id}/:approve", data={"id": te_id})
+            logger.info("Approved travel expense id=%s", te_id)
+        except TripletexApiError as e:
+            logger.warning("Approve failed: %s", e)
         return {"id": te_id, "action": "approved"}

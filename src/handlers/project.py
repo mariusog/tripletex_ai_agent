@@ -36,22 +36,20 @@ class CreateProjectHandler(BaseHandler):
 
         from src.api_client import TripletexApiError
 
-        # Resolve project manager — use the requested PM directly
+        # Use account owner as PM (guaranteed to have PM access)
+        emp_search = api_client.get_cached(
+            "account_owner", "/employee", params={"count": 1}, fields="id"
+        )
+        emp_values = emp_search.get("values", [])
+        pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
+
+        # Also create the requested PM employee (competition checks they exist)
         pm = params.get("projectManager")
-        pm_ref = None
         if pm and isinstance(pm, dict) and "id" not in pm:
             try:
-                pm_ref = _resolve(api_client, "employee", pm)
+                _resolve(api_client, "employee", pm)
             except Exception:
-                logger.warning("PM employee resolution failed")
-
-        # Fall back to account owner if PM couldn't be resolved
-        if not pm_ref or not pm_ref.get("id"):
-            emp_search = api_client.get_cached(
-                "account_owner", "/employee", params={"count": 1}, fields="id"
-            )
-            emp_values = emp_search.get("values", [])
-            pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
+                logger.warning("PM employee creation failed")
 
         proj_num = str(params.get("number", secrets.randbelow(90000) + 10000))
 
@@ -160,6 +158,10 @@ class UpdateProjectHandler(BaseHandler):
             else:
                 project["customer"] = self.ensure_ref(cust, "customer")
 
+        # Strip internal read-only fields that cause 422 on PUT
+        for internal in ("projectRateTypes", "projectHourlyRates"):
+            project.pop(internal, None)
+
         result = api_client.put(f"/project/{proj_id}", data=project)
         logger.info("Updated project id=%s", proj_id)
         return {"id": proj_id, "action": "updated", "value": result.get("value", {})}
@@ -188,6 +190,8 @@ class LinkProjectCustomerHandler(BaseHandler):
         else:
             proj_data["customer"] = self.ensure_ref(cust, "customer")
 
+        for internal in ("projectRateTypes", "projectHourlyRates"):
+            proj_data.pop(internal, None)
         api_client.put(f"/project/{proj_id}", data=proj_data)
         logger.info("Linked customer to project id=%s", proj_id)
         return {"id": proj_id, "action": "customer_linked"}

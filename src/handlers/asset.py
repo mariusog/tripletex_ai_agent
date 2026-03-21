@@ -23,10 +23,13 @@ class CreateAssetHandler(BaseHandler):
         return "create_asset"
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
+        from datetime import date as dt_date
+
         body: dict[str, Any] = {"name": params["name"]}
 
         for field in (
             "description",
+            "dateOfAcquisition",
             "acquisitionDate",
             "acquisitionCost",
             "depreciationPercentage",
@@ -36,6 +39,10 @@ class CreateAssetHandler(BaseHandler):
         ):
             if field in params:
                 body[field] = params[field]
+
+        # dateOfAcquisition is required by the API — default to today
+        if "dateOfAcquisition" not in body:
+            body["dateOfAcquisition"] = params.get("acquisitionDate", dt_date.today().isoformat())
 
         for ref_field in ("account", "depreciationAccount", "department", "type"):
             if ref_field in params:

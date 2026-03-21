@@ -101,16 +101,10 @@ class AssignRoleHandler(BaseHandler):
         role = params.get("role", "")
         role_lower = role.lower() if role else ""
 
-        # Map role names to Tripletex userType / fields
-        if role_lower in ("administrator", "admin"):
-            employee["userType"] = "ADMINISTRATOR"
-        elif role_lower in ("standard", "user"):
-            employee["userType"] = "STANDARD"
-        elif role_lower in ("no_access", "noaccess"):
-            employee["userType"] = "NO_ACCESS"
-
-        if "userType" in params:
-            employee["userType"] = params["userType"]
+        # userType is create-only (can't be updated via PUT), so we set
+        # allowInformationRegistration instead for role changes
+        if role_lower in ("administrator", "admin", "standard", "user"):
+            employee["allowInformationRegistration"] = True
 
         # Handle entitlements if provided
         if "roles" in params:
@@ -118,12 +112,17 @@ class AssignRoleHandler(BaseHandler):
         if "entitlements" in params:
             employee["entitlements"] = params["entitlements"]
 
-        # Set common access flags based on role
-        if role_lower:
-            employee["allowInformationRegistration"] = True
-
         if not employee.get("dateOfBirth"):
             employee["dateOfBirth"] = "1990-01-01"
+
+        # Strip read-only fields that cause 422 on PUT
+        for ro_field in (
+            "employments",
+            "entitlementInfo",
+            "holidayAllowanceEarned",
+            "userType",
+        ):
+            employee.pop(ro_field, None)
 
         result = api_client.put(f"/employee/{emp_id}", data=employee)
         value = result.get("value", {}) if result else {}
