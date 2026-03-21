@@ -130,6 +130,7 @@ departments: ["X","Y","Z"]
 - "Create order + invoice + payment" → create_invoice with \
 register_payment param
 - "Reversed/returned payment" → register_payment with reversal: true
+- "Create project X linked to customer Y" → create_project (NOT create_customer)
 
 Extract ALL relevant parameters from the prompt. Use field names \
 matching the Tripletex API.

@@ -216,7 +216,16 @@ class CreateTravelExpenseHandler(BaseHandler):
             return {"error": "travel_expense_creation_failed"}
 
         # Step 3: Add costs
-        costs = params.get("costs", [])
+        raw_costs = params.get("costs", [])
+        # Normalize: LLM may return dict {perDiem:..., expenses:[...]} or list [...]
+        if isinstance(raw_costs, dict):
+            costs = raw_costs.get("expenses", [])
+            # Move perDiem to params for step 4
+            if raw_costs.get("perDiem") and not params.get("perDiem"):
+                params["perDiem"] = raw_costs["perDiem"]
+        else:
+            costs = raw_costs
+
         payment_type = _get_payment_type(api_client)
         cat_cache: dict[str, list[dict[str, Any]]] = {}
 
