@@ -125,7 +125,8 @@ class CreateVoucherHandler(BaseHandler):
                             cust = inv.get("customer")
                             if cust and cust.get("id"):
                                 customer_ref = {"id": cust["id"]}
-                                # Store overdue invoice ID in context
+                                # Store for context propagation to next steps
+                                params["customer"] = customer_ref
                                 params["_overdue_invoice_id"] = inv["id"]
                                 logger.info(
                                     "Found overdue invoice id=%s customer=%s",
