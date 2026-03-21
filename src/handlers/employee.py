@@ -76,7 +76,7 @@ class CreateEmployeeHandler(BaseHandler):
         if "department" in params:
             dept = params["department"]
             if isinstance(dept, str):
-                # Resolve department name to ID
+                # Search for department by name
                 resp = api_client.get(
                     "/department", params={"name": dept, "count": 5}, fields="id,name"
                 )
@@ -85,6 +85,13 @@ class CreateEmployeeHandler(BaseHandler):
                     if v.get("name", "").strip().lower() == dept.strip().lower():
                         found = {"id": v["id"]}
                         break
+                if not found:
+                    # Create the department if it doesn't exist
+                    try:
+                        dept_result = api_client.post("/department", data={"name": dept})
+                        found = {"id": dept_result.get("value", {}).get("id")}
+                    except TripletexApiError:
+                        pass
                 body["department"] = found or self.ensure_ref(dept, "department")
             else:
                 body["department"] = self.ensure_ref(dept, "department")
