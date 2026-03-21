@@ -113,6 +113,8 @@ class TaskRouter:
 
             # Shared context carries entity refs between steps
             context: dict[str, Any] = {}
+            step_results: list[dict[str, Any]] = []
+            all_read_only = True
 
             for i, classification in enumerate(classifications):
                 task_type = classification.task_type
@@ -159,6 +161,9 @@ class TaskRouter:
 
                     # Update context for next step
                     _update_context(context, result, params, task_type)
+                    step_results.append(result)
+                    if api_client.write_call_count > 0:
+                        all_read_only = False
 
                     elapsed = time.monotonic() - start
                     logger.info(
@@ -183,6 +188,44 @@ class TaskRouter:
                         elapsed,
                     )
 
+            # If all steps were read-only, re-classify with the data
+            # This handles tasks like "analyze expenses and create projects"
+            if all_read_only and step_results:
+                logger.info("All steps read-only, re-classifying with data")
+                new_tasks = self._reclassify_with_data(request, step_results)
+                write_tasks = [t for t in new_tasks if t.task_type != "balance_sheet_report"]
+                if write_tasks:
+                    logger.info(
+                        "Re-classified %d action task(s): %s",
+                        len(write_tasks),
+                        [t.task_type for t in write_tasks],
+                    )
+                    for i, classification in enumerate(write_tasks):
+                        task_type = classification.task_type
+                        params = _strip_placeholders(classification.params)
+                        params = normalize_params(params)
+                        if context:
+                            params = _inject_context(params, context)
+                        handler = self._registry.get(task_type)
+                        if not handler:
+                            continue
+                        try:
+                            result = handler.execute(api_client, params)
+                            _update_context(context, result, params, task_type)
+                            elapsed = time.monotonic() - start
+                            logger.info(
+                                "Handler result step=R%d task_type=%s "
+                                "writes=%d errors=%d duration=%.2fs result=%s",
+                                i + 1,
+                                task_type,
+                                api_client.write_call_count,
+                                api_client.error_count,
+                                elapsed,
+                                result,
+                            )
+                        except Exception:
+                            logger.exception("Re-classified step R%d failed", i + 1)
+
         except Exception:
             elapsed = time.monotonic() - start
             logger.exception("Router error after %.2fs", elapsed)
@@ -206,6 +249,27 @@ class TaskRouter:
             f"and extract parameters:\n\n{request.prompt}"
         )
         return self._llm.classify_and_extract(prompt=rephrased, files=request.files or None)
+
+    def _reclassify_with_data(
+        self,
+        request: SolveRequest,
+        step_results: list[dict[str, Any]],
+    ) -> list[TaskClassification]:
+        """Re-classify after read-only steps, passing API data to LLM for analysis."""
+        data_summary = []
+        for sr in step_results:
+            data_summary.append(str(sr)[:2000])
+        augmented_prompt = f"{request.prompt}\n\nDATA FROM TRIPLETEX API:\n" + "\n---\n".join(
+            data_summary
+        )
+        try:
+            return self._llm.classify_and_extract(
+                prompt=augmented_prompt,
+                files=request.files or None,
+            )
+        except Exception:
+            logger.exception("Re-classification with data failed")
+            return []
 
 
 def create_router() -> TaskRouter:

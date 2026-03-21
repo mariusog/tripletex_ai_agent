@@ -217,7 +217,11 @@ class BalanceSheetReportHandler(BaseHandler):
         if "accountNumberTo" in params:
             query["accountNumberTo"] = params["accountNumberTo"]
 
-        result = api_client.get("/balanceSheet", params=query)
+        result = api_client.get(
+            "/balanceSheet",
+            params=query,
+            fields="account(id,number,name),balanceIn,balanceChange,balanceOut",
+        )
         values = result.get("values", []) if result else []
         logger.info("Retrieved balance sheet with %d entries", len(values))
         return {"entries": values, "action": "report_retrieved", "count": len(values)}
