@@ -46,8 +46,11 @@ class CreateEmployeeHandler(BaseHandler):
         }
 
         for field in (
-            "email", "phoneNumberMobile", "nationalIdentityNumber",
-            "bankAccountNumber", "address",
+            "email",
+            "phoneNumberMobile",
+            "nationalIdentityNumber",
+            "bankAccountNumber",
+            "address",
         ):
             if params.get(field):
                 body[field] = params[field]
@@ -104,23 +107,16 @@ class CreateEmployeeHandler(BaseHandler):
         if annual_salary:
             emp_detail["annualSalary"] = float(annual_salary)
 
-        # Working hours per day
-        hours = params.get("hoursPerDay") or params.get("hoursPerWeek")
-        if hours:
-            weekly = float(hours) * 5 if params.get("hoursPerDay") else float(hours)
-            emp_detail["hoursPerWeek"] = weekly
+        # Job code (stillingskode) — occupationCode is on employment, not details
+        job_code = params.get("jobCode") or params.get("occupationCode")
 
-        # Job code (stillingskode)
-        if params.get("jobCode") or params.get("occupationCode"):
-            code = params.get("jobCode") or params.get("occupationCode")
-            emp_detail["occupationCode"] = {"id": 0, "code": str(code)}
-
-        body["employments"] = [
-            {
-                "startDate": start_date,
-                "employmentDetails": [emp_detail],
-            }
-        ]
+        employment: dict[str, Any] = {
+            "startDate": start_date,
+            "employmentDetails": [emp_detail],
+        }
+        if job_code:
+            employment["occupationCode"] = str(job_code)
+        body["employments"] = [employment]
 
         body = self.strip_none_values(body)
 

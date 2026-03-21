@@ -48,41 +48,83 @@ def run_handler(client: TripletexClient, task_type: str, params: dict[str, Any])
 
 
 class TestEmployeeOnboardingFull:
-    """Simulates: 'Create employee X, assign to dept Y, 80% stilling, salary Z'"""
+    """Simulates: 'Create employee X, assign to dept Y, 80% stilling, salary Z'
 
-    def test_onboarding_with_department_and_employment(self, client):
+    Based on real competition prompt:
+    'Du har mottatt en arbeidskontrakt (se vedlagt PDF). Opprett den ansatte
+    i Tripletex med alle detaljer fra kontrakten: personnummer, fødselsdato,
+    avdeling, stillingskode, lønn, stillingsprosent og startdato.'
+    """
+
+    def test_onboarding_with_all_fields(self, client):
         tag = uid()
         # Step 1: Create department
         dept_result = run_handler(
-            client, "create_department", {"name": f"Marketing-{tag}"}
+            client, "create_department", {"name": f"Innkjøp-{tag}"}
         )
         assert dept_result["id"]
 
-        # Step 2: Create employee with department name (not ID)
+        # Step 2: Create employee with ALL competition-verified fields
         emp_result = run_handler(
             client,
             "create_employee",
             {
-                "firstName": f"Test-{tag}",
-                "lastName": "Onboard",
-                "email": f"test-{tag}@example.com",
-                "dateOfBirth": "1990-05-15",
-                "department": f"Marketing-{tag}",
-                "employmentType": "Fast stilling",
+                "firstName": f"Hilde-{tag}",
+                "lastName": "Bakken",
+                "email": f"hilde-{tag}@example.org",
+                "dateOfBirth": "1987-02-08",
+                "nationalIdentityNumber": "08028777990",
+                "department": f"Innkjøp-{tag}",
+                "startDate": "2026-07-22",
+                "employmentType": "fast",
                 "employmentPercentage": 80,
-                "startDate": "2026-06-01",
+                "annualSalary": 570000,
+                "hoursPerDay": 6.0,
             },
         )
         assert emp_result["id"]
 
-        # Verify
+        # Verify ALL fields the competition checks
         v = client.get(
             f"/employee/{emp_result['id']}",
-            fields="firstName,lastName,department(id,name),employments(*)",
+            fields="firstName,lastName,email,dateOfBirth,nationalIdentityNumber,"
+            "department(id,name),employments(startDate,employmentDetails(*))",
         )["value"]
-        assert v["firstName"] == f"Test-{tag}"
+        assert v["firstName"] == f"Hilde-{tag}"
+        assert v["lastName"] == "Bakken"
+        assert v["email"] == f"hilde-{tag}@example.org"
+        assert v["dateOfBirth"] == "1987-02-08"
         assert v["department"] is not None
-        assert len(v.get("employments", [])) >= 1
+
+        emps = v.get("employments", [])
+        assert len(emps) >= 1, "No employment record"
+        assert emps[0]["startDate"] == "2026-07-22"
+
+        details = emps[0].get("employmentDetails", [])
+        assert len(details) >= 1, "No employment details"
+        detail = details[0]
+        assert detail.get("percentageOfFullTimeEquivalent") == 80.0
+        assert detail.get("employmentType") == "ORDINARY"
+
+    def test_onboarding_minimal(self, client):
+        """Simpler variant: just name + email + department."""
+        tag = uid()
+        run_handler(client, "create_department", {"name": f"HR-{tag}"})
+        emp_result = run_handler(
+            client,
+            "create_employee",
+            {
+                "firstName": f"Simple-{tag}",
+                "lastName": "Test",
+                "email": f"simple-{tag}@example.com",
+                "department": f"HR-{tag}",
+            },
+        )
+        assert emp_result["id"]
+        v = client.get(
+            f"/employee/{emp_result['id']}", fields="department(name)"
+        )["value"]
+        assert v["department"] is not None
 
 
 # ============================================================
