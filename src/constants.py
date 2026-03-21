@@ -118,6 +118,7 @@ TIER_2_TASKS = [
     "update_project",
     "create_asset",
     "update_asset",
+    "log_timesheet",
 ]
 
 # Tier 3 task types (x3 multiplier, complex workflows, opens Saturday)
@@ -166,6 +167,7 @@ OPTIMAL_CALL_COUNTS: dict[str, int] = {
     "update_project": 2,  # GET /project/{id} + PUT /project/{id}
     "create_asset": 1,  # POST /asset
     "update_asset": 2,  # GET /asset/{id} + PUT /asset/{id}
+    "log_timesheet": 2,  # resolve employee + POST /timesheet/entry
     # Tier 3: complex workflows (1-2 calls)
     "create_voucher": 1,  # POST /ledger/voucher (postings inline)
     "reverse_voucher": 1,  # PUT /ledger/voucher/{id}/:reverse

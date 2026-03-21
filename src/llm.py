@@ -111,6 +111,8 @@ orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency}}
 - create_activity: {{name, ...}}
 - create_asset: {{name, ...}}
 - update_asset: {{id/name (to find), fields to update...}}
+- log_timesheet: {{employee, project, activity, hours, date, hourlyRate, \
+comment, customer, createInvoice: true (if prompt asks to invoice)}}
 - create_voucher: {{date, description, postings (debit/credit accounts, amounts), \
 customDimension: {{name, values, linkedValue}} (if creating dimension), ...}}
 - reverse_voucher: {{voucherId or search criteria...}}

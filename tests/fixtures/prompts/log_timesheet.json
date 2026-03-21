@@ -1,0 +1,19 @@
+{
+  "task_type": "log_timesheet",
+  "prompts": {
+    "no": "Logg 8 timer for Kari Nordmann på aktiviteten Utvikling i prosjektet Skymigrering for Fjordtech AS. Timepris: 950 kr/t.",
+    "en": "Log 12 hours for John Smith on activity Analysis in the project Data Migration for Greenfield Ltd. Hourly rate: 850 NOK/h.",
+    "es": "Registre 6 horas para María López en la actividad Consultoría del proyecto Implementación para Sierra SL. Tarifa: 750 NOK/h.",
+    "pt": "Registe 10 horas para Ana Silva na atividade Desenvolvimento no projeto Atualização para Porto Lda. Taxa horária: 900 NOK/h.",
+    "nn": "Logg 8 timar for Kari Nordmann på aktiviteten Utvikling i prosjektet Skymigrering. Timepris: 950 kr/t.",
+    "de": "Erfassen Sie 7 Stunden für Max Müller für die Aktivität Beratung im Projekt Digitalisierung für Waldstein GmbH. Stundensatz: 800 NOK/h.",
+    "fr": "Enregistrez 5 heures pour Pierre Dupont sur l'activité Analyse dans le projet Migration pour Colline SARL. Taux horaire: 850 NOK/h."
+  },
+  "expected_params": {
+    "employee": "John Smith",
+    "activity": "Analysis",
+    "project": "Data Migration",
+    "hours": 12,
+    "hourlyRate": 850
+  }
+}
