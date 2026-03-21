@@ -1477,6 +1477,57 @@ class TestTimesheetLogging:
     im Projekt E-Commerce-Entwicklung für Waldstein GmbH'
     """
 
+    def test_log_many_hours_splits_across_days(self, client):
+        """33 hours must be split across multiple days (max 7.5h/day).
+
+        Based on real competition run (4/8):
+        'Erfassen Sie 33 Stunden für Paul Müller auf der Aktivität Testing
+        im Projekt Datenmigration für Sonnental GmbH. Stundensatz: 900 NOK/h.'
+        """
+        tag = uid()
+        result = run_handler(
+            client,
+            "log_timesheet",
+            {
+                "employee": {
+                    "firstName": f"Split-{tag}",
+                    "lastName": "Hours",
+                    "email": f"split-{tag}@example.com",
+                },
+                "hours": 33,
+                "activity": f"Testing-{tag}",
+                "project": f"SplitProj-{tag}",
+                "date": "2026-03-10",
+            },
+        )
+        assert result.get("entryId"), f"First entry not created: {result}"
+
+        # Verify total hours across all entries for this employee
+        emp_id = None
+        emps = client.get(
+            "/employee",
+            params={"firstName": f"Split-{tag}", "count": 1},
+            fields="id",
+        )
+        if emps.get("values"):
+            emp_id = emps["values"][0]["id"]
+
+        if emp_id:
+            entries = client.get(
+                "/timesheet/entry",
+                params={
+                    "employeeId": emp_id,
+                    "dateFrom": "2026-03-10",
+                    "dateTo": "2026-03-20",
+                },
+                fields="hours,date",
+            )
+            total = sum(e.get("hours", 0) for e in entries.get("values", []))
+            assert total == 33.0, f"Total hours {total} != 33"
+            assert len(entries["values"]) >= 5, (
+                f"Expected 5+ entries (33/7.5), got {len(entries['values'])}"
+            )
+
     def test_log_hours_creates_entry(self, client):
         tag = uid()
         result = run_handler(
