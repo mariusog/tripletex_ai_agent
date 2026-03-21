@@ -216,7 +216,7 @@ def _resolve_product(
 
 
 def _resolve_employee(api_client: TripletexClient, value: Any) -> dict[str, int]:
-    """Resolve employee: create via handler, ensure ready, search fallback."""
+    """Resolve employee: search first, then create if not found."""
     direct = _try_direct_id(value)
     if direct:
         return direct
@@ -228,18 +228,8 @@ def _resolve_employee(api_client: TripletexClient, value: Any) -> dict[str, int]
         parts = value.strip().split()
         first = parts[0] if parts else ""
         last = parts[-1] if len(parts) > 1 else ""
-    if first and last:
-        from src.handlers import HANDLER_REGISTRY
 
-        emp_params: dict[str, Any] = {"firstName": first, "lastName": last}
-        if email:
-            emp_params["email"] = email
-        try:
-            result = HANDLER_REGISTRY["create_employee"].execute(api_client, emp_params)
-            if result.get("id"):
-                return {"id": result["id"]}
-        except TripletexApiError:
-            pass
+    # Search by email first (most precise match)
     if email:
         try:
             resp = api_client.get("/employee", params={"email": email, "count": 1}, fields="id")
@@ -262,11 +252,14 @@ def _resolve_employee(api_client: TripletexClient, value: Any) -> dict[str, int]
             return {"id": v["id"]}
     from src.handlers import HANDLER_REGISTRY
 
+    create_params: dict[str, Any] = {
+        "firstName": first or "Unknown",
+        "lastName": last or "Employee",
+    }
+    if email:
+        create_params["email"] = email
     try:
-        result = HANDLER_REGISTRY["create_employee"].execute(
-            api_client,
-            {"firstName": first or "Unknown", "lastName": last or "Employee"},
-        )
+        result = HANDLER_REGISTRY["create_employee"].execute(api_client, create_params)
         if result.get("id"):
             return {"id": result["id"]}
     except TripletexApiError as e:

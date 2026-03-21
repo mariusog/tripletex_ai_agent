@@ -503,6 +503,30 @@ class TestReverseVoucherFallback:
 # ============================================================
 
 
+class TestEmployeeOnboarding:
+    """Simulate competition pattern: create dept then employee with dept name."""
+
+    def test_create_dept_then_employee_with_dept_name(self, client):
+        tag = uid()
+        run_handler(client, "create_department", {"name": f"Onboard-{tag}"})
+        result = run_handler(
+            client,
+            "create_employee",
+            {
+                "firstName": f"Onb-{tag}",
+                "lastName": "Test",
+                "email": f"onb-{tag}@example.com",
+                "department": f"Onboard-{tag}",
+                "employmentType": "Fast stilling",
+                "employmentPercentage": 80,
+                "startDate": "2026-06-01",
+            },
+        )
+        assert result["id"]
+        v = client.get(f"/employee/{result['id']}", fields="department(id,name)")["value"]
+        assert v["department"] is not None
+
+
 class TestUpdateDepartment:
     def test_rename(self, client):
         tag = uid()
