@@ -1815,3 +1815,38 @@ class TestMonthlyClosingNonNumericAccount:
             },
         )
         assert r3.get("id")
+
+
+# ============================================================
+# PATTERN 19: Payroll with voucher fallback
+# Competition: salary API fails, fall back to manual voucher
+# ============================================================
+
+
+class TestPayrollVoucherFallback:
+    """Based on real failure: salary API 422 'Arbeidsforholdet er ikke knyttet
+    mot en virksomhet'. Prompt says to fall back to manual vouchers.
+    """
+
+    def test_payroll_creates_voucher_on_failure(self, client):
+        """Payroll should fall back to voucher when salary API fails."""
+        tag = uid()
+        result = run_handler(
+            client,
+            "run_payroll",
+            {
+                "employee": {
+                    "firstName": f"Pay-{tag}",
+                    "lastName": "Worker",
+                    "email": f"pay-{tag}@example.com",
+                },
+                "baseSalary": 52050,
+                "bonus": 7200,
+            },
+        )
+        # Should either succeed via salary API or fall back to voucher
+        assert result.get("id"), f"Payroll failed without fallback: {result}"
+        assert result.get("action") in (
+            "payroll_created",
+            "payroll_voucher_fallback",
+        )
