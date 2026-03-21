@@ -1,0 +1,77 @@
+{
+  "timestamp": "2026-03-21 08:13:47",
+  "prompt": "The customer Blueshore Ltd (org no. 937709293) has an outstanding invoice for 5900 NOK excluding VAT for \"Consulting Hours\". Register full payment on this invoice.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 1.26
+    },
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "status": 201,
+      "duration_s": 1.28
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "status": 201,
+      "duration_s": 1.41
+    },
+    {
+      "method": "POST",
+      "endpoint": "/product",
+      "status": 201,
+      "duration_s": 1.56
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order/orderline/list",
+      "status": 201,
+      "duration_s": 1.19
+    },
+    {
+      "method": "GET",
+      "endpoint": "/invoice/paymentType",
+      "status": 200,
+      "duration_s": 1.12
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/order/401997166/:invoice",
+      "status": 200,
+      "duration_s": 1.46
+    }
+  ],
+  "errors": [],
+  "task_type": "register_payment",
+  "params": {
+    "customer": {
+      "name": "Blueshore Ltd",
+      "organizationNumber": "937709293"
+    },
+    "amount": 5900,
+    "description": "Full payment for Consulting Hours invoice",
+    "reversal": false,
+    "orderLines": [
+      {
+        "product": {
+          "name": "Consulting Hours"
+        },
+        "count": 1,
+        "unitPriceExcludingVatCurrency": 5900
+      }
+    ]
+  },
+  "handler": "RegisterPaymentHandler",
+  "total_api_calls": 7,
+  "total_duration_s": 12.52,
+  "result": {
+    "id": 2147579168,
+    "action": "payment_registered"
+  },
+  "service": "tripletex-agent-2"
+}
