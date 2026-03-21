@@ -355,16 +355,22 @@ class CreateCreditNoteHandler(BaseHandler):
         if not invoice_id:
             return {"error": "invoice_not_found"}
 
-        cn_body: dict[str, Any] = {}
-        if params.get("comment"):
-            cn_body["comment"] = params["comment"]
+        from datetime import date as dt_date
+
+        cn_params: dict[str, Any] = {
+            "date": dt_date.today().isoformat(),
+        }
         if "creditNoteDate" in params:
             date_val = self.validate_date(params["creditNoteDate"], "creditNoteDate")
             if date_val:
-                cn_body["date"] = date_val
+                cn_params["date"] = date_val
+        if params.get("comment"):
+            cn_params["comment"] = params["comment"]
 
         try:
-            result = api_client.put(f"/invoice/{invoice_id}/:createCreditNote", data=cn_body)
+            result = api_client.put(
+                f"/invoice/{invoice_id}/:createCreditNote", params=cn_params
+            )
             credit_note = result.get("value", {}) if result else {}
             cn_id = credit_note.get("id")
             logger.info("Created credit note id=%s for invoice id=%s", cn_id, invoice_id)
