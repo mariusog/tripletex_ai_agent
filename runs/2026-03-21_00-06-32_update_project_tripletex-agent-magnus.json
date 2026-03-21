@@ -1,0 +1,63 @@
+{
+  "timestamp": "2026-03-21 00:06:32",
+  "prompt": "Sett fastpris 206950 kr på prosjektet \"Datasikkerhet\" for Tindra AS (org.nr 833180568). Prosjektleder er Karin Bakken (karin.bakken@example.org). Fakturer kunden for 33 % av fastprisen som en delbetaling.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2 git=unknown",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/project",
+      "status": 200,
+      "duration_s": 6.7
+    },
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "status": 201,
+      "duration_s": 6.64
+    },
+    {
+      "method": "GET",
+      "endpoint": "/employee",
+      "status": 200,
+      "duration_s": 6.07
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/project/401979668",
+      "status": 422,
+      "duration_s": 6.05
+    }
+  ],
+  "errors": [
+    {
+      "method": "PUT",
+      "endpoint": "/project/401979668",
+      "status": 422,
+      "duration_s": 6.05
+    }
+  ],
+  "task_type": "update_project",
+  "params": {
+    "name": "Datasikkerhet",
+    "fixedPrice": 206950,
+    "invoicePercentage": 33,
+    "customer": {
+      "name": "Tindra AS",
+      "organizationNumber": "833180568"
+    },
+    "projectManager": {
+      "firstName": "Karin",
+      "lastName": "Bakken",
+      "email": "karin.bakken@example.org"
+    }
+  },
+  "error_details": [
+    {
+      "status": 422,
+      "endpoint": "PUT /project/401979668",
+      "message": "Validering feilet. | validation: [{'field': 'Internt felt (projectratetypes)', 'message': 'Timepriser for prosjektet kan bare endres via endepunktet \"project/hourlyRates\".', 'path': None, 'rootId': None}]"
+    }
+  ],
+  "status": "error",
+  "service": "tripletex-agent-magnus"
+}
