@@ -15,6 +15,56 @@ from src.handlers.base import BaseHandler
 logger = logging.getLogger(__name__)
 
 
+# Common Norwegian account numbers → names (for auto-creation)
+_ACCOUNT_NUMBER_NAMES: dict[int, str] = {
+    1000: "Kontanter",
+    1009: "Avskrivning forskning og utvikling",
+    1020: "Patenter",
+    1029: "Avskrivning patenter",
+    1030: "Utsatt skattefordel",
+    1039: "Avskrivning utsatt skattefordel",
+    1050: "Goodwill",
+    1100: "Bygninger",
+    1109: "Avskrivning bygninger",
+    1200: "Maskiner og anlegg",
+    1209: "Avskrivning maskiner og anlegg",
+    1210: "Biler",
+    1219: "Avskrivning biler",
+    1240: "Inventar",
+    1249: "Avskrivning inventar",
+    1250: "Programvare",
+    1259: "Avskrivning programvare",
+    1280: "Kontormaskiner",
+    1289: "Avskrivning kontormaskiner",
+    1500: "Kundefordringer",
+    1700: "Forskuddsbetalt leiekostnad",
+    1720: "Forskuddsbetalt forsikring",
+    1920: "Bankinnskudd",
+    2400: "Leverandørgjeld",
+    2700: "Utgående merverdiavgift",
+    2710: "Inngående merverdiavgift",
+    2900: "Påløpt lønn",
+    2920: "Betalbar skatt",
+    3000: "Salgsinntekt",
+    3900: "Annen driftsrelatert inntekt",
+    5000: "Lønn til ansatte",
+    6000: "Avskrivning",
+    6010: "Avskrivning bygninger og annen fast eiendom",
+    6020: "Avskrivning transportmidler",
+    6030: "Avskrivning maskiner",
+    6040: "Avskrivning inventar",
+    6050: "Avskrivning programvare",
+    6300: "Leie lokale",
+    6340: "Lys, varme",
+    6500: "Verktøy og inventar",
+    6540: "Inventar",
+    6800: "Kontorrekvisita",
+    6860: "Møter, kurs",
+    7000: "Reisekostnad",
+    7300: "Salgskostnad",
+    8700: "Skattekostnad",
+}
+
 # Norwegian accounting term → account number range mapping
 _ACCOUNT_NAME_RANGES: dict[str, tuple[int, int]] = {
     "kostkonto": (6000, 6999),
@@ -85,36 +135,22 @@ def resolve_account(
         vat = values[0].get("vatType")
         vat_ref = {"id": vat["id"]} if vat and vat.get("id") else None
         return {"id": values[0]["id"]}, vat_ref
-    # Account not found — search by wider ranges
-    # First try exact 100-range, then 1000-range
-    # Tripletex numberFrom/numberTo doesn't filter properly,
-    # so fetch more accounts and filter in code
+    # Account not found — create it
     try:
-        all_resp = api_client.get(
+        name = _ACCOUNT_NUMBER_NAMES.get(number, f"Konto {number}")
+        create_resp = api_client.post(
             "/ledger/account",
-            params={"count": 1000},
-            fields="id,number,vatType(id)",
+            data={"number": number, "name": name},
         )
-        all_accts = all_resp.get("values", [])
-        # Find closest account in same 100-range, then 1000-range
-        for range_start, range_end in [
-            ((number // 100) * 100, (number // 100) * 100 + 99),
-            ((number // 1000) * 1000, (number // 1000) * 1000 + 999),
-        ]:
-            for acct in all_accts:
-                acct_num = acct.get("number", 0)
-                if range_start <= acct_num <= range_end:
-                    vat = acct.get("vatType")
-                    vat_ref = {"id": vat["id"]} if vat and vat.get("id") else None
-                    logger.info(
-                        "Account %d not found, using %d instead",
-                        number,
-                        acct_num,
-                    )
-                    return {"id": acct["id"]}, vat_ref
-    except TripletexApiError:
-        pass
-    logger.warning("Account %d not found", number)
+        created = create_resp.get("value", {})
+        if created.get("id"):
+            vat = created.get("vatType")
+            vat_ref = {"id": vat["id"]} if vat and vat.get("id") else None
+            logger.info("Created missing account %d (%s)", number, name)
+            return {"id": created["id"]}, vat_ref
+    except TripletexApiError as e:
+        logger.warning("Could not create account %d: %s", number, e)
+    logger.warning("Account %d not found and could not be created", number)
     return {"id": 0}, None
 
 

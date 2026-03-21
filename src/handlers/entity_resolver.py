@@ -128,7 +128,7 @@ def _resolve_customer(api_client: TripletexClient, value: Any) -> dict[str, int]
 
 
 def _resolve_supplier(api_client: TripletexClient, value: Any) -> dict[str, int] | None:
-    """Resolve supplier: always create-first, search as fallback."""
+    """Resolve supplier: search first, create only if not found."""
     if value is None:
         return None
     direct = _try_direct_id(value)
@@ -137,6 +137,15 @@ def _resolve_supplier(api_client: TripletexClient, value: Any) -> dict[str, int]
     name = str(value) if not isinstance(value, dict) else value.get("name", "")
     if not name:
         return None
+    # Search first to avoid duplicate creation
+    try:
+        resp = api_client.get("/supplier", params={"name": name, "count": 5}, fields="id,name")
+        for v in resp.get("values", []):
+            if v.get("name", "").strip().lower() == name.strip().lower():
+                return {"id": v["id"]}
+    except TripletexApiError:
+        pass
+    # Not found — create
     org_nr = value.get("organizationNumber") if isinstance(value, dict) else None
     email = value.get("email") if isinstance(value, dict) else None
     sup_body: dict[str, Any] = {"name": name}
@@ -148,13 +157,6 @@ def _resolve_supplier(api_client: TripletexClient, value: Any) -> dict[str, int]
     try:
         res = api_client.post("/supplier", data=sup_body)
         return {"id": res.get("value", {}).get("id")}
-    except TripletexApiError:
-        pass
-    try:
-        resp = api_client.get("/supplier", params={"name": name, "count": 5}, fields="id,name")
-        for v in resp.get("values", []):
-            if v.get("name", "").strip().lower() == name.strip().lower():
-                return {"id": v["id"]}
     except TripletexApiError:
         pass
     return None
