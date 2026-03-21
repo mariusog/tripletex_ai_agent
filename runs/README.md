@@ -22,8 +22,35 @@ git push
 |--------|---------|---------|
 | Magnus | `tripletex-agent-magnus` | `python scripts/capture_runs.py` (default) |
 | Team shared | `tripletex-agent-2` | `python scripts/capture_runs.py --service tripletex-agent-2` |
+| Stian | `tripletex-agent-stian` | `python scripts/capture_runs.py --service tripletex-agent-stian` |
 
 **Add your service name here when you set one up!**
+
+## Auto-posting to GCS
+
+`tripletex-agent-2` automatically saves run data to GCS after each competition submission:
+```
+gs://ai-nm26osl-1792-nmiai/tripletex-runs/
+```
+
+Check runs: `gsutil ls gs://ai-nm26osl-1792-nmiai/tripletex-runs/`
+
+## Enable run capture on your service
+
+Add this to your `src/server.py` in the `solve` function, right after `logger.info("Received solve request...")`:
+
+```python
+is_competition = "tx-proxy" in (request.tripletex_credentials.base_url or "")
+if is_competition:
+    import json
+    logger.info(
+        "COMPETITION_RUN prompt=%s base_url=%s",
+        json.dumps(request.prompt[:500]),
+        request.tripletex_credentials.base_url,
+    )
+```
+
+Without this, the capture script still works but gets less data.
 
 ## What gets captured
 
@@ -46,32 +73,16 @@ Each competition submission is saved as a JSON file: `YYYY-MM-DD_HH-MM-SS_{task_
 }
 ```
 
-## How to use this data
-
-### Find problems
-- **High API call counts** — compare against optimal in `src/constants.py`
-- **4xx errors** — reduce efficiency bonus, check `errors` and `error_details`
-- **Misclassifications** — wrong `task_type` for the prompt language
-- **`<UNKNOWN>` params** — LLM failed to extract a field
-- **Missing task types** — task types we've never seen
-
-### Track coverage
-```bash
-# See which task types we've encountered
-ls runs/ | sed 's/.*_\(.*\)_tripletex.*/\1/' | sort | uniq -c | sort -rn
-```
-
-### Compare against optimal
-Check `src/constants.py` `OPTIMAL_CALL_COUNTS` — every call above optimal costs us efficiency bonus points.
-
 ## Important notes
 
-- **GETs count!** The proxy counts ALL requests (GET, POST, PUT, DELETE) toward the efficiency score
-- **Zero errors = max bonus.** Any 4xx error reduces the efficiency multiplier
+- **GETs are FREE!** Only POST, PUT, DELETE, PATCH count toward efficiency scoring
+- **4xx errors reduce the efficiency bonus.** Avoid trial-and-error
+- **Zero errors + minimal writes = max bonus.** Can up to double your tier score
 - **Each submission = fresh sandbox.** Entities don't carry over between runs
 - **Best score kept forever.** Bad runs never lower your score
 - **Prompts come in 7 languages**: NO, EN, ES, PT, NN, DE, FR
+- **30 task types × 56 variants** (7 languages × 8 data sets)
 
 ## Requirements for capture
 
-Your service needs the `COMPETITION_RUN` log line in `src/server.py`. If you're running the latest code from `Magnus-attempt` branch, this is already included.
+Your service needs the `COMPETITION_RUN` log line in `src/server.py`. If you're running the latest code from `Marius-attempt` branch, this is already included.
