@@ -259,14 +259,31 @@ class CreateVoucherHandler(BaseHandler):
             else:
                 expanded.append(p)
 
+        # Auto-balance: if only one side provided, add contra entry
         if expanded:
+            total = sum(
+                p.get("amountGross", p.get("amount", p.get("debit", 0) or 0))
+                - abs(p.get("credit", 0) or 0)
+                for p in expanded
+            )
+            if total != 0:
+                # Add balancing entry on contra account (1920 bank for expenses)
+                contra = 1920 if total > 0 else 3000
+                expanded.append(
+                    {
+                        "account": contra,
+                        "amountGross": -total,
+                        "description": body.get("description", ""),
+                    }
+                )
+
             body["postings"] = [
                 _build_posting(
                     api_client,
                     p,
                     row=i + 1,
                     supplier=supplier_ref,
-                    dimension_ref=dim_value_ref,
+                    dimension_ref=dim_value_ref if i == 0 else None,
                 )
                 for i, p in enumerate(expanded)
             ]
