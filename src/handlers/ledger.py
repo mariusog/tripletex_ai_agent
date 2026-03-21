@@ -115,7 +115,7 @@ def _build_posting(
         amount = 0
     result["amountGross"] = amount
     result["amountGrossCurrency"] = amount
-    # Set VAT type from account default if not explicitly provided
+    # Set VAT type: use account's default (which respects locked accounts)
     if "vatType" in posting:
         result["vatType"] = BaseHandler.ensure_ref(posting["vatType"], "vatType")
     elif vat_ref:
@@ -132,7 +132,11 @@ class CreateVoucherHandler(BaseHandler):
 
     tier = 3
     description = "Create a voucher with debit/credit postings"
-    disambiguation = "For supplier invoices (leverandørfaktura), use this."
+    disambiguation = (
+        "For supplier invoices (leverandørfaktura), use this. "
+        "Use 2 postings: debit expense account with GROSS amount (inkl MVA) + vatType, "
+        "credit 2400 with negative gross amount. Do NOT manually split VAT into separate posting."
+    )
 
     def get_task_type(self) -> str:
         return "create_voucher"
@@ -163,8 +167,14 @@ class CreateVoucherHandler(BaseHandler):
 
             customer_ref = _resolve_entity(api_client, "customer", params["customer"])
 
-        # Normalize postings: split debitAccount/creditAccount into separate rows
+        # Detect and fix manual VAT split pattern:
+        # If LLM sent 3 postings (expense + VAT 2710 + AP 2400),
+        # merge expense+VAT into one posting with gross amount + vatType
         raw_postings = params.get("postings", [])
+        vat_rate = params.get("vatRate") or params.get("vat")
+        raw_postings = self._merge_vat_postings(raw_postings, vat_rate)
+
+        # Normalize postings: split debitAccount/creditAccount into separate rows
         postings: list[dict[str, Any]] = []
         for p in raw_postings:
             if "debitAccount" in p and "creditAccount" in p:
@@ -174,6 +184,7 @@ class CreateVoucherHandler(BaseHandler):
                         "account": p["debitAccount"],
                         "debit": amt,
                         "description": p.get("description", ""),
+                        "vatRate": p.get("vatRate") or vat_rate,
                     }
                 )
                 postings.append(
@@ -184,6 +195,8 @@ class CreateVoucherHandler(BaseHandler):
                     }
                 )
             else:
+                if vat_rate and "vatRate" not in p and "vatType" not in p:
+                    p["vatRate"] = vat_rate
                 postings.append(p)
 
         if postings:
@@ -210,6 +223,87 @@ class CreateVoucherHandler(BaseHandler):
         value = result.get("value", {})
         logger.info("Created voucher id=%s", value.get("id"))
         return {"id": value.get("id"), "action": "created"}
+
+    @staticmethod
+    def _merge_vat_postings(
+        postings: list[dict[str, Any]], vat_rate: Any = None
+    ) -> list[dict[str, Any]]:
+        """Merge manual VAT split into gross posting with vatType.
+
+        If LLM sent: debit 6340 (net), debit 2710 (VAT), credit 2400 (gross)
+        Merge to: debit 6340 (gross, with vatRate), credit 2400 (gross)
+        Tripletex handles the VAT split automatically when vatType is set.
+        """
+        if len(postings) < 3:
+            return postings
+
+        # Find VAT posting (account 2710-2719 = input VAT accounts)
+        vat_idx = None
+        for i, p in enumerate(postings):
+            acct = p.get("account") or p.get("debitAccount") or ""
+            try:
+                acct_num = int(acct)
+            except (TypeError, ValueError):
+                continue
+            if 2710 <= acct_num <= 2719:
+                vat_idx = i
+                break
+
+        if vat_idx is None:
+            return postings
+
+        vat_posting = postings[vat_idx]
+        vat_amount = (
+            vat_posting.get("debit")
+            or vat_posting.get("debitAmount")
+            or vat_posting.get("amount")
+            or 0
+        )
+
+        # Find the expense posting (the other debit that isn't VAT or AP)
+        expense_idx = None
+        for i, p in enumerate(postings):
+            if i == vat_idx:
+                continue
+            acct = p.get("account") or p.get("debitAccount") or ""
+            try:
+                acct_num = int(acct)
+            except (TypeError, ValueError):
+                continue
+            # Not AP (2400) and not VAT (2710) = expense account
+            if acct_num not in range(2400, 2500) and acct_num not in range(2710, 2720):
+                debit = p.get("debit") or p.get("debitAmount") or p.get("amount", 0)
+                if debit and debit > 0:
+                    expense_idx = i
+                    break
+
+        if expense_idx is None:
+            return postings
+
+        # Merge: expense gets gross amount (net + VAT), VAT posting removed
+        merged = list(postings)
+        expense = dict(merged[expense_idx])
+        net = (
+            expense.get("debit")
+            or expense.get("debitAmount")
+            or expense.get("amount")
+            or 0
+        )
+        gross = net + vat_amount
+        expense["debit"] = gross
+        expense["debitAmount"] = gross
+        if "amount" in expense:
+            expense["amount"] = gross
+        expense["vatRate"] = vat_rate or 25
+        merged[expense_idx] = expense
+
+        # Remove VAT posting
+        merged.pop(vat_idx)
+        logger.info(
+            "Merged VAT posting: net=%s + vat=%s = gross=%s",
+            net, vat_amount, gross,
+        )
+        return merged
 
 
 @register_handler

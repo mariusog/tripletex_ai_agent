@@ -435,19 +435,43 @@ class TestCreateVoucher:
 
 
 class TestCreateVoucherWithVAT:
-    def test_3_posting_with_vat(self, client):
-        """Supplier invoice with expense + VAT + AP postings."""
+    def test_supplier_invoice_with_vat(self, client):
+        """Supplier invoice: gross amount on expense account."""
         tag = uid()
         result = run_handler(
             client,
             "create_voucher",
             {
-                "description": f"VAT invoice {tag}",
-                "supplier": {"name": f"VATSup-{tag}"},
+                "description": f"Supplier invoice {tag}",
+                "supplier": {"name": f"VATSup-{tag}", "organizationNumber": "555666777"},
                 "postings": [
-                    {"account": 7100, "debit": 8000},
-                    {"account": 2710, "debit": 2000},
-                    {"account": 2400, "credit": 10000},
+                    {"account": 7300, "debit": 10000, "description": "Services"},
+                    {"account": 2400, "credit": 10000, "description": "Supplier payable"},
+                ],
+            },
+        )
+        v_id = result["id"]
+        assert v_id
+        voucher = client.get(
+            f"/ledger/voucher/{v_id}",
+            fields="postings(account(id,number),amountGross)",
+        )["value"]
+        assert len(voucher["postings"]) >= 2
+
+    def test_merge_3_posting_vat_split(self, client):
+        """When LLM sends 3 postings (net+VAT+AP), merges into 2 (gross+AP)."""
+        tag = uid()
+        result = run_handler(
+            client,
+            "create_voucher",
+            {
+                "description": f"Merged VAT invoice {tag}",
+                "supplier": {"name": f"MergeSup-{tag}"},
+                "vatRate": 25,
+                "postings": [
+                    {"account": 7300, "debit": 8000, "description": "Net expense"},
+                    {"account": 2710, "debit": 2000, "description": "Input VAT"},
+                    {"account": 2400, "credit": 10000, "description": "AP"},
                 ],
             },
         )
