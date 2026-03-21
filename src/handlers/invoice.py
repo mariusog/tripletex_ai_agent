@@ -12,18 +12,16 @@ from src.handlers.base import BaseHandler, register_handler
 logger = logging.getLogger(__name__)
 
 
-_bank_account_set = False
+_bank_account_set_for: set[str] = set()
 
 
 def _ensure_bank_account(api_client: TripletexClient) -> None:
     """Ensure the company has a bank account on ledger account 1920.
 
     Tripletex requires a bank account number before invoices can be created.
-    Uses get_cached to leverage global process-level cache, avoiding
-    repeated API calls across client instances and handler invocations.
+    Tracks per base_url since each competition submission is a fresh sandbox.
     """
-    global _bank_account_set
-    if _bank_account_set:
+    if api_client.base_url in _bank_account_set_for:
         return
     try:
         resp = api_client.get_cached(
@@ -34,11 +32,11 @@ def _ensure_bank_account(api_client: TripletexClient) -> None:
         )
         values = resp.get("values", [])
         if not values:
-            _bank_account_set = True
+            _bank_account_set_for.add(api_client.base_url)
             return
         acct = values[0]
         if acct.get("bankAccountNumber"):
-            _bank_account_set = True
+            _bank_account_set_for.add(api_client.base_url)
             return
         api_client.put(
             f"/ledger/account/{acct['id']}",
@@ -51,7 +49,7 @@ def _ensure_bank_account(api_client: TripletexClient) -> None:
             },
         )
         logger.info("Set bank account number on ledger account 1920")
-        _bank_account_set = True
+        _bank_account_set_for.add(api_client.base_url)
     except TripletexApiError as e:
         logger.warning("Failed to set bank account: %s", e)
 
