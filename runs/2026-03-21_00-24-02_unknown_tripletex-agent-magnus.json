@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-03-21 00:24:02",
+  "prompt": "Log 15 hours for Samuel Williams (samuel.williams@example.org) on the activity \"Analyse\" in the project \"Website Redesign\" for Windmill Ltd (org no. 898523942). Hourly rate: 1950 NOK/h. Generate a project invoice to the customer based on the logged hours.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2 git=unknown",
+  "api_calls": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 201,
+      "duration_s": 7.32
+    }
+  ],
+  "errors": [],
+  "handler": "CreateVoucherHandler",
+  "total_api_calls": 5,
+  "total_duration_s": 33.13,
+  "result": {
+    "id": 608880594,
+    "action": "created"
+  },
+  "service": "tripletex-agent-magnus"
+}
