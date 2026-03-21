@@ -778,9 +778,14 @@ class TestYearEndClosingFull:
 
 
 class TestTimesheetLogging:
-    """Simulates: 'Log hours for employee on activity in project'"""
+    """Simulates: 'Log hours for employee on activity in project'
 
-    def test_log_hours(self, client):
+    Based on real competition prompt:
+    'Erfassen Sie 5 Stunden für Jonas Müller auf der Aktivität Analyse
+    im Projekt E-Commerce-Entwicklung für Waldstein GmbH'
+    """
+
+    def test_log_hours_creates_entry(self, client):
         tag = uid()
         result = run_handler(
             client,
@@ -791,10 +796,17 @@ class TestTimesheetLogging:
                     "lastName": "Logger",
                     "email": f"ts-{tag}@example.com",
                 },
-                "hours": 8,
-                "activity": f"Consulting-{tag}",
+                "hours": 5,
+                "activity": f"Analyse-{tag}",
                 "project": f"TSProj-{tag}",
                 "date": "2026-03-15",
             },
         )
-        assert result.get("entryId") or result.get("action")
+        assert result.get("entryId"), f"Timesheet entry not created: {result}"
+        # Verify the entry
+        entry = client.get(
+            f"/timesheet/entry/{result['entryId']}",
+            fields="hours,date",
+        )["value"]
+        assert entry["hours"] == 5.0
+        assert entry["date"] == "2026-03-15"

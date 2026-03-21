@@ -21,10 +21,11 @@ def _create_activity(
     project_ref: dict[str, int] | None = None,
 ) -> dict[str, int]:
     """Resolve an activity by name and link it to a project if provided."""
+    # Create as a project activity type so it can be used in timesheets
     act_ref = resolve(api_client, "activity", name)
     if not act_ref.get("id"):
         return {"id": 0}
-    # Link activity to project with chargeableHours enabled
+    # Link activity to project
     if project_ref and act_ref.get("id"):
         with contextlib.suppress(TripletexApiError):
             api_client.post(
@@ -32,7 +33,6 @@ def _create_activity(
                 data={
                     "project": project_ref,
                     "activity": act_ref,
-                    "chargeableHours": True,
                 },
             )
     return act_ref
@@ -43,14 +43,17 @@ def _create_project(
     name: str,
     customer_ref: dict[str, int] | None = None,
     pm_ref: dict[str, int] | None = None,
+    entry_date: str | None = None,
 ) -> dict[str, int]:
     """Always create a project by name."""
     import secrets
 
+    # Use entry date or Jan 1st of current year as start (so past entries work)
+    start = entry_date or f"{dt_date.today().year}-01-01"
     body: dict[str, Any] = {
         "name": name,
         "number": str(secrets.randbelow(90000) + 10000),
-        "startDate": dt_date.today().isoformat(),
+        "startDate": start,
         "projectManager": pm_ref or {"id": 0},
     }
     if customer_ref:
@@ -118,7 +121,10 @@ class LogTimesheetHandler(BaseHandler):
         if isinstance(proj_name, dict):
             proj_name = proj_name.get("name", "")
         if proj_name:
-            project_ref = _create_project(api_client, proj_name, customer_ref, pm_ref)
+            entry_date = params.get("date") or today
+            project_ref = _create_project(
+                api_client, proj_name, customer_ref, pm_ref, entry_date=entry_date
+            )
 
         # Step 5: Find or create activity
         activity_ref = None

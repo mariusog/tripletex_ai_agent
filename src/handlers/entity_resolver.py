@@ -279,7 +279,7 @@ def _resolve_activity(api_client: TripletexClient, value: Any) -> dict[str, int]
     try:
         res = api_client.post(
             "/activity",
-            data={"name": name, "activityType": "GENERAL_ACTIVITY"},
+            data={"name": name, "activityType": "PROJECT_GENERAL_ACTIVITY"},
         )
         return {"id": res.get("value", {}).get("id")}
     except TripletexApiError:
