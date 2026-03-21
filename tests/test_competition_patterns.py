@@ -850,6 +850,70 @@ class TestProjectFixedPriceAndMilestone:
         )
         assert len(emps["values"]) > 0, "PM employee not created from string name"
 
+    def test_full_project_milestone_flow(self, client):
+        """End-to-end: customer + PM + project + 25% milestone invoice.
+
+        Mirrors exact competition pattern:
+        1) Create customer Cascade SARL
+        2) Create employee Alice Moreau (PM)
+        3) Create project with customer, PM string
+        4) Invoice 25% of fixed price as milestone
+        """
+        tag = uid()
+        # Step 1: Create customer
+        cust_result = run_handler(
+            client,
+            "create_customer",
+            {"name": f"Cascade-{tag}", "organizationNumber": "913754689"},
+        )
+        assert cust_result["id"]
+
+        # Step 2: Create PM employee
+        emp_result = run_handler(
+            client,
+            "create_employee",
+            {
+                "firstName": f"Alice-{tag}",
+                "lastName": "Moreau",
+                "email": f"alice-{tag}@example.org",
+            },
+        )
+        assert emp_result["id"]
+
+        # Step 3: Create project with PM as string
+        proj_result = run_handler(
+            client,
+            "create_project",
+            {
+                "name": f"E-commerce-{tag}",
+                "customer": {"name": f"Cascade-{tag}"},
+                "projectManager": f"Alice-{tag} Moreau",
+            },
+        )
+        assert proj_result["id"]
+        v = client.get(
+            f"/project/{proj_result['id']}",
+            fields="name,customer(id),projectManager(id)",
+        )["value"]
+        assert v["customer"] is not None, "Customer not linked"
+
+        # Step 4: Invoice 25% milestone (328650 * 0.25 = 82162.50)
+        inv_result = run_handler(
+            client,
+            "create_invoice",
+            {
+                "customer": {"name": f"Cascade-{tag}"},
+                "orderLines": [
+                    {
+                        "description": "Milestone 25%",
+                        "count": 1,
+                        "unitPriceExcludingVatCurrency": 82162.50,
+                    }
+                ],
+            },
+        )
+        assert inv_result["id"]
+
     def test_update_project_fixed_price(self, client):
         tag = uid()
         run_handler(client, "create_project", {"name": f"UpdFP-{tag}"})
