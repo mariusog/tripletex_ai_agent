@@ -19,11 +19,13 @@ class CreateEmployeeHandler(BaseHandler):
     tier = 1
     description = "Create a new employee in Tripletex"
     disambiguation = (
-        "Extract ALL fields from attached PDF/offer letter: "
-        "personnummer (nationalIdentityNumber), email, bankAccountNumber, "
-        "dateOfBirth, startDate, annualSalary, employmentPercentage, "
-        "hoursPerDay, department name, and jobCode/stillingskode. "
-        "Missing any field costs points."
+        "CRITICAL: Extract EVERY field from attached PDF/offer letter. "
+        "Each missing field loses points. Required fields: "
+        "email, nationalIdentityNumber (personnummer/fødselsnummer, 11 digits), "
+        "bankAccountNumber (kontonummer), dateOfBirth, startDate, "
+        "annualSalary (årslønn), employmentPercentage (stillingsprosent), "
+        "hoursPerDay (arbeidstid per dag), department name (avdeling), "
+        "and jobCode (stillingskode, 4-digit STYRK code)."
     )
     param_schema = {
         "firstName": ParamSpec(description="Employee first name"),

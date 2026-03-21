@@ -203,6 +203,43 @@ class TestEmployeeOnboardingFull:
         assert v["department"] is not None
         assert v["department"]["name"] == f"NewDept-{tag}"
 
+    def test_missing_email_and_nin_still_creates(self, client):
+        """When LLM misses email and NIN from PDF, employee still created.
+
+        Based on real 11/14 run: LLM extracted everything except email
+        and nationalIdentityNumber. Employee should still be created
+        with all other fields correct.
+        """
+        tag = uid()
+        result = run_handler(
+            client,
+            "create_employee",
+            {
+                "firstName": f"NoEmail-{tag}",
+                "lastName": "Berge",
+                "dateOfBirth": "1999-11-05",
+                "startDate": "2026-07-20",
+                "annualSalary": 630000,
+                "employmentPercentage": 100,
+                "hoursPerDay": 7.5,
+                "department": f"Regnskap-{tag}",
+                # No email, no nationalIdentityNumber
+            },
+        )
+        assert result["id"], f"Employee not created without email: {result}"
+        v = client.get(
+            f"/employee/{result['id']}",
+            fields="firstName,department(name),"
+            "employments(employmentDetails("
+            "annualSalary,shiftDurationHours,employmentForm))",
+        )["value"]
+        assert v["firstName"] == f"NoEmail-{tag}"
+        assert v["department"] is not None
+        details = v["employments"][0]["employmentDetails"]
+        assert details[0]["annualSalary"] == 630000.0
+        assert details[0]["shiftDurationHours"] == 7.5
+        assert details[0]["employmentForm"] == "PERMANENT"
+
     def test_onboarding_minimal(self, client):
         """Simpler variant: just name + email + department."""
         tag = uid()
