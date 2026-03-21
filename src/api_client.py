@@ -189,6 +189,20 @@ class TripletexClient:
                     error.message,
                     error.validation_messages,
                 )
+
+                # Retry-with-fix: on 422, strip offending fields and retry once
+                if (
+                    response.status_code == 422
+                    and isinstance(json_data, dict)
+                    and error.validation_messages
+                    and attempt == 0
+                ):
+                    fixed = self._try_fix_payload(json_data, error.validation_messages)
+                    if fixed and fixed != json_data:
+                        logger.info("Retrying %s %s after stripping fields", method, endpoint)
+                        json_data = fixed
+                        continue
+
                 raise TripletexApiError(error)
 
             # Success — parse JSON if present
@@ -198,6 +212,32 @@ class TripletexClient:
 
         # Should not reach here, but handle defensively
         raise TripletexApiError(ApiError(status=429, message="Rate limit retries exhausted"))
+
+    @staticmethod
+    def _try_fix_payload(
+        data: dict[str, Any], validation_messages: list[dict[str, Any]]
+    ) -> dict[str, Any] | None:
+        """Try to fix a payload by stripping fields mentioned in validation errors."""
+        fixed = dict(data)
+        changed = False
+        for vm in validation_messages:
+            field = vm.get("field", "")
+            if not field or field == "None":
+                continue
+            # Strip "Internt felt (fieldName)" format
+            if field.startswith("Internt felt"):
+                inner = field.split("(")[-1].rstrip(")")
+                if inner in fixed:
+                    fixed.pop(inner)
+                    changed = True
+            # Strip dotted paths like "postings.customer.id" — skip, too complex
+            elif "." in field:
+                continue
+            # Strip direct field names
+            elif field in fixed:
+                fixed.pop(field)
+                changed = True
+        return fixed if changed else None
 
     @staticmethod
     def _parse_error(response: httpx.Response, status_code: int) -> ApiError:

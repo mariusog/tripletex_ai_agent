@@ -12,6 +12,22 @@ from src.api_client import TripletexApiError, TripletexClient
 logger = logging.getLogger(__name__)
 
 
+def ensure_department_exists(api_client: TripletexClient) -> dict[str, int] | None:
+    """Get or create a default department. Returns {"id": N} or None."""
+    dept = api_client.get_cached("default_dept", "/department", params={"count": 1}, fields="id")
+    if dept.get("values"):
+        return {"id": dept["values"][0]["id"]}
+    # Fresh sandbox — create a department
+    try:
+        result = api_client.post("/department", data={"name": "Avdeling", "departmentNumber": "1"})
+        dept_id = result.get("value", {}).get("id")
+        if dept_id:
+            return {"id": dept_id}
+    except TripletexApiError:
+        pass
+    return None
+
+
 def _ensure_employee_ready(api_client: TripletexClient, emp_id: int) -> None:
     """Ensure an existing employee has dateOfBirth, department, employment."""
     try:
@@ -26,11 +42,9 @@ def _ensure_employee_ready(api_client: TripletexClient, emp_id: int) -> None:
             emp["dateOfBirth"] = "1990-01-01"
             needs_update = True
         if not emp.get("department") or not emp["department"].get("id"):
-            dept = api_client.get_cached(
-                "default_dept", "/department", params={"count": 1}, fields="id"
-            )
-            if dept.get("values"):
-                emp["department"] = {"id": dept["values"][0]["id"]}
+            dept_ref = ensure_department_exists(api_client)
+            if dept_ref:
+                emp["department"] = dept_ref
                 needs_update = True
         if needs_update:
             api_client.put(f"/employee/{emp_id}", data=emp)

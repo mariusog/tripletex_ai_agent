@@ -47,9 +47,7 @@ class BankReconciliationHandler(BaseHandler):
             self._process_bank_fee(api_client, fee, results)
 
         # If no structured data, fall back to basic reconciliation
-        if not any(params.get(k) for k in (
-            "customerPayments", "supplierPayments", "bankFees"
-        )):
+        if not any(params.get(k) for k in ("customerPayments", "supplierPayments", "bankFees")):
             return self._basic_reconciliation(api_client, params)
 
         return results
@@ -78,12 +76,14 @@ class BankReconciliationHandler(BaseHandler):
                     "register_payment": {"amount": amount, "paymentDate": date},
                 },
             )
-            results["payments"].append({
-                "customer": customer_name,
-                "invoice_id": inv_result.invoice_id,
-                "amount": amount,
-                "status": "paid",
-            })
+            results["payments"].append(
+                {
+                    "customer": customer_name,
+                    "invoice_id": inv_result.invoice_id,
+                    "amount": amount,
+                    "status": "paid",
+                }
+            )
         except Exception as e:
             logger.warning("Customer payment failed for %s: %s", cp.get("customer"), e)
 
@@ -100,7 +100,7 @@ class BankReconciliationHandler(BaseHandler):
             supplier_ref = _resolve(api_client, "supplier", {"name": supplier_name})
 
             # Create voucher: debit AP (2400), credit bank (1920)
-            from src.handlers.ledger import _resolve_account
+            from src.services.posting_builder import resolve_account as _resolve_account
 
             bank_acct, _ = _resolve_account(api_client, 1920)
             ap_acct, _ = _resolve_account(api_client, 2400)
@@ -124,15 +124,15 @@ class BankReconciliationHandler(BaseHandler):
                     },
                 ],
             }
-            result = api_client.post(
-                "/ledger/voucher", data=body, params={"sendToLedger": "true"}
+            result = api_client.post("/ledger/voucher", data=body, params={"sendToLedger": "true"})
+            results["payments"].append(
+                {
+                    "supplier": supplier_name,
+                    "voucher_id": result.get("value", {}).get("id"),
+                    "amount": amount,
+                    "status": "paid",
+                }
             )
-            results["payments"].append({
-                "supplier": supplier_name,
-                "voucher_id": result.get("value", {}).get("id"),
-                "amount": amount,
-                "status": "paid",
-            })
         except Exception as e:
             logger.warning("Supplier payment failed for %s: %s", sp.get("supplier"), e)
 
@@ -145,10 +145,10 @@ class BankReconciliationHandler(BaseHandler):
             date = fee.get("date", "")
             desc = fee.get("description", "Bankgebyr")
 
-            from src.handlers.ledger import _resolve_account
+            from src.services.posting_builder import resolve_account
 
-            bank_acct, _ = _resolve_account(api_client, 1920)
-            fee_acct, _ = _resolve_account(api_client, 7770)
+            bank_acct, _ = resolve_account(api_client, 1920)
+            fee_acct, _ = resolve_account(api_client, 7770)
 
             # Positive fee = income, negative fee = expense
             body: dict[str, Any] = {
@@ -169,9 +169,7 @@ class BankReconciliationHandler(BaseHandler):
                     },
                 ],
             }
-            api_client.post(
-                "/ledger/voucher", data=body, params={"sendToLedger": "true"}
-            )
+            api_client.post("/ledger/voucher", data=body, params={"sendToLedger": "true"})
         except Exception as e:
             logger.warning("Bank fee voucher failed: %s", e)
 

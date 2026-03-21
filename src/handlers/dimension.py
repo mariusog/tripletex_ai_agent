@@ -8,7 +8,8 @@ from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
 from src.handlers.base import BaseHandler, register_handler
-from src.handlers.ledger import _build_posting, _resolve_account
+from src.services.posting_builder import build_posting as _build_posting
+from src.services.posting_builder import resolve_account as _resolve_account
 
 logger = logging.getLogger(__name__)
 

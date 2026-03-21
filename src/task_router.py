@@ -14,6 +14,7 @@ from src.api_client import TripletexClient
 from src.handlers import HANDLER_REGISTRY
 from src.llm import LLMClient
 from src.models import SolveRequest, SolveResponse, TaskClassification
+from src.services.param_normalizer import normalize_params
 
 logger = logging.getLogger(__name__)
 
@@ -35,23 +36,22 @@ def _strip_placeholders(params: dict) -> dict:
 def _inject_context(params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
     """Inject shared context from previous steps into params.
 
-    Context carries forward: customer refs, invoice IDs, etc.
-    Only fills in missing params — never overwrites explicit values.
+    Fills in missing entity refs from context — never overwrites explicit values.
     """
     merged = dict(params)
-
-    # If this step needs a customer and doesn't have one, use context
-    if "customer" not in merged and "customer" in context:
-        merged["customer"] = context["customer"]
-
-    # If this step needs an invoiceId and doesn't have one, use context
-    if "invoiceId" not in merged and "invoiceId" in context:
-        merged["invoiceId"] = context["invoiceId"]
-
-    # If this step needs an employee and doesn't have one, use context
-    if "employee" not in merged and "employee" in context:
-        merged["employee"] = context["employee"]
-
+    # Auto-inject any context key that's missing in params
+    for key in (
+        "customer",
+        "supplier",
+        "employee",
+        "invoiceId",
+        "orderId",
+        "projectId",
+        "voucherId",
+        "travelExpenseId",
+    ):
+        if key not in merged and key in context:
+            merged[key] = context[key]
     return merged
 
 
@@ -60,16 +60,24 @@ def _update_context(
 ) -> None:
     """Update shared context with results from a completed step."""
     if result.get("id"):
-        # Store the last created entity ID
         context["lastId"] = result["id"]
 
-    # Propagate specific entity references
-    if "customer" in params:
-        context["customer"] = params["customer"]
-    if result.get("id") and result.get("action") in ("created", "sent"):
-        context["invoiceId"] = result["id"]
+    # Propagate entity references from params
+    for key in ("customer", "supplier", "employee"):
+        if key in params:
+            context[key] = params[key]
+
+    # Propagate IDs from results
+    if result.get("id"):
+        action = result.get("action", "")
+        if action in ("created", "sent"):
+            context["invoiceId"] = result["id"]
+        if action == "created" and "voucher" in str(type(result)):
+            context["voucherId"] = result["id"]
     if result.get("orderId"):
         context["orderId"] = result["orderId"]
+    if result.get("entryId"):
+        context["entryId"] = result["entryId"]
 
 
 class TaskRouter:
@@ -105,6 +113,7 @@ class TaskRouter:
             for i, classification in enumerate(classifications):
                 task_type = classification.task_type
                 params = _strip_placeholders(classification.params)
+                params = normalize_params(params)
 
                 # Inject context from previous steps
                 if i > 0:
