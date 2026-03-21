@@ -1279,6 +1279,55 @@ class TestLedgerCorrectionMultipleErrors:
             f"Expected 8+ postings (4 corrections x 2), got {len(v['postings'])}"
         )
 
+    def test_corrections_with_varied_llm_formats(self, client):
+        """LLM sends varied type names and missing fields.
+
+        Based on real 0/4 failure: type='duplicate_reversal' not matched,
+        first correction had no type, missing_vat used 'amount' not 'netAmount'.
+        """
+        tag = uid()
+        result = run_handler(
+            client,
+            "ledger_correction",
+            {
+                "description": f"Varied corrections {tag}",
+                "corrections": [
+                    {
+                        "wrongAccount": 6340,
+                        "correctAccount": 6390,
+                        "amount": 2450,
+                        "description": "No type field — auto-detect from wrongAccount",
+                    },
+                    {
+                        "type": "duplicate_reversal",
+                        "account": 6300,
+                        "amount": 2900,
+                        "description": "duplicate_reversal not duplicate_voucher",
+                    },
+                    {
+                        "type": "missing_vat",
+                        "account": 7300,
+                        "amount": 5350,
+                        "vatAccount": 2710,
+                        "description": "amount not netAmount",
+                    },
+                    {
+                        "type": "incorrect_amount",
+                        "account": 7100,
+                        "recordedAmount": 8550,
+                        "correctAmount": 6750,
+                        "description": "No difference field — compute from amounts",
+                    },
+                ],
+            },
+        )
+        assert result.get("id"), f"Correction voucher not created: {result}"
+        v = client.get(
+            f"/ledger/voucher/{result['id']}",
+            fields="postings(amountGross)",
+        )["value"]
+        assert len(v["postings"]) >= 8, f"Expected 8+ postings, got {len(v['postings'])}"
+
     def test_corrections_with_explicit_postings(self, client):
         """When LLM sends raw postings directly."""
         tag = uid()
