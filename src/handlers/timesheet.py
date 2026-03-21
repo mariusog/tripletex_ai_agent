@@ -128,8 +128,6 @@ class LogTimesheetHandler(BaseHandler):
             entry_body["activity"] = activity_ref
         if params.get("comment"):
             entry_body["comment"] = params["comment"]
-        if params.get("hourlyRate"):
-            entry_body["projectChargeableHours"] = float(hours)
 
         try:
             result = api_client.post("/timesheet/entry", data=entry_body)
