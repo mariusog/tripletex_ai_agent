@@ -124,6 +124,8 @@ class CreateEmployeeHandler(BaseHandler):
         emp_detail: dict[str, Any] = {
             "date": start_date,
             "employmentType": emp_type,
+            "employmentForm": "PERMANENT" if emp_type == "ORDINARY" else "TEMPORARY",
+            "workingHoursScheme": "NOT_SHIFT",
             "percentageOfFullTimeEquivalent": pct,
         }
 

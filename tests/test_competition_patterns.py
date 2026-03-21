@@ -152,7 +152,8 @@ class TestEmployeeOnboardingFull:
             "nationalIdentityNumber,bankAccountNumber,"
             "department(id,name),"
             "employments(startDate,employmentDetails("
-            "employmentType,percentageOfFullTimeEquivalent,"
+            "employmentType,employmentForm,workingHoursScheme,"
+            "percentageOfFullTimeEquivalent,"
             "annualSalary,shiftDurationHours,occupationCode(id)))",
         )["value"]
 
@@ -177,6 +178,8 @@ class TestEmployeeOnboardingFull:
         )
         assert d["annualSalary"] == 550000.0, f"salary: {d['annualSalary']}"
         assert d["shiftDurationHours"] == 6.0, f"hours: {d['shiftDurationHours']}"
+        assert d["employmentForm"] == "PERMANENT", f"form: {d['employmentForm']}"
+        assert d["workingHoursScheme"] == "NOT_SHIFT", f"scheme: {d['workingHoursScheme']}"
 
     def test_single_step_with_nonexistent_department(self, client):
         """LLM classifies as single create_employee without create_department.
