@@ -70,9 +70,13 @@ class CreateVoucherHandler(BaseHandler):
     tier = 3
     description = "Create a voucher with debit/credit postings"
     disambiguation = (
-        "For supplier invoices (leverandørfaktura), use this. "
-        "Use 2 postings: debit expense account with GROSS amount (inkl MVA) + vatType, "
-        "credit 2400 with negative gross amount. Do NOT manually split VAT."
+        "For supplier invoices and receipts, use this. "
+        "Use 2 postings: debit expense account with GROSS amount (inkl MVA), "
+        "credit 2400 with negative gross amount. Do NOT manually split VAT — "
+        "Tripletex handles it via the account's VAT type. "
+        "From receipts/PDFs: extract supplier name, org number, date, "
+        "invoice number, GROSS amount (total inkl MVA), and the correct "
+        "expense account based on what was purchased."
     )
 
     def get_task_type(self) -> str:
