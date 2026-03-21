@@ -1,0 +1,92 @@
+{
+  "timestamp": "2026-03-20 22:42:16",
+  "prompt": "Crie o produto \"Sessão de formação\" com número de produto 6378. O preço é 37050 NOK sem IVA, utilizando a taxa padrão de 25 %.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 1.85
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/vatType",
+      "status": 200,
+      "duration_s": 2.08
+    },
+    {
+      "method": "GET",
+      "endpoint": "/supplier",
+      "status": 200,
+      "duration_s": 0.28
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/ledger/account/363119753",
+      "status": 200,
+      "duration_s": 2.14
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.22
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.22
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.23
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 201,
+      "duration_s": 0.51
+    }
+  ],
+  "errors": [],
+  "task_type": "create_voucher",
+  "params": {
+    "description": "Leverandørfaktura INV-2026-4876 fra Fossekraft AS (org.nr 887157731) - Kontortenester",
+    "invoiceNumber": "INV-2026-4876",
+    "supplier": {
+      "name": "Fossekraft AS",
+      "organizationNumber": "887157731"
+    },
+    "amountIncludingVat": 61800,
+    "vatRate": 25,
+    "postings": [
+      {
+        "account": 6340,
+        "description": "Kontortenester",
+        "debitAmount": 49440
+      },
+      {
+        "account": 2710,
+        "description": "Inngåande MVA 25%",
+        "debitAmount": 12360
+      },
+      {
+        "account": 2400,
+        "description": "Leverandørgjeld Fossekraft AS",
+        "creditAmount": 61800
+      }
+    ]
+  },
+  "handler": "CreateVoucherHandler",
+  "total_api_calls": 5,
+  "total_duration_s": 6.91,
+  "result": {
+    "id": 608867717,
+    "action": "created"
+  },
+  "service": "tripletex-agent-magnus"
+}

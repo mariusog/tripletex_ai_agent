@@ -1,0 +1,82 @@
+{
+  "timestamp": "2026-03-20 22:18:11",
+  "prompt": "Crea y envía una factura al cliente Viento SL (org. nº 844876831) por 35350 NOK sin IVA. La factura es por Licencia de software.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 2.01
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/ledger/account/362495004",
+      "status": 200,
+      "duration_s": 2.26
+    },
+    {
+      "method": "GET",
+      "endpoint": "/customer",
+      "status": 200,
+      "duration_s": 2.43
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "status": 201,
+      "duration_s": 2.09
+    },
+    {
+      "method": "POST",
+      "endpoint": "/product",
+      "status": 201,
+      "duration_s": 2.21
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order/orderline/list",
+      "status": 201,
+      "duration_s": 2.05
+    },
+    {
+      "method": "POST",
+      "endpoint": "/invoice",
+      "status": 201,
+      "duration_s": 2.32
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/invoice/2147550821/:send",
+      "status": 204,
+      "duration_s": 2.22
+    }
+  ],
+  "errors": [],
+  "task_type": "create_invoice",
+  "params": {
+    "customer": {
+      "name": "Viento SL",
+      "organizationNumber": "844876831"
+    },
+    "orderLines": [
+      {
+        "product": {
+          "name": "Licencia de software"
+        },
+        "count": 1,
+        "unitPriceExcludingVatCurrency": 35350
+      }
+    ],
+    "send_invoice": true
+  },
+  "handler": "CreateInvoiceHandler",
+  "total_api_calls": 8,
+  "total_duration_s": 20.0,
+  "result": {
+    "id": 2147550821,
+    "orderId": 401974705,
+    "action": "created"
+  },
+  "service": "tripletex-agent-magnus"
+}

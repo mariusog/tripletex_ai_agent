@@ -1,0 +1,53 @@
+{
+  "timestamp": "2026-03-20 22:10:00",
+  "prompt": "CrÃ©ez le projet \"ImplÃ©mentation Montagne\" liÃ© au client Montagne SARL (nÂº org. 842138248). Le chef de projet est Jules Martin (jules.martin@example.org).",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/employee",
+      "status": 200,
+      "duration_s": 2.59
+    },
+    {
+      "method": "GET",
+      "endpoint": "/employee",
+      "status": 200,
+      "duration_s": 2.31
+    },
+    {
+      "method": "GET",
+      "endpoint": "/customer",
+      "status": 200,
+      "duration_s": 2.54
+    },
+    {
+      "method": "POST",
+      "endpoint": "/project",
+      "status": 201,
+      "duration_s": 2.76
+    }
+  ],
+  "errors": [],
+  "task_type": "create_project",
+  "params": {
+    "name": "Implémentation Montagne",
+    "customer": {
+      "name": "Montagne SARL",
+      "organizationNumber": "842138248"
+    },
+    "projectManager": {
+      "firstName": "Jules",
+      "lastName": "Martin",
+      "email": "jules.martin@example.org"
+    }
+  },
+  "handler": "CreateProjectHandler",
+  "total_api_calls": 4,
+  "total_duration_s": 13.48,
+  "result": {
+    "id": 401974340,
+    "action": "created"
+  },
+  "service": "tripletex-agent-2"
+}

@@ -42,6 +42,7 @@ TASK_TO_FILE = {
     "balance_sheet_report": "reporting.py",
     "create_asset": "asset.py", "update_asset": "asset.py",
     "assign_role": "module.py", "enable_module": "module.py",
+    "log_timesheet": "timesheet.py",
 }
 
 

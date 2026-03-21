@@ -1,0 +1,63 @@
+{
+  "timestamp": "2026-03-20 23:09:46",
+  "prompt": "Establezca un precio fijo de 419850 NOK en el proyecto \"Implementación ERP\" para Montaña SL (org. nº 950971622). El director del proyecto es Ricardo López (ricardo.lopez@example.org). Facture al cliente el 33 % del precio fijo como pago parcial.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/project",
+      "status": 200,
+      "duration_s": 0.79
+    },
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "status": 201,
+      "duration_s": 0.77
+    },
+    {
+      "method": "GET",
+      "endpoint": "/employee",
+      "status": 200,
+      "duration_s": 0.26
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/project/401977320",
+      "status": 422,
+      "duration_s": 0.26
+    }
+  ],
+  "errors": [
+    {
+      "method": "PUT",
+      "endpoint": "/project/401977320",
+      "status": 422,
+      "duration_s": 0.26
+    }
+  ],
+  "task_type": "update_project",
+  "params": {
+    "name": "Implementación ERP",
+    "fixedPrice": 419850,
+    "currency": "NOK",
+    "projectManager": {
+      "firstName": "Ricardo",
+      "lastName": "López",
+      "email": "ricardo.lopez@example.org"
+    },
+    "customer": {
+      "name": "Montaña SL",
+      "organizationNumber": "950971622"
+    }
+  },
+  "error_details": [
+    {
+      "status": 422,
+      "endpoint": "PUT /project/401977320",
+      "message": "Request mapping failed | validation: [{'field': 'fixedPrice', 'message': 'Feltet eksisterer ikke i objektet.', 'path': None, 'rootId': None}]"
+    }
+  ],
+  "status": "error",
+  "service": "tripletex-agent-magnus"
+}
