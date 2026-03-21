@@ -83,12 +83,22 @@ class RegisterPaymentHandler(BaseHandler):
 
     tier = 2
     description = "Register payment on an invoice"
+    disambiguation = (
+        "For currency payments: amount should be in NOK at the PAYMENT exchange rate, "
+        "not the invoice rate. E.g. 13986 EUR at payment rate 11.31 = 158201.66 NOK."
+    )
     param_schema = {
         "customer": ParamSpec(required=False),
-        "amount": ParamSpec(type="number", description="Payment amount"),
+        "amount": ParamSpec(type="number", description="Payment amount in NOK"),
         "paymentDate": ParamSpec(required=False, type="date"),
         "reversal": ParamSpec(required=False, type="boolean"),
         "orderLines": ParamSpec(required=False, type="list"),
+        "exchangeRate": ParamSpec(
+            required=False, type="number", description="Payment exchange rate"
+        ),
+        "currencyAmount": ParamSpec(
+            required=False, type="number", description="Amount in foreign currency"
+        ),
     }
 
     def get_task_type(self) -> str:
@@ -101,6 +111,19 @@ class RegisterPaymentHandler(BaseHandler):
         overdue_id = params.get("_overdue_invoice_id")
         if overdue_id and not params.get("invoiceId"):
             params["invoiceId"] = overdue_id
+
+        # Fix currency payment amounts: use foreign amount x payment rate
+        exchange_rate = params.get("exchangeRate")
+        currency_amount = params.get("currencyAmount")
+        if exchange_rate and currency_amount:
+            correct_nok = round(float(currency_amount) * float(exchange_rate), 2)
+            logger.info(
+                "Currency payment: %s x %s = %s NOK",
+                currency_amount,
+                exchange_rate,
+                correct_nok,
+            )
+            params["amount"] = correct_nok
 
         invoice_id = _find_invoice_id(api_client, params)
 
@@ -179,19 +202,19 @@ class RegisterPaymentHandler(BaseHandler):
         pt_id = int(params.get("paymentTypeId", pt_values[0]["id"] if pt_values else 0))
 
         pay_amount = params["amount"]
-        try:
-            inv_data = api_client.get(f"/invoice/{invoice_id}", fields="amount")
-            actual_amount = inv_data.get("value", {}).get("amount")
-            # Use invoice amount for full payment (LLM amount ≈ net, invoice = gross)
-            # Keep LLM amount for partial payments (LLM amount << invoice amount)
-            if (
-                actual_amount
-                and not params.get("reversal")
-                and abs(pay_amount) >= abs(actual_amount) * 0.8
-            ):
-                pay_amount = actual_amount  # Full payment — use exact amount
-        except TripletexApiError:
-            pass
+        # Don't override for currency payments or partial payments
+        if not params.get("exchangeRate") and not params.get("currencyAmount"):
+            try:
+                inv_data = api_client.get(f"/invoice/{invoice_id}", fields="amount")
+                actual_amount = inv_data.get("value", {}).get("amount")
+                if (
+                    actual_amount
+                    and not params.get("reversal")
+                    and abs(pay_amount) >= abs(actual_amount) * 0.8
+                ):
+                    pay_amount = actual_amount  # Full payment — use exact amount
+            except TripletexApiError:
+                pass
 
         api_client.put(
             f"/invoice/{invoice_id}/:payment",

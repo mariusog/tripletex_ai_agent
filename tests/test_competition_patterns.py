@@ -675,6 +675,50 @@ class TestCurrencyInvoiceWithAgio:
         assert result["id"]
 
 
+# ============================================================
+# PATTERN 3e: Currency payment at different exchange rate
+# Competition: 'Invoice in EUR at rate X, customer paid at rate Y'
+# ============================================================
+
+
+class TestCurrencyPaymentAmount:
+    """Verify payment uses the PAYMENT exchange rate, not invoice rate.
+
+    Based on real competition run:
+    Invoice: 13986 EUR at 10.37 = 144994.92 NOK
+    Payment: 13986 EUR at 11.31 = 158201.66 NOK
+    Check 2 failed because we paid 144994.92 instead of 158201.66
+    """
+
+    def test_payment_uses_payment_rate(self, client):
+        tag = uid()
+        # Create invoice at original rate
+        inv_result = run_handler(
+            client,
+            "create_invoice",
+            {
+                "customer": {"name": f"EURCust-{tag}"},
+                "orderLines": [
+                    {"description": "EUR service", "unitPriceExcludingVatCurrency": 100000, "count": 1}
+                ],
+            },
+        )
+        assert inv_result["id"]
+
+        # Register payment with exchange rate info
+        pay_result = run_handler(
+            client,
+            "register_payment",
+            {
+                "invoiceId": inv_result["id"],
+                "amount": 100000,  # LLM might send original NOK
+                "exchangeRate": 11.31,
+                "currencyAmount": 13986,
+            },
+        )
+        assert pay_result.get("action") == "payment_registered"
+
+
 class TestProjectWithCustomerAndPM:
     """Simulates: 'Create project X linked to customer Y, PM is Z'"""
 
