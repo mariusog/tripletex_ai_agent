@@ -46,47 +46,61 @@ class LedgerCorrectionHandler(BaseHandler):
 
         supplier_ref = _resolve_supplier(api_client, params.get("supplier"))
 
-        # Build correction postings from explicit postings or corrections list
-        postings = params.get("postings", [])
+        # Build correction postings — handle multiple LLM output formats:
+        # 1. corrections: [{wrongAccount, correctAccount, amount}]
+        # 2. postings: [{account, amountGross}] (flat)
+        # 3. postings: [{lines: [{account, debitAmount, creditAmount}]}] (nested)
+        flat_postings: list[dict[str, Any]] = []
 
-        # Expand corrections list into debit/credit posting pairs
-        corrections = params.get("corrections", [])
-        if corrections and not postings:
-            for corr in corrections:
-                wrong = corr.get("wrongAccount")
-                correct = corr.get("correctAccount")
-                amount = corr.get("amount", 0)
-                desc = corr.get("description", "Korreksjon")
-                if wrong and correct and amount:
-                    # Reverse the wrong posting
-                    postings.append(
-                        {
-                            "account": wrong,
-                            "amountGross": -amount,
-                            "description": desc,
-                        }
-                    )
-                    # Add the correct posting
-                    postings.append(
-                        {
-                            "account": correct,
-                            "amountGross": amount,
-                            "description": desc,
-                        }
-                    )
-                elif correct and amount:
-                    postings.append(
-                        {
-                            "account": correct,
-                            "amountGross": amount,
-                            "description": desc,
-                        }
-                    )
+        # First: expand corrections list into debit/credit pairs
+        for corr in params.get("corrections", []):
+            wrong = corr.get("wrongAccount")
+            correct = corr.get("correctAccount")
+            amount = corr.get("amount", 0)
+            correct_amount = corr.get("correctAmount")
+            desc = corr.get("description", "Korreksjon")
+            if wrong and correct and amount:
+                flat_postings.append(
+                    {"account": wrong, "amountGross": -amount, "description": desc}
+                )
+                flat_postings.append(
+                    {"account": correct, "amountGross": amount, "description": desc}
+                )
+            elif wrong and amount and correct_amount:
+                diff = correct_amount - amount
+                flat_postings.append({"account": wrong, "amountGross": diff, "description": desc})
+            elif wrong and amount:
+                flat_postings.append(
+                    {"account": wrong, "amountGross": -amount, "description": desc}
+                )
+            elif correct and amount:
+                flat_postings.append(
+                    {"account": correct, "amountGross": amount, "description": desc}
+                )
 
-        if postings:
+        # Then: flatten any nested postings with 'lines'
+        for p in params.get("postings", []):
+            if "lines" in p:
+                for line in p["lines"]:
+                    acct = line.get("account")
+                    debit = line.get("debitAmount", 0) or 0
+                    credit = line.get("creditAmount", 0) or 0
+                    if acct and (debit or credit):
+                        amt = debit - credit if debit else -credit
+                        flat_postings.append(
+                            {
+                                "account": acct,
+                                "amountGross": amt,
+                                "description": p.get("description", ""),
+                            }
+                        )
+            elif p.get("account"):
+                flat_postings.append(p)
+
+        if flat_postings:
             body["postings"] = [
                 _build_posting(api_client, p, row=i + 1, supplier=supplier_ref)
-                for i, p in enumerate(postings)
+                for i, p in enumerate(flat_postings)
             ]
 
         # If correcting a specific voucher, reverse it first
