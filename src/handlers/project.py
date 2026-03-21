@@ -29,25 +29,22 @@ class CreateProjectHandler(BaseHandler):
 
         from src.api_client import TripletexApiError
 
-        # projectManager must have PM access — use account owner as PM
-        emp_search = api_client.get_cached(
-            "account_owner", "/employee", params={"count": 1}, fields="id"
-        )
-        emp_values = emp_search.get("values", [])
-        pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
-
-        # Create the requested PM employee (competition checks they exist)
+        # Resolve project manager — use the requested PM directly
         pm = params.get("projectManager")
+        pm_ref = None
         if pm and isinstance(pm, dict) and "id" not in pm:
-            pm_first = pm.get("firstName", "")
-            pm_last = pm.get("lastName", "")
-            if pm_first and pm_last:
-                try:
-                    _resolve(api_client, "employee", pm)
-                except Exception:
-                    logger.warning("PM employee creation failed, continuing")
-            else:
-                _resolve(api_client, "employee", pm)
+            try:
+                pm_ref = _resolve(api_client, "employee", pm)
+            except Exception:
+                logger.warning("PM employee resolution failed")
+
+        # Fall back to account owner if PM couldn't be resolved
+        if not pm_ref or not pm_ref.get("id"):
+            emp_search = api_client.get_cached(
+                "account_owner", "/employee", params={"count": 1}, fields="id"
+            )
+            emp_values = emp_search.get("values", [])
+            pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
 
         proj_num = str(params.get("number", secrets.randbelow(90000) + 10000))
 
