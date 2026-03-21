@@ -91,6 +91,9 @@ class RunPayrollHandler(BaseHandler):
         # Step 1: Resolve employee
         emp_ref = resolve_employee(api_client, params["employee"])
 
+        # Ensure employee has an employment record for the payroll period
+        self._ensure_employment(api_client, emp_ref["id"], year, month)
+
         # Step 2: Build salary specifications
         specifications = []
         type_cache: dict[str, list[dict[str, Any]]] = {}
@@ -173,3 +176,38 @@ class RunPayrollHandler(BaseHandler):
         except TripletexApiError as e:
             logger.warning("Salary transaction failed: %s", e)
             return {"error": str(e)}
+
+    @staticmethod
+    def _ensure_employment(api_client: TripletexClient, emp_id: int, year: int, month: int) -> None:
+        """Ensure employee has an employment record covering the payroll period."""
+        try:
+            resp = api_client.get(
+                "/employee/employment",
+                params={"employeeId": emp_id, "count": 1},
+                fields="id",
+            )
+            if resp.get("values"):
+                return  # Already has employment
+        except TripletexApiError:
+            pass
+
+        # Create employment record
+        start_date = f"{year}-{month:02d}-01"
+        try:
+            api_client.post(
+                "/employee/employment",
+                data={
+                    "employee": {"id": emp_id},
+                    "startDate": start_date,
+                    "employmentDetails": [
+                        {
+                            "date": start_date,
+                            "employmentType": "ORDINARY",
+                            "percentageOfFullTimeEquivalent": 100,
+                        }
+                    ],
+                },
+            )
+            logger.info("Created employment for employee %s", emp_id)
+        except TripletexApiError as e:
+            logger.warning("Employment creation failed: %s", e)
