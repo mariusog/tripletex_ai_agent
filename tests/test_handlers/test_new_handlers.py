@@ -279,8 +279,8 @@ class TestYearEndClosingHandler:
             if "balanceSheet" in path:
                 return sample_api_response(
                     values=[
-                        {"account": {"id": 10}, "closingBalance": 5000},
-                        {"account": {"id": 11}, "closingBalance": -2000},
+                        {"account": {"id": 10}, "balanceOut": 5000},
+                        {"account": {"id": 11}, "balanceOut": -2000},
                     ]
                 )
             return sample_api_response(values=[{"id": 99}])

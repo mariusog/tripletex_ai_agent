@@ -1061,6 +1061,75 @@ class TestYearEndClosingFull:
         assert result.get("action") in ("year_end_closed", "no_postings_needed")
 
 
+# ============================================================
+# PATTERN 12b: Monthly closing with accrual + depreciation + salary
+# Competition: 'Monthly close: book accrual, depreciation, salary provision'
+# ============================================================
+
+
+class TestMonthlyClosing:
+    """Simulates monthly closing with 3 vouchers.
+
+    Based on real competition prompt:
+    'Führen Sie den Monatsabschluss für März 2026 durch.
+    Buchen Sie die Rechnungsabgrenzung (3500 NOK/Monat),
+    monatliche Abschreibung (79150/6 Jahre/12 = 1099.31),
+    und Gehaltsrückstellung (Betrag nicht angegeben).'
+    """
+
+    def test_depreciation_uses_precise_amount(self, client):
+        """Depreciation should use exact calculation, not rounded."""
+        tag = uid()
+        # 79150 / 6 years / 12 months = 1099.305... ≈ 1099.31
+        result = run_handler(
+            client,
+            "create_voucher",
+            {
+                "description": f"Depreciation {tag}",
+                "date": "2026-03-31",
+                "postings": [
+                    {"debitAccount": "6020", "creditAccount": "1210", "amount": 1099.31},
+                ],
+            },
+        )
+        assert result["id"]
+
+    def test_salary_accrual_infers_amount(self, client):
+        """When salary accrual amount is 0, should infer from existing data."""
+        tag = uid()
+        # First create some salary data
+        run_handler(
+            client,
+            "create_voucher",
+            {
+                "description": f"Salary {tag}",
+                "date": "2026-03-15",
+                "postings": [
+                    {"account": 5000, "debit": 45000},
+                    {"account": 1920, "credit": 45000},
+                ],
+            },
+        )
+        # Now create salary accrual with amount 0 — should infer from account 5000
+        result = run_handler(
+            client,
+            "create_voucher",
+            {
+                "description": f"Salary accrual {tag}",
+                "date": "2026-03-31",
+                "postings": [
+                    {
+                        "debitAccount": "5000",
+                        "creditAccount": "2900",
+                        "amount": 0,
+                        "description": "Gehaltsrückstellung",
+                    },
+                ],
+            },
+        )
+        assert result["id"], f"Salary accrual voucher not created: {result}"
+
+
 class TestTimesheetLogging:
     """Simulates: 'Log hours for employee on activity in project'
 

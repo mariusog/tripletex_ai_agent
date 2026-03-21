@@ -128,6 +128,9 @@ class CreateVoucherHandler(BaseHandler):
             if "debitAccount" in p and "creditAccount" in p:
                 amt = p.get("amount", p.get("amountGross", 0))
                 if not amt:
+                    # Try to infer amount from existing data for salary accruals
+                    amt = self._infer_missing_amount(api_client, p)
+                if not amt:
                     logger.warning("Skipping posting with no amount: %s", p)
                     continue
                 postings.append(
@@ -208,7 +211,7 @@ class CreateVoucherHandler(BaseHandler):
                 },
             )
             entries = resp.get("values", [])
-            total = sum(e.get("closingBalance", 0) or 0 for e in entries)
+            total = sum(e.get("balanceOut", 0) or 0 for e in entries)
             # In Tripletex: revenue = negative balance, expenses = positive
             # Profit = revenue - expenses = -total
             profit = -total
@@ -247,6 +250,51 @@ class CreateVoucherHandler(BaseHandler):
                         p[key] = -real_tax if p[key] < 0 else real_tax
             fixed.append(p)
         return fixed
+
+    @staticmethod
+    def _infer_missing_amount(
+        api_client: TripletexClient, posting: dict[str, Any]
+    ) -> float:
+        """Try to infer a missing amount from existing sandbox data.
+
+        For salary accruals (5000/2900), queries existing salary postings.
+        """
+        debit_acct = posting.get("debitAccount", "")
+        credit_acct = posting.get("creditAccount", "")
+        try:
+            debit_num = int(debit_acct)
+            credit_num = int(credit_acct)
+        except (TypeError, ValueError):
+            return 0
+
+        # Salary accrual: debit 5000 (salary expense), credit 2900 (accrued)
+        # Look at existing salary postings on account 5000
+        if 5000 <= debit_num <= 5099 and 2900 <= credit_num <= 2999:
+            try:
+                from datetime import date as dt_date
+
+                today = dt_date.today()
+                resp = api_client.get(
+                    "/balanceSheet",
+                    params={
+                        "dateFrom": f"{today.year}-01-01",
+                        "dateTo": today.isoformat(),
+                        "accountNumberFrom": str(debit_num),
+                        "accountNumberTo": str(debit_num),
+                    },
+                )
+                entries = resp.get("values", [])
+                if entries:
+                    balance = entries[0].get("balanceOut", 0) or 0
+                    if balance > 0:
+                        logger.info(
+                            "Inferred salary accrual amount %s from account %d",
+                            balance, debit_num,
+                        )
+                        return balance
+            except Exception:
+                logger.warning("Could not infer salary amount from account %d", debit_num)
+        return 0
 
     @staticmethod
     def _acct_num(posting: dict) -> int:

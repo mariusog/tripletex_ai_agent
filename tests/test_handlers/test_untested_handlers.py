@@ -36,8 +36,8 @@ class TestBalanceSheetReport:
     def test_happy_path(self):
         _ensure_imported()
         entries = [
-            {"account": {"id": 1}, "closingBalance": 50000},
-            {"account": {"id": 2}, "closingBalance": -30000},
+            {"account": {"id": 1}, "balanceOut": 50000},
+            {"account": {"id": 2}, "balanceOut": -30000},
         ]
         client = _mock_client(get_response=sample_api_response(values=entries))
         handler = get_handler("balance_sheet_report")
@@ -168,11 +168,11 @@ class TestYearEndClosing:
                 values=[
                     {
                         "account": {"id": 301},
-                        "closingBalance": -50000,
+                        "balanceOut": -50000,
                     },
                     {
                         "account": {"id": 401},
-                        "closingBalance": 30000,
+                        "balanceOut": 30000,
                     },
                 ]
             ),

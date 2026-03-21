@@ -204,7 +204,7 @@ class YearEndClosingHandler(BaseHandler):
         row = 1
 
         for entry in entries:
-            balance = entry.get("closingBalance", 0) or 0
+            balance = entry.get("balanceOut", 0) or 0
             if abs(balance) < 0.01:
                 continue
             acct = entry.get("account", {})
@@ -258,7 +258,7 @@ class YearEndClosingHandler(BaseHandler):
             )
             entries = resp.get("values", [])
             # Sum all balances — negative = revenue, positive = expense
-            total_result = sum(e.get("closingBalance", 0) or 0 for e in entries)
+            total_result = sum(e.get("balanceOut", 0) or 0 for e in entries)
             # Profit = negative total (revenue > expenses)
             profit = -total_result
             if profit <= 0:
