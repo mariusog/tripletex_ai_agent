@@ -81,6 +81,7 @@ class TestEmployeeOnboardingFull:
                 "employmentPercentage": 100,
                 "annualSalary": 660000,
                 "hoursPerDay": 7.5,
+                "jobCode": "1211",
             },
         )
         assert emp_result["id"]
@@ -112,6 +113,8 @@ class TestEmployeeOnboardingFull:
         assert detail.get("percentageOfFullTimeEquivalent") == 100.0
         assert detail.get("employmentType") == "ORDINARY"
         assert detail.get("annualSalary") == 660000.0
+        assert detail.get("shiftDurationHours") == 7.5
+        assert detail.get("occupationCode") is not None
 
     def test_onboarding_minimal(self, client):
         """Simpler variant: just name + email + department."""

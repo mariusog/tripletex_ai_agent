@@ -113,10 +113,30 @@ class CreateEmployeeHandler(BaseHandler):
             "percentageOfFullTimeEquivalent": pct,
         }
 
-        # Annual salary → monthly pay specification
+        # Annual salary
         annual_salary = params.get("annualSalary") or params.get("salary")
         if annual_salary:
             emp_detail["annualSalary"] = float(annual_salary)
+
+        # Occupation code (stillingskode) — needs ID reference
+        job_code = params.get("jobCode") or params.get("occupationCode")
+        if job_code:
+            try:
+                occ_resp = api_client.get(
+                    "/employee/employment/occupationCode",
+                    params={"code": str(job_code), "count": 1},
+                    fields="id",
+                )
+                occ_vals = occ_resp.get("values", [])
+                if occ_vals:
+                    emp_detail["occupationCode"] = {"id": occ_vals[0]["id"]}
+            except TripletexApiError:
+                pass
+
+        # Working hours per day → shiftDurationHours on employmentDetails
+        hours_per_day = params.get("hoursPerDay")
+        if hours_per_day:
+            emp_detail["shiftDurationHours"] = float(hours_per_day)
 
         body["employments"] = [
             {

@@ -252,9 +252,7 @@ class CreateVoucherHandler(BaseHandler):
         return fixed
 
     @staticmethod
-    def _infer_missing_amount(
-        api_client: TripletexClient, posting: dict[str, Any]
-    ) -> float:
+    def _infer_missing_amount(api_client: TripletexClient, posting: dict[str, Any]) -> float:
         """Try to infer a missing amount from existing sandbox data.
 
         For salary accruals (5000/2900), queries existing salary postings.
@@ -289,7 +287,8 @@ class CreateVoucherHandler(BaseHandler):
                     if balance > 0:
                         logger.info(
                             "Inferred salary accrual amount %s from account %d",
-                            balance, debit_num,
+                            balance,
+                            debit_num,
                         )
                         return balance
             except Exception:
