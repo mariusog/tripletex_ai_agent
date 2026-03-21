@@ -18,10 +18,12 @@ from src.task_router import TaskRouter
 def mock_llm() -> MagicMock:
     """LLMClient mock returning a create_employee classification."""
     llm = MagicMock()
-    llm.classify_and_extract.return_value = TaskClassification(
-        task_type="create_employee",
-        params={"firstName": "Ola", "lastName": "Nordmann"},
-    )
+    llm.classify_and_extract.return_value = [
+        TaskClassification(
+            task_type="create_employee",
+            params={"firstName": "Ola", "lastName": "Nordmann"},
+        )
+    ]
     return llm
 
 
@@ -76,9 +78,9 @@ async def test_unknown_task_type_returns_completed(
     sample_request: SolveRequest,
 ) -> None:
     """solve() returns completed when no handler is found."""
-    mock_llm.classify_and_extract.return_value = TaskClassification(
-        task_type="unknown_task", params={}
-    )
+    mock_llm.classify_and_extract.return_value = [
+        TaskClassification(task_type="unknown_task", params={})
+    ]
     mock_client_cls.return_value = MagicMock(api_call_count=0)
     router = TaskRouter(llm_client=mock_llm, handler_registry={})
 
@@ -134,7 +136,7 @@ async def test_llm_retry_on_first_failure(
 ) -> None:
     """solve() retries LLM classification once when first attempt fails."""
     llm = MagicMock()
-    classification = TaskClassification(task_type="create_employee", params={"firstName": "Ola"})
+    classification = [TaskClassification(task_type="create_employee", params={"firstName": "Ola"})]
     llm.classify_and_extract.side_effect = [RuntimeError("transient"), classification]
     mock_client_cls.return_value = MagicMock(api_call_count=1)
     registry = {"create_employee": mock_handler}

@@ -2,6 +2,7 @@
 
 Uses Claude API to classify incoming prompts into task types
 and extract structured parameters for handler execution.
+Supports multi-step task decomposition for complex prompts.
 """
 
 from __future__ import annotations
@@ -29,7 +30,6 @@ from src.models import FileAttachment, TaskClassification
 logger = logging.getLogger(__name__)
 
 # Classification rules that are cross-cutting (not tied to any single handler).
-# These are domain knowledge about how to disambiguate between task types.
 _CLASSIFICATION_RULES = """\
 CLASSIFICATION RULES (important!):
 - If the task mentions creating an order AND an invoice (or "faktura"), classify as "create_invoice"
@@ -57,17 +57,26 @@ classify as "create_dimension_voucher"
 registrar horas), classify as "log_timesheet". If the task also asks to generate an \
 invoice from the hours, still classify as "log_timesheet" with generateInvoice: true
 
+MULTI-STEP TASKS:
+- If the prompt asks for MULTIPLE DIFFERENT operations (e.g. "create a voucher AND send an \
+invoice AND register a payment"), decompose into separate tasks in the "tasks" array.
+- Order the tasks logically: create entities before referencing them, \
+book vouchers before invoices, etc.
+- Share context between steps: if step 1 creates a customer, use the same customer \
+name/reference in later steps that need it.
+- Common multi-step patterns:
+  * "Book a fee + create an invoice for it + send it" → create_voucher, create_invoice, send_invoice
+  * "Create invoice + register payment" → create_invoice (with register_payment in params)
+  * "Find overdue invoice + register partial payment" → register_payment (searches automatically)
+  * "Create employee + assign role" → create_employee, assign_role
+
 Extract ALL relevant parameters from the prompt. Use field names matching the Tripletex API.
 If dates are mentioned, format as yyyy-MM-dd.
 If the prompt references attached files, note that in params as "has_attachments": true."""
 
 
 def build_system_prompt(handlers: dict[str, Any]) -> str:
-    """Assemble the classification prompt from handler metadata.
-
-    Reads tier, description, param_schema, and disambiguation from each
-    registered handler to build the full system prompt.
-    """
+    """Assemble the classification prompt from handler metadata."""
     all_task_types = sorted(handlers.keys())
 
     # Group handlers by tier
@@ -91,7 +100,6 @@ def build_system_prompt(handlers: dict[str, Any]) -> str:
             desc = getattr(h, "description", "") or ""
             param_schema = getattr(h, "param_schema", {}) or {}
 
-            # Build param list
             if param_schema:
                 param_parts = []
                 for pname, pspec in param_schema.items():
@@ -118,7 +126,8 @@ def build_system_prompt(handlers: dict[str, Any]) -> str:
     # Assemble full prompt
     parts = [
         "You are a task classifier for Tripletex accounting software.",
-        "Given a user prompt (in any language), identify the task type and extract parameters.",
+        "Given a user prompt (in any language), identify the task type(s) and extract parameters.",
+        "If the prompt requires MULTIPLE different operations, return them all in the tasks array.",
         "",
         f"TASK TYPES: {json.dumps(all_task_types)}",
         "",
@@ -135,26 +144,6 @@ def build_system_prompt(handlers: dict[str, Any]) -> str:
     parts.extend(schema_lines)
 
     return "\n".join(parts)
-
-
-CLASSIFY_TOOL = {
-    "name": "classify_task",
-    "description": "Classify the accounting task and extract all parameters.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "task_type": {
-                "type": "string",
-                "description": "The task type to execute",
-            },
-            "params": {
-                "type": "object",
-                "description": "Extracted parameters for the handler",
-            },
-        },
-        "required": ["task_type", "params"],
-    },
-}
 
 
 class LLMClient:
@@ -184,34 +173,50 @@ class LLMClient:
         from src.handlers import HANDLER_REGISTRY
 
         self._system_prompt = build_system_prompt(HANDLER_REGISTRY)
+        self._all_task_types = sorted(HANDLER_REGISTRY.keys())
 
     def classify_and_extract(
         self,
         prompt: str,
         files: list[FileAttachment] | None = None,
-    ) -> TaskClassification:
-        """Classify a prompt using tool_use for guaranteed structured output."""
+    ) -> list[TaskClassification]:
+        """Classify a prompt into one or more tasks with structured output.
+
+        Returns a list of TaskClassification objects. Single-task prompts
+        return a list with one element.
+        """
         messages = self._build_messages(prompt, files)
 
-        # Build tool with enum constraint from registered task types
-        from src.handlers import HANDLER_REGISTRY
-
-        all_task_types = sorted(HANDLER_REGISTRY.keys())
-        classify_tool = dict(CLASSIFY_TOOL)
-        classify_tool["input_schema"] = {
-            "type": "object",
-            "properties": {
-                "task_type": {
-                    "type": "string",
-                    "enum": all_task_types,
-                    "description": "The task type to execute",
+        classify_tool = {
+            "name": "classify_task",
+            "description": "Classify the accounting task(s) and extract all parameters. "
+            "For multi-step prompts, include all tasks in the tasks array.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "tasks": {
+                        "type": "array",
+                        "description": "Ordered list of tasks to execute. "
+                        "Use a single item for simple prompts, multiple for multi-step.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "task_type": {
+                                    "type": "string",
+                                    "enum": self._all_task_types,
+                                    "description": "The task type to execute",
+                                },
+                                "params": {
+                                    "type": "object",
+                                    "description": "Extracted parameters for the handler",
+                                },
+                            },
+                            "required": ["task_type", "params"],
+                        },
+                    },
                 },
-                "params": {
-                    "type": "object",
-                    "description": "Extracted parameters for the handler",
-                },
+                "required": ["tasks"],
             },
-            "required": ["task_type", "params"],
         }
 
         for attempt in range(LLM_MAX_RETRIES + 1):
@@ -288,16 +293,30 @@ class LLMClient:
         return [{"role": "user", "content": content}]
 
     @staticmethod
-    def _parse_response(response: Any) -> TaskClassification:
-        """Extract TaskClassification from tool_use response."""
+    def _parse_response(response: Any) -> list[TaskClassification]:
+        """Extract list of TaskClassification from tool_use response."""
         for block in response.content:
             if block.type == "tool_use" and block.name == "classify_task":
                 parsed = block.input
-                return TaskClassification(
-                    task_type=parsed.get("task_type", "unknown"),
-                    params=parsed.get("params", {}),
-                )
+                tasks = parsed.get("tasks", [])
+                if tasks:
+                    return [
+                        TaskClassification(
+                            task_type=t.get("task_type", "unknown"),
+                            params=t.get("params", {}),
+                        )
+                        for t in tasks
+                    ]
+                # Fallback: old single-task format
+                if "task_type" in parsed:
+                    return [
+                        TaskClassification(
+                            task_type=parsed.get("task_type", "unknown"),
+                            params=parsed.get("params", {}),
+                        )
+                    ]
 
+        # Fallback: parse text response
         for block in response.content:
             if block.type == "text":
                 text = block.text.strip()
@@ -307,14 +326,23 @@ class LLMClient:
                 try:
                     parsed = json.loads(text)
                     if isinstance(parsed, list):
-                        parsed = parsed[0] if parsed else {}
+                        return [
+                            TaskClassification(
+                                task_type=t.get("task_type", "unknown"),
+                                params=t.get("params", {}),
+                            )
+                            for t in parsed
+                            if isinstance(t, dict)
+                        ]
                     if isinstance(parsed, dict):
-                        return TaskClassification(
-                            task_type=parsed.get("task_type", "unknown"),
-                            params=parsed.get("params", {}),
-                        )
+                        return [
+                            TaskClassification(
+                                task_type=parsed.get("task_type", "unknown"),
+                                params=parsed.get("params", {}),
+                            )
+                        ]
                 except json.JSONDecodeError:
                     logger.warning("LLM text fallback non-JSON: %.200s", text)
 
         logger.warning("No tool_use or parseable text in LLM response")
-        return TaskClassification(task_type="unknown", params={})
+        return [TaskClassification(task_type="unknown", params={})]
