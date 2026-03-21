@@ -1,0 +1,54 @@
+{
+  "timestamp": "2026-03-21 00:17:15",
+  "prompt": "Crea y envía una factura al cliente Luna SL (org. nº 844920520) por 20200 NOK sin IVA. La factura es por Servicio de red.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2 git=unknown",
+  "api_calls": [
+    {
+      "method": "POST",
+      "endpoint": "/order/orderline/list",
+      "status": 201,
+      "duration_s": 8.18
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/order/401980333/:invoice",
+      "status": 200,
+      "duration_s": 8.36
+    }
+  ],
+  "errors": [],
+  "task_type": "create_invoice",
+  "params": {
+    "customer": {
+      "name": "Luna SL",
+      "organizationNumber": "844920520"
+    },
+    "orderLines": [
+      {
+        "product": {
+          "name": "Servicio de red"
+        },
+        "count": 1,
+        "unitPriceExcludingVatCurrency": 20200
+      }
+    ],
+    "send_invoice": true
+  },
+  "created_entities": [
+    {
+      "method": "PUT",
+      "endpoint": "/order/401980333/:invoice",
+      "id": "2147558140",
+      "fields": "{'amount': 53250.0}"
+    }
+  ],
+  "handler": "CreateInvoiceHandler",
+  "total_api_calls": 7,
+  "total_duration_s": 62.37,
+  "result": {
+    "id": 2147558140,
+    "orderId": 401980333,
+    "action": "created"
+  },
+  "service": "tripletex-agent-magnus"
+}
