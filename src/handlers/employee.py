@@ -45,7 +45,10 @@ class CreateEmployeeHandler(BaseHandler):
             ),
         }
 
-        for field in ("email", "phoneNumberMobile"):
+        for field in (
+            "email", "phoneNumberMobile", "nationalIdentityNumber",
+            "bankAccountNumber", "address",
+        ):
             if params.get(field):
                 body[field] = params[field]
 
@@ -95,6 +98,23 @@ class CreateEmployeeHandler(BaseHandler):
             "employmentType": emp_type,
             "percentageOfFullTimeEquivalent": pct,
         }
+
+        # Annual salary → monthly pay specification
+        annual_salary = params.get("annualSalary") or params.get("salary")
+        if annual_salary:
+            emp_detail["annualSalary"] = float(annual_salary)
+
+        # Working hours per day
+        hours = params.get("hoursPerDay") or params.get("hoursPerWeek")
+        if hours:
+            weekly = float(hours) * 5 if params.get("hoursPerDay") else float(hours)
+            emp_detail["hoursPerWeek"] = weekly
+
+        # Job code (stillingskode)
+        if params.get("jobCode") or params.get("occupationCode"):
+            code = params.get("jobCode") or params.get("occupationCode")
+            emp_detail["occupationCode"] = {"id": 0, "code": str(code)}
+
         body["employments"] = [
             {
                 "startDate": start_date,
