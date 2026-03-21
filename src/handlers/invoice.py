@@ -251,9 +251,19 @@ class RegisterPaymentHandler(BaseHandler):
                 # Ensure positive payment is registered during invoice creation
                 inv_params["register_payment"] = {"amount": abs_amount}
 
+            # For non-reversals, include payment in CreateInvoiceHandler
+            if not is_reversal:
+                inv_params["register_payment"] = {"amount": pay_amount}
+
             invoice_handler = CreateInvoiceHandler()
             inv_result = invoice_handler.execute(api_client, inv_params)
             invoice_id = inv_result.get("id")
+
+            # Non-reversals: payment already registered via PUT /order/:invoice
+            if not is_reversal:
+                if not invoice_id:
+                    return {"error": "invoice_not_found"}
+                return {"id": invoice_id, "action": "payment_registered"}
 
             # For reversals: register negative payment to reverse
             if is_reversal and invoice_id:
