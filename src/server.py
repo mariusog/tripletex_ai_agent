@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import os
 import time
+from datetime import UTC
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -77,8 +78,43 @@ async def solve(
         elapsed = time.monotonic() - start_time
         logger.exception("Task failed after %.2fs", elapsed)
 
+    # Save competition run data to GCS
+    if is_competition:
+        _save_run_to_gcs(request.prompt, base_url, elapsed)
+
     # Always return completed -- scoring checks account state independently
     return SolveResponse(status="completed")
+
+
+def _save_run_to_gcs(prompt: str, base_url: str, elapsed: float) -> None:
+    """Save competition run data to GCS bucket for team sharing."""
+    try:
+        import json as _json
+        from datetime import datetime
+
+        from google.cloud import storage
+
+        ts = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S")
+        service = os.environ.get("K_SERVICE", "tripletex-agent-2")
+        run_data = {
+            "timestamp": ts,
+            "prompt": prompt[:500],
+            "base_url": base_url,
+            "duration_s": round(elapsed, 2),
+            "service": service,
+        }
+        bucket_name = "ai-nm26osl-1792-nmiai"
+        blob_path = f"tripletex-runs/{ts}_{service}.json"
+        client = storage.Client()
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(blob_path)
+        blob.upload_from_string(
+            _json.dumps(run_data, ensure_ascii=False, indent=2),
+            content_type="application/json",
+        )
+        logger.info("Saved run to gs://%s/%s", bucket_name, blob_path)
+    except Exception:
+        logger.warning("Failed to save run to GCS (non-critical)")
 
 
 @app.get("/health")
