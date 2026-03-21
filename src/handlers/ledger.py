@@ -110,6 +110,9 @@ class CreateVoucherHandler(BaseHandler):
         for p in raw_postings:
             if "debitAccount" in p and "creditAccount" in p:
                 amt = p.get("amount", p.get("amountGross", 0))
+                if not amt:
+                    logger.warning("Skipping posting with no amount: %s", p)
+                    continue
                 postings.append(
                     {
                         "account": p["debitAccount"],

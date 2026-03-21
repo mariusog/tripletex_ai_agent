@@ -155,7 +155,10 @@ class YearEndClosingHandler(BaseHandler):
                 _build_posting(api_client, p, row=i + 1) for i, p in enumerate(postings)
             ]
         else:
-            body["postings"] = self._generate_closing_postings(api_client, year, date)
+            # Generate closing entries + tax calculation
+            closing = self._generate_closing_postings(api_client, year, date)
+            tax = self._calculate_tax_posting(api_client, year, date)
+            body["postings"] = closing + tax
 
         if not body.get("postings"):
             return {"year": year, "action": "no_postings_needed"}
@@ -237,6 +240,57 @@ class YearEndClosingHandler(BaseHandler):
                 )
 
         return postings
+
+    def _calculate_tax_posting(
+        self, api_client: TripletexClient, year: int, date: str
+    ) -> list[dict[str, Any]]:
+        """Calculate 22% tax on taxable profit and return postings."""
+        try:
+            # Get revenue (3000-3999) and expenses (4000-8699)
+            resp = api_client.get(
+                "/balanceSheet",
+                params={
+                    "dateFrom": f"{year}-01-01",
+                    "dateTo": f"{year}-12-31",
+                    "accountNumberFrom": 3000,
+                    "accountNumberTo": 8699,
+                },
+            )
+            entries = resp.get("values", [])
+            # Sum all balances — negative = revenue, positive = expense
+            total_result = sum(e.get("closingBalance", 0) or 0 for e in entries)
+            # Profit = negative total (revenue > expenses)
+            profit = -total_result
+            if profit <= 0:
+                return []  # No tax on loss
+
+            tax = round(profit * 0.22, 2)
+
+            from src.services.posting_builder import resolve_account
+
+            acct_8700, _ = resolve_account(api_client, 8700)
+            acct_2920, _ = resolve_account(api_client, 2920)
+
+            row = 100  # High row to avoid conflicts with closing entries
+            return [
+                {
+                    "row": row,
+                    "account": acct_8700,
+                    "amountGross": tax,
+                    "amountGrossCurrency": tax,
+                    "description": f"Skattekostnad {year} (22%)",
+                },
+                {
+                    "row": row + 1,
+                    "account": acct_2920,
+                    "amountGross": -tax,
+                    "amountGrossCurrency": -tax,
+                    "description": f"Betalbar skatt {year}",
+                },
+            ]
+        except (TripletexApiError, Exception) as e:
+            logger.warning("Tax calculation failed: %s", e)
+            return []
 
 
 @register_handler

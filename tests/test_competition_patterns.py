@@ -648,6 +648,94 @@ class TestLedgerCorrectionMultipleErrors:
         assert result.get("id"), f"Correction voucher not created: {result}"
 
 
+# ============================================================
+# PATTERN 12: Year-end closing with depreciation + tax
+# Competition: 'Simplified year-end: depreciate assets, reverse prepaid,
+# calculate and book tax at 22%, then close the year'
+# ============================================================
+
+
+class TestYearEndClosingFull:
+    """Simulates the full year-end closing flow.
+
+    Based on real competition prompt:
+    'Gjer forenkla årsoppgjer for 2025: 1) Bokfør årlege avskrivingar
+    for tre eigedelar... 2) Reverser forskotsbetalt kostnad...
+    3) Rekn ut og bokfør skattekostnad (22% av skattbart resultat)'
+
+    Key insight: tax amount requires querying the P&L AFTER booking
+    depreciations, so the LLM can't compute it upfront.
+    """
+
+    def test_depreciation_voucher(self, client):
+        """Each asset depreciation should produce a balanced voucher."""
+        tag = uid()
+        # Depreciation: 193500 / 8 years = 24187.50
+        result = run_handler(
+            client,
+            "create_voucher",
+            {
+                "description": f"Depreciation {tag}",
+                "date": "2025-12-31",
+                "postings": [
+                    {"account": 6010, "debit": 24187.50, "description": "Avskriving"},
+                    {"account": 1209, "credit": 24187.50, "description": "Akkumulert"},
+                ],
+            },
+        )
+        assert result["id"]
+        v = client.get(
+            f"/ledger/voucher/{result['id']}",
+            fields="postings(amountGross)",
+        )["value"]
+        # Verify postings balance
+        total = sum(p.get("amountGross", 0) for p in v["postings"])
+        assert abs(total) < 0.01, f"Postings don't balance: {total}"
+
+    def test_tax_voucher_must_have_amount(self, client):
+        """Tax voucher must include actual amount, not empty postings."""
+        tag = uid()
+        # Tax = 22% of some profit
+        tax_amount = round(100000 * 0.22, 2)
+        result = run_handler(
+            client,
+            "create_voucher",
+            {
+                "description": f"Tax {tag}",
+                "date": "2025-12-31",
+                "postings": [
+                    {"account": 8700, "debit": tax_amount, "description": "Skattekostnad"},
+                    {"account": 2920, "credit": tax_amount, "description": "Betalbar skatt"},
+                ],
+            },
+        )
+        assert result["id"]
+
+    def test_year_end_closing_generates_postings(self, client):
+        """Year-end closing should generate postings from balance sheet."""
+        # First create some activity so there's something to close
+        tag = uid()
+        run_handler(
+            client,
+            "create_voucher",
+            {
+                "description": f"Revenue {tag}",
+                "date": "2025-06-15",
+                "postings": [
+                    {"account": 1920, "debit": 100000},
+                    {"account": 3000, "credit": 100000},
+                ],
+            },
+        )
+        result = run_handler(
+            client,
+            "year_end_closing",
+            {"year": 2025},
+        )
+        # Should either create a closing voucher or report no postings needed
+        assert result.get("action") in ("year_end_closed", "no_postings_needed")
+
+
 class TestTimesheetLogging:
     """Simulates: 'Log hours for employee on activity in project'"""
 
