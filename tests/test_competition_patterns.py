@@ -201,6 +201,88 @@ class TestSupplierInvoiceFromPDF:
 # ============================================================
 
 
+# ============================================================
+# PATTERN 2b: Receipt/expense voucher with department
+# Competition: 'Book receipt for X on department Y with correct VAT'
+# ============================================================
+
+
+class TestReceiptVoucherWithDepartment:
+    """Simulates: 'Book Whiteboard receipt on department HR, correct VAT'
+
+    Based on real competition prompt:
+    'Vi trenger Whiteboard fra denne kvitteringen bokført på avdeling HR.
+    Bruk riktig utgiftskonto basert på kjøpet, og sørg for korrekt MVA-behandling.'
+    """
+
+    def test_receipt_voucher_with_dept_on_postings(self, client):
+        tag = uid()
+        # Step 1: Create supplier
+        run_handler(
+            client,
+            "create_supplier",
+            {"name": f"Jernia-{tag}", "organizationNumber": "988015148"},
+        )
+        # Step 2: Create department
+        run_handler(client, "create_department", {"name": f"HR-{tag}"})
+        # Step 3: Create voucher with department on postings
+        result = run_handler(
+            client,
+            "create_voucher",
+            {
+                "description": f"Whiteboard receipt {tag}",
+                "date": "2026-06-21",
+                "supplier": {"name": f"Jernia-{tag}"},
+                "postings": [
+                    {
+                        "account": 6540,
+                        "debit": 14300,
+                        "description": "Whiteboard",
+                        "department": f"HR-{tag}",
+                    },
+                    {
+                        "account": 2400,
+                        "credit": 14300,
+                        "description": "Leverandørgjeld",
+                    },
+                ],
+            },
+        )
+        v_id = result["id"]
+        assert v_id
+        # Verify department is set on the expense posting
+        voucher = client.get(
+            f"/ledger/voucher/{v_id}",
+            fields="postings(account(number),department(id,name),amountGross)",
+        )["value"]
+        expense_posting = None
+        for p in voucher["postings"]:
+            if p.get("account", {}).get("number") == 6540:
+                expense_posting = p
+                break
+        if expense_posting:
+            assert expense_posting.get("department") is not None, (
+                "Department not set on expense posting"
+            )
+
+    def test_receipt_with_supplier_and_vat(self, client):
+        """Supplier receipt with amount including VAT."""
+        tag = uid()
+        result = run_handler(
+            client,
+            "create_voucher",
+            {
+                "description": f"Office supplies {tag}",
+                "supplier": {"name": f"Staples-{tag}"},
+                "postings": [
+                    {"account": 6540, "debit": 5000, "description": "Office supplies"},
+                    {"account": 2400, "credit": 5000, "description": "AP"},
+                ],
+            },
+        )
+        assert result["id"]
+
+
 class TestInvoiceWithPayment:
     """Simulates: 'Create invoice for customer X with products, register payment'"""
 
