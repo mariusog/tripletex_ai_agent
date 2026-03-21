@@ -56,7 +56,10 @@ def _inject_context(params: dict[str, Any], context: dict[str, Any]) -> dict[str
 
 
 def _update_context(
-    context: dict[str, Any], result: dict[str, Any], params: dict[str, Any]
+    context: dict[str, Any],
+    result: dict[str, Any],
+    params: dict[str, Any],
+    task_type: str = "",
 ) -> None:
     """Update shared context with results from a completed step."""
     if result.get("id"):
@@ -67,13 +70,14 @@ def _update_context(
         if key in params:
             context[key] = params[key]
 
-    # Propagate IDs from results
+    # Propagate IDs based on task type
     if result.get("id"):
-        action = result.get("action", "")
-        if action in ("created", "sent"):
+        if "invoice" in task_type or task_type == "send_invoice":
             context["invoiceId"] = result["id"]
-        if action == "created" and "voucher" in str(type(result)):
+        if "voucher" in task_type:
             context["voucherId"] = result["id"]
+        if "project" in task_type:
+            context["projectId"] = result["id"]
     if result.get("orderId"):
         context["orderId"] = result["orderId"]
     if result.get("entryId"):
@@ -154,7 +158,7 @@ class TaskRouter:
                         result = handler.execute(api_client, params)
 
                     # Update context for next step
-                    _update_context(context, result, params)
+                    _update_context(context, result, params, task_type)
 
                     elapsed = time.monotonic() - start
                     logger.info(

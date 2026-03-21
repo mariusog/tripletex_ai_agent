@@ -50,7 +50,20 @@ class CreateEmployeeHandler(BaseHandler):
                 body[field] = params[field]
 
         if "department" in params:
-            body["department"] = self.ensure_ref(params["department"], "department")
+            dept = params["department"]
+            if isinstance(dept, str):
+                # Resolve department name to ID
+                resp = api_client.get(
+                    "/department", params={"name": dept, "count": 5}, fields="id,name"
+                )
+                found = None
+                for v in resp.get("values", []):
+                    if v.get("name", "").strip().lower() == dept.strip().lower():
+                        found = {"id": v["id"]}
+                        break
+                body["department"] = found or self.ensure_ref(dept, "department")
+            else:
+                body["department"] = self.ensure_ref(dept, "department")
         else:
             from src.handlers.entity_resolver import ensure_department_exists
 
@@ -58,20 +71,34 @@ class CreateEmployeeHandler(BaseHandler):
             if dept_ref:
                 body["department"] = dept_ref
 
+        # Map Norwegian/localized employment types to API enum values
+        emp_type = params.get("employmentType", "ORDINARY")
+        emp_type_map = {
+            "fast stilling": "ORDINARY",
+            "permanent": "ORDINARY",
+            "vikariat": "TEMPORARY",
+            "temporary": "TEMPORARY",
+            "midlertidig": "TEMPORARY",
+        }
+        emp_type = emp_type_map.get(str(emp_type).lower(), emp_type)
+        if emp_type not in ("ORDINARY", "MARITIME", "FREELANCE", "TEMPORARY"):
+            emp_type = "ORDINARY"
+
+        pct = params.get("employmentPercentage") or params.get(
+            "percentageOfFullTimeEquivalent", 100
+        )
+
         # Employment record
         start_date = self.validate_date(params.get("startDate"), "startDate") or today
+        emp_detail: dict[str, Any] = {
+            "date": start_date,
+            "employmentType": emp_type,
+            "percentageOfFullTimeEquivalent": pct,
+        }
         body["employments"] = [
             {
                 "startDate": start_date,
-                "employmentDetails": [
-                    {
-                        "date": start_date,
-                        "employmentType": params.get("employmentType", "ORDINARY"),
-                        "percentageOfFullTimeEquivalent": params.get(
-                            "percentageOfFullTimeEquivalent", 100
-                        ),
-                    }
-                ],
+                "employmentDetails": [emp_detail],
             }
         ]
 

@@ -65,6 +65,10 @@ def normalize_params(params: dict[str, Any]) -> dict[str, Any]:
         if alias_from in result and alias_to not in result:
             result[alias_to] = result.pop(alias_from)
 
+    # Strip context pollution from multi-step (invoiceId from previous step)
+    if "invoiceId" in result and result.get("invoiceId") == result.get("id"):
+        result.pop("invoiceId", None)
+
     return result
 
 
