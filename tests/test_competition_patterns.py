@@ -532,6 +532,77 @@ class TestLateFeeFlow:
             f"send_invoice caused {errors_after - errors_before} errors"
         )
 
+    def test_context_propagates_customer_from_voucher(self, client):
+        """Voucher finds overdue customer → must propagate to later steps.
+
+        Based on real competition failure (5/10): voucher found customer
+        but steps 2-4 had no customer because context wasn't propagated.
+        """
+        tag = uid()
+        # Pre-existing customer + unpaid invoice
+        run_handler(
+            client,
+            "create_customer",
+            {"name": f"CtxCust-{tag}", "organizationNumber": "880860666"},
+        )
+        run_handler(
+            client,
+            "create_invoice",
+            {
+                "customer": {"name": f"CtxCust-{tag}"},
+                "orderLines": [
+                    {
+                        "description": "Unpaid service",
+                        "unitPriceExcludingVatCurrency": 10000,
+                        "count": 1,
+                    }
+                ],
+            },
+        )
+
+        # Simulate multi-step: voucher (no customer) → invoice → payment
+        # Step 1: Voucher — should find overdue customer and set in params
+        from src.services.param_normalizer import normalize_params
+        from src.task_router import _inject_context, _strip_placeholders, _update_context
+
+        voucher_params = normalize_params(
+            _strip_placeholders(
+                {
+                    "description": f"Late fee {tag}",
+                    "postings": [
+                        {"account": 1500, "debit": 35},
+                        {"account": 3400, "credit": 35},
+                    ],
+                }
+            )
+        )
+        v_result = run_handler(client, "create_voucher", voucher_params)
+        assert v_result["id"]
+
+        # Verify customer was set in params by the handler
+        assert "customer" in voucher_params, (
+            "Voucher handler should set customer in params for context propagation"
+        )
+
+        # Simulate context update + inject
+        context: dict = {}
+        _update_context(context, v_result, voucher_params, "create_voucher")
+        assert "customer" in context, f"Customer not in context: {context}"
+
+        # Step 2: Invoice with injected context
+        inv_params = _inject_context(
+            {
+                "orderLines": [
+                    {"description": "Fee", "unitPriceExcludingVatCurrency": 35, "count": 1}
+                ]
+            },
+            context,
+        )
+        assert "customer" in inv_params, "Customer not injected into invoice params"
+
+        inv_result = run_handler(client, "create_invoice", inv_params)
+        assert inv_result["id"], f"Invoice failed without customer: {inv_result}"
+
     def test_full_late_fee_flow_with_overdue_invoice(self, client):
         """End-to-end: find overdue invoice, voucher, fee invoice, send, partial pay.
 
