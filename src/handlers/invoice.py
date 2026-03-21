@@ -177,8 +177,14 @@ class RegisterPaymentHandler(BaseHandler):
         try:
             inv_data = api_client.get(f"/invoice/{invoice_id}", fields="amount")
             actual_amount = inv_data.get("value", {}).get("amount")
-            if actual_amount and not params.get("reversal"):
-                pay_amount = actual_amount
+            # Use invoice amount for full payment (LLM amount ≈ net, invoice = gross)
+            # Keep LLM amount for partial payments (LLM amount << invoice amount)
+            if (
+                actual_amount
+                and not params.get("reversal")
+                and abs(pay_amount) >= abs(actual_amount) * 0.8
+            ):
+                pay_amount = actual_amount  # Full payment — use exact amount
         except TripletexApiError:
             pass
 

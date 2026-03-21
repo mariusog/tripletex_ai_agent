@@ -370,6 +370,108 @@ class TestInvoiceWithExistingProducts:
         assert result["id"], f"Invoice not created: {result}"
 
 
+# ============================================================
+# PATTERN 3c: Late fee / overdue invoice (Mahngebühr/purregebyr)
+# Competition: 'Book late fee, create invoice for fee, send it,
+# register partial payment on overdue invoice'
+# ============================================================
+
+
+class TestLateFeeFlow:
+    """Simulates: 'Book late fee voucher + invoice + send + partial payment'
+
+    Based on real competition prompt:
+    'En av kundene dine har en forfalt faktura. Bokfør et purregebyr
+    på 50 kr. Debet kundefordringer (1500), kredit purregebyr (3400).
+    Opprett også en faktura for purregebyret og send den.
+    Registrer en delbetaling på 5000 kr på den forfalte fakturaen.'
+    """
+
+    def test_late_fee_voucher_with_auto_customer(self, client):
+        """Voucher on account 1500 auto-finds customer when none specified."""
+        tag = uid()
+        # Create a customer first (simulates pre-existing data)
+        run_handler(client, "create_customer", {"name": f"OverdueCust-{tag}"})
+
+        result = run_handler(
+            client,
+            "create_voucher",
+            {
+                "description": f"Late fee {tag}",
+                "postings": [
+                    {"account": 1500, "debit": 50, "description": "Kundefordringer"},
+                    {"account": 3400, "credit": 50, "description": "Purregebyr"},
+                ],
+            },
+        )
+        assert result["id"], f"Voucher not created: {result}"
+
+        # Verify customer was attached to the 1500 posting
+        v = client.get(
+            f"/ledger/voucher/{result['id']}",
+            fields="postings(account(number),customer(id))",
+        )["value"]
+        for p in v["postings"]:
+            if p.get("account", {}).get("number") == 1500:
+                assert p.get("customer") is not None, (
+                    "Customer not attached to accounts receivable posting"
+                )
+
+    def test_send_invoice_with_default_sendtype(self, client):
+        """send_invoice should use EMAIL as default sendType."""
+        tag = uid()
+        result = run_handler(
+            client,
+            "send_invoice",
+            {
+                "customer": {"name": f"SendCust-{tag}"},
+                "orderLines": [
+                    {
+                        "description": "Late fee",
+                        "unitPriceExcludingVatCurrency": 50,
+                        "count": 1,
+                    }
+                ],
+            },
+        )
+        assert result.get("id")
+        assert result.get("action") == "sent"
+
+    def test_partial_payment(self, client):
+        """Register partial payment on an invoice (not full amount)."""
+        tag = uid()
+        # Create invoice first
+        inv_result = run_handler(
+            client,
+            "create_invoice",
+            {
+                "customer": {"name": f"PartialCust-{tag}"},
+                "orderLines": [
+                    {
+                        "description": "Service",
+                        "unitPriceExcludingVatCurrency": 20000,
+                        "count": 1,
+                    }
+                ],
+            },
+        )
+        inv_id = inv_result["id"]
+        assert inv_id
+
+        # Register partial payment of 5000
+        pay_result = run_handler(
+            client,
+            "register_payment",
+            {"invoiceId": inv_id, "amount": 5000},
+        )
+        assert pay_result.get("action") == "payment_registered"
+
+        # Verify outstanding amount
+        inv = client.get(f"/invoice/{inv_id}", fields="amount,amountOutstanding")["value"]
+        assert inv["amountOutstanding"] > 0, "Should still have outstanding balance"
+        assert inv["amountOutstanding"] < inv["amount"], "Payment should reduce outstanding"
+
+
 class TestProjectWithCustomerAndPM:
     """Simulates: 'Create project X linked to customer Y, PM is Z'"""
 
