@@ -139,6 +139,8 @@ def _build_posting(
     account = posting.get("account") or posting.get("debitAccount") or posting.get("creditAccount")
     if account:
         acct_ref, vat_ref = _resolve_account(api_client, account)
+        if acct_ref.get("id", 0) == 0:
+            logger.warning("Account '%s' resolved to id=0, skipping posting", account)
         result["account"] = acct_ref
 
     for field in ("amountCurrency", "amount", "description"):

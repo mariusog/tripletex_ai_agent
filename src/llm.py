@@ -46,6 +46,7 @@ MULTILINGUAL KEYWORDS:
 - leverandørfaktura/supplier invoice/Lieferantenrechnung = create_voucher (NOT create_invoice)
 - kreditnota/credit note/Gutschrift/nota de crédito = credit note
 - betaling/payment/Zahlung/pago/paiement = payment
+- stornieren/Stornierung/zurückgebucht/Rückbuchung = payment reversal
 - slett/slette/delete/löschen/eliminar/supprimer = delete
 - avdeling/department/Abteilung/departamento = department
 - prosjekt/project/Projekt/proyecto/projet = project

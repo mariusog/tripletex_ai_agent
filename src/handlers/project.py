@@ -143,12 +143,13 @@ class UpdateProjectHandler(BaseHandler):
             else:
                 project["customer"] = self.ensure_ref(cust, "customer")
 
-        # Resolve PM — create employee if needed
+        # Resolve PM — create employee and try to use them as PM
         if "projectManager" in params:
             pm = params["projectManager"]
             if isinstance(pm, dict) and "id" not in pm:
-                _resolve_employee(api_client, pm)
-            # Keep account owner as actual PM (they have PM access)
+                pm_ref = _resolve_employee(api_client, pm)
+                if pm_ref and pm_ref.get("id"):
+                    project["projectManager"] = pm_ref
 
         if "department" in params:
             project["department"] = self.ensure_ref(params["department"], "department")
@@ -168,6 +169,7 @@ class UpdateProjectHandler(BaseHandler):
             "isInternal",
             "isClosed",
             "fixedprice",
+            "fixedPrice",
             "isFixedPrice",
             "description",
             "isPriceCeiling",
