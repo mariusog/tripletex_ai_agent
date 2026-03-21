@@ -82,13 +82,13 @@ class TripletexClient:
         params: dict[str, Any] | None = None,
         fields: str | None = None,
     ) -> Any:
-        """GET with caching. Checks global process cache first, then per-session."""
-        global_key = (self.base_url, cache_key)
-        if global_key in _global_cache:
-            return _global_cache[global_key]
+        """GET with per-session caching only.
+
+        No global cache — competition uses same proxy URL for different
+        sandboxes, so global cache poisons fresh accounts.
+        """
         if cache_key not in self._cache:
             self._cache[cache_key] = self.get(endpoint, params=params, fields=fields)
-        _global_cache[global_key] = self._cache[cache_key]
         return self._cache[cache_key]
 
     def post(
