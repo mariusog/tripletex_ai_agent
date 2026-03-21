@@ -156,10 +156,23 @@ class UpdateProjectHandler(BaseHandler):
         # Whitelist mutable fields only — GET returns many readOnly fields
         # that cause 422 on PUT (e.g. projectRateTypes, hourlyRates)
         mutable_fields = {
-            "id", "version", "name", "number", "startDate", "endDate",
-            "customer", "projectManager", "department", "isInternal",
-            "isClosed", "fixedprice", "isFixedPrice", "description",
-            "isPriceCeiling", "priceCeilingAmount", "mainProject",
+            "id",
+            "version",
+            "name",
+            "number",
+            "startDate",
+            "endDate",
+            "customer",
+            "projectManager",
+            "department",
+            "isInternal",
+            "isClosed",
+            "fixedprice",
+            "isFixedPrice",
+            "description",
+            "isPriceCeiling",
+            "priceCeilingAmount",
+            "mainProject",
         }
         project = {k: v for k, v in project.items() if k in mutable_fields}
 
