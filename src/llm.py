@@ -67,6 +67,10 @@ Include "orderLines" with the product/service name and amount from the original 
 - If the task mentions DELETING a voucher/entry (slett bilag), classify as "delete_voucher"
 - If the task mentions creating a custom accounting DIMENSION and posting a voucher, \
 classify as "create_voucher" with customDimension params (NOT a separate task type)
+- If the task mentions booking a reminder fee (Mahngebühr/purregebyr/late fee) \
+or finding an overdue invoice, classify as "create_voucher" with the fee postings
+- If the task mentions reviewing/auditing the ledger and finding/fixing errors, \
+classify as "ledger_correction"
 - If the task asks to create MULTIPLE entities (e.g., "three departments", "deux produits"), \
 extract ALL names into a list param (e.g., departments: ["A", "B", "C"])
 - If the task mentions a customer by name, pass the full name as "customer" \
@@ -118,7 +122,9 @@ comment, customer, createInvoice: true (if prompt asks to invoice)}}
 customDimension: {{name, values, linkedValue}} (if creating dimension), ...}}
 - reverse_voucher: {{voucherId or search criteria...}}
 - bank_reconciliation: {{account, date, ...}}
-- ledger_correction: {{account, amount, date, description, ...}}
+- ledger_correction: {{date, description, postings (correction entries), \
+supplier (if AP accounts involved), corrections: [{{type, wrongAccount, \
+correctAccount, amount, description}}] (list of errors to fix)}}
 - year_end_closing: {{year, ...}}
 - delete_travel_expense: {{travelExpenseId, employee (name to search), title (to match)}}
 - delete_voucher: {{voucherId, number, date, description (to match)}}
