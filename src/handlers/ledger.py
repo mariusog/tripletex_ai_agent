@@ -21,27 +21,32 @@ def _resolve_supplier(api_client: TripletexClient, supplier: Any) -> dict[str, i
         return {"id": int(supplier)}
     name = str(supplier) if not isinstance(supplier, dict) else supplier.get("name", "")
     org_nr = supplier.get("organizationNumber") if isinstance(supplier, dict) else None
+    email = supplier.get("email") if isinstance(supplier, dict) else None
     if not name:
         return None
-    # Search by name (verify exact match — API search is fuzzy)
-    try:
-        resp = api_client.get("/supplier", params={"name": name, "count": 5}, fields="id,name")
-        values = resp.get("values", [])
-        logger.info("Supplier search for '%s' returned %d results", name, len(values))
-        for v in values:
-            if v.get("name", "").strip().lower() == name.strip().lower():
-                logger.info("Found exact supplier match: id=%s name='%s'", v["id"], v.get("name"))
-                return {"id": v["id"]}
-    except TripletexApiError:
-        pass  # Search failed, create instead
-    # Create
+    # Always create to ensure correct attributes
     sup_body: dict[str, Any] = {"name": name}
     if org_nr:
         sup_body["organizationNumber"] = str(org_nr)
-    result = api_client.post("/supplier", data=sup_body)
-    sup_id = result.get("value", {}).get("id")
-    logger.info("Auto-created supplier '%s' id=%s", name, sup_id)
-    return {"id": sup_id}
+    if email:
+        sup_body["email"] = email
+        sup_body["invoiceEmail"] = email
+    try:
+        result = api_client.post("/supplier", data=sup_body)
+        sup_id = result.get("value", {}).get("id")
+        logger.info("Created supplier '%s' id=%s", name, sup_id)
+        return {"id": sup_id}
+    except TripletexApiError:
+        pass
+    # Fallback: search
+    try:
+        resp = api_client.get("/supplier", params={"name": name, "count": 5}, fields="id,name")
+        for v in resp.get("values", []):
+            if v.get("name", "").strip().lower() == name.strip().lower():
+                return {"id": v["id"]}
+    except TripletexApiError:
+        pass
+    return None
 
 
 @register_handler
@@ -58,8 +63,12 @@ class CreateSupplierHandler(BaseHandler):
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         body: dict[str, Any] = {"name": params["name"]}
         for field in (
-            "email", "phoneNumber", "phoneNumberMobile",
-            "organizationNumber", "invoiceEmail", "description",
+            "email",
+            "phoneNumber",
+            "phoneNumberMobile",
+            "organizationNumber",
+            "invoiceEmail",
+            "description",
         ):
             if params.get(field):
                 body[field] = params[field]
