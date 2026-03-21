@@ -215,6 +215,28 @@ class TestCreateDepartment:
         assert body["departmentManager"] == {"id": 99}
 
 
+class TestUpdateDepartment:
+    def test_happy_path(self):
+        client = MagicMock()
+        client.get.return_value = sample_api_response(
+            values=[{"id": 5, "name": "Sales", "version": 0}]
+        )
+        client.put.return_value = sample_api_response(value={"id": 5})
+        handler = get_handler("update_department")
+        assert handler is not None
+        result = handler.execute(client, {"name": "Sales", "newName": "Marketing"})
+        assert result["id"] == 5
+        assert result["action"] == "updated"
+
+    def test_not_found(self):
+        client = MagicMock()
+        client.get.return_value = sample_api_response(values=[])
+        handler = get_handler("update_department")
+        assert handler is not None
+        result = handler.execute(client, {"name": "Missing"})
+        assert result == {"error": "not_found"}
+
+
 # ---------------------------------------------------------------------------
 # Project
 # ---------------------------------------------------------------------------

@@ -66,6 +66,38 @@ class TestCreateVoucher:
         assert handler.validate_params({}) == []
 
 
+class TestCreateSupplier:
+    def test_happy_path(self):
+        client = _mock_client(post_response=sample_api_response(value={"id": 200}))
+        handler = get_handler("create_supplier")
+        assert handler is not None
+        result = handler.execute(
+            client,
+            {"name": "Nord Consulting AS", "organizationNumber": "987654321"},
+        )
+        assert result["id"] == 200
+        assert result["action"] == "created"
+        body = client.post.call_args[1]["data"]
+        assert body["name"] == "Nord Consulting AS"
+        assert body["organizationNumber"] == "987654321"
+
+    def test_email_copies_to_invoice_email(self):
+        client = _mock_client(post_response=sample_api_response(value={"id": 201}))
+        handler = get_handler("create_supplier")
+        assert handler is not None
+        result = handler.execute(
+            client,
+            {"name": "Sup AS", "email": "post@sup.no"},
+        )
+        body = client.post.call_args[1]["data"]
+        assert body["invoiceEmail"] == "post@sup.no"
+
+    def test_required_params(self):
+        handler = get_handler("create_supplier")
+        assert handler is not None
+        assert "name" in handler.required_params
+
+
 class TestReverseVoucher:
     def test_happy_path(self):
         client = _mock_client()
