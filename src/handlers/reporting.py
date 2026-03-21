@@ -158,7 +158,11 @@ class YearEndClosingHandler(BaseHandler):
             # Generate closing entries + tax calculation
             closing = self._generate_closing_postings(api_client, year, date)
             tax = self._calculate_tax_posting(api_client, year, date)
-            body["postings"] = closing + tax
+            all_postings = closing + tax
+            # Re-number rows sequentially (no gaps)
+            for i, p in enumerate(all_postings):
+                p["row"] = i + 1
+            body["postings"] = all_postings
 
         if not body.get("postings"):
             return {"year": year, "action": "no_postings_needed"}
@@ -203,6 +207,17 @@ class YearEndClosingHandler(BaseHandler):
         total = 0.0
         row = 1
 
+        # Fetch all accounts with VAT types for proper closing postings
+        all_accts = {}
+        try:
+            acct_resp = api_client.get(
+                "/ledger/account", params={"count": 1000}, fields="id,number,vatType(id)"
+            )
+            for a in acct_resp.get("values", []):
+                all_accts[a["id"]] = a
+        except TripletexApiError:
+            pass
+
         for entry in entries:
             balance = entry.get("balanceOut", 0) or 0
             if abs(balance) < 0.01:
@@ -211,14 +226,18 @@ class YearEndClosingHandler(BaseHandler):
             acct_id = acct.get("id")
             if not acct_id:
                 continue
-            postings.append(
-                {
-                    "row": row,
-                    "account": {"id": acct_id},
-                    "amountGross": -balance,
-                    "amountGrossCurrency": -balance,
-                }
-            )
+            posting: dict[str, Any] = {
+                "row": row,
+                "account": {"id": acct_id},
+                "amountGross": -balance,
+                "amountGrossCurrency": -balance,
+            }
+            # Include VAT type if account has one (required for locked accounts)
+            acct_info = all_accts.get(acct_id, {})
+            vat = acct_info.get("vatType")
+            if vat and vat.get("id"):
+                posting["vatType"] = {"id": vat["id"]}
+            postings.append(posting)
             total += balance
             row += 1
 
@@ -268,26 +287,29 @@ class YearEndClosingHandler(BaseHandler):
 
             from src.services.posting_builder import resolve_account
 
-            acct_8700, _ = resolve_account(api_client, 8700)
-            acct_2920, _ = resolve_account(api_client, 2920)
+            acct_8700, vat_8700 = resolve_account(api_client, 8700)
+            acct_2920, vat_2920 = resolve_account(api_client, 2920)
 
-            row = 100  # High row to avoid conflicts with closing entries
-            return [
-                {
-                    "row": row,
-                    "account": acct_8700,
-                    "amountGross": tax,
-                    "amountGrossCurrency": tax,
-                    "description": f"Skattekostnad {year} (22%)",
-                },
-                {
-                    "row": row + 1,
-                    "account": acct_2920,
-                    "amountGross": -tax,
-                    "amountGrossCurrency": -tax,
-                    "description": f"Betalbar skatt {year}",
-                },
-            ]
+            row = 100  # High row — re-numbered later
+            p1: dict[str, Any] = {
+                "row": row,
+                "account": acct_8700,
+                "amountGross": tax,
+                "amountGrossCurrency": tax,
+                "description": f"Skattekostnad {year} (22%)",
+            }
+            if vat_8700:
+                p1["vatType"] = vat_8700
+            p2: dict[str, Any] = {
+                "row": row + 1,
+                "account": acct_2920,
+                "amountGross": -tax,
+                "amountGrossCurrency": -tax,
+                "description": f"Betalbar skatt {year}",
+            }
+            if vat_2920:
+                p2["vatType"] = vat_2920
+            return [p1, p2]
         except (TripletexApiError, Exception) as e:
             logger.warning("Tax calculation failed: %s", e)
             return []

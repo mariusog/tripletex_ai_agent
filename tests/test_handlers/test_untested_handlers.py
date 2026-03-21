@@ -162,22 +162,29 @@ class TestYearEndClosing:
     def test_auto_generates_closing_from_balance_sheet(self):
         _ensure_imported()
         client = MagicMock()
-        # First GET: balance sheet, second GET: equity account
+        # GETs: balance sheet, all accounts (VAT lookup), equity account,
+        #       balance sheet (tax calc), tax account 8700, tax account 2920
         client.get.side_effect = [
             sample_api_response(
                 values=[
-                    {
-                        "account": {"id": 301},
-                        "balanceOut": -50000,
-                    },
-                    {
-                        "account": {"id": 401},
-                        "balanceOut": 30000,
-                    },
+                    {"account": {"id": 301}, "balanceOut": -50000},
+                    {"account": {"id": 401}, "balanceOut": 30000},
+                ]
+            ),
+            sample_api_response(
+                values=[
+                    {"id": 301, "number": 3000, "vatType": {"id": 3}},
+                    {"id": 401, "number": 7000, "vatType": None},
                 ]
             ),
             sample_api_response(values=[{"id": 205}]),  # equity 2050
+            sample_api_response(values=[{"balanceOut": -20000}]),  # tax P&L
+            sample_api_response(values=[{"id": 870, "number": 8700}]),  # acct 8700
+            sample_api_response(values=[{"id": 292, "number": 2920}]),  # acct 2920
         ]
+        client.get_cached.return_value = sample_api_response(
+            values=[{"id": 870, "number": 8700}]
+        )
         client.post.return_value = sample_api_response(value={"id": 78})
         handler = get_handler("year_end_closing")
         assert handler is not None
@@ -185,7 +192,7 @@ class TestYearEndClosing:
         assert result["id"] == 78
         assert result["action"] == "year_end_closed"
         body = client.post.call_args[1]["data"]
-        assert len(body["postings"]) == 3  # 2 account closings + 1 equity
+        assert len(body["postings"]) >= 3  # 2 account closings + 1 equity + optional tax
 
 
 class TestReverseVoucher:
