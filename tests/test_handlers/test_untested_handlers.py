@@ -85,7 +85,7 @@ class TestBankReconciliation:
         client.post.assert_called_once()
         body = client.post.call_args[1]["data"]
         assert body["account"] == {"id": 5}
-        assert body["type"] == "MANUAL_RECONCILIATION"
+        assert body["type"] == "MANUAL"
 
     def test_resolves_account_by_number(self):
         _ensure_imported()
@@ -410,7 +410,8 @@ class TestAssignRole:
         assert result["id"] == 7
         assert result["action"] == "role_assigned"
         body = client.put.call_args[1]["data"]
-        assert body["userType"] == "ADMINISTRATOR"
+        assert body.get("allowInformationRegistration") is True
+        assert "userType" not in body  # userType is create-only, stripped on PUT
 
     def test_employee_not_found(self):
         _ensure_imported()

@@ -81,4 +81,4 @@ class TestBankReconciliation:
         assert result["id"] == 52
         body = client.post.call_args[1]["data"]
         assert body["account"] == {"id": 1920}
-        assert body["type"] == "MANUAL_RECONCILIATION"
+        assert body["type"] == "MANUAL"
