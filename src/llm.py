@@ -69,6 +69,12 @@ name/reference in later steps that need it.
   * "Create invoice + register payment" → create_invoice (with register_payment in params)
   * "Find overdue invoice + register partial payment" → register_payment (searches automatically)
   * "Create employee + assign role" → create_employee, assign_role
+  * PROJECT LIFECYCLE (budget + hours + supplier cost + invoice) → \
+create_project, log_timesheet (per employee), create_voucher (supplier cost), create_invoice
+- IMPORTANT: For project lifecycle tasks that mention registering hours, supplier costs, AND \
+invoicing, you MUST decompose into the FULL workflow: create_project first, then log_timesheet \
+for each employee, then create_voucher for supplier costs, then create_invoice. Do NOT just \
+create entities — execute the complete workflow.
 
 EFFICIENCY RULES:
 - Only POST/PUT/DELETE/PATCH calls count for efficiency scoring. GET requests are FREE.

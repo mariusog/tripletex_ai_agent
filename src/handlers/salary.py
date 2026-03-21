@@ -179,5 +179,47 @@ class RunPayrollHandler(BaseHandler):
             logger.info("Created salary transaction id=%s", tx_id)
             return {"id": tx_id, "action": "payroll_created"}
         except TripletexApiError as e:
-            logger.warning("Salary transaction failed: %s", e)
-            return {"error": str(e)}
+            logger.warning("Salary transaction failed: %s, falling back to voucher", e)
+            return self._fallback_voucher(api_client, params, date)
+
+    @staticmethod
+    def _fallback_voucher(
+        api_client: TripletexClient, params: dict[str, Any], date: str
+    ) -> dict[str, Any]:
+        """Fall back to manual voucher when salary API is unavailable."""
+        from src.handlers.base import HANDLER_REGISTRY
+
+        total = 0.0
+        base = params.get("baseSalary") or params.get("salary") or 0
+        bonus = params.get("bonus") or 0
+        total = float(base) + float(bonus)
+
+        # Add extras
+        for extra in params.get("extras", []):
+            total += float(extra.get("amount", 0))
+
+        if not total:
+            return {"error": "no_salary_amount"}
+
+        voucher_params: dict[str, Any] = {
+            "description": "Lønn / Payroll",
+            "date": date,
+            "postings": [
+                {
+                    "debitAccount": "5000",
+                    "creditAccount": "2900",
+                    "amount": total,
+                    "description": "Lønn / Payroll",
+                }
+            ],
+        }
+
+        handler = HANDLER_REGISTRY.get("create_voucher")
+        if handler:
+            result = handler.execute(api_client, voucher_params)
+            logger.info("Payroll fallback voucher id=%s", result.get("id"))
+            return {
+                "id": result.get("id"),
+                "action": "payroll_voucher_fallback",
+            }
+        return {"error": "no_voucher_handler"}
