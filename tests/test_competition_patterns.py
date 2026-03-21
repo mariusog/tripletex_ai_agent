@@ -185,6 +185,27 @@ class TestSupplierInvoiceFromPDF:
         result = run_handler(client, "create_voucher", params)
         assert result["id"]
 
+    def test_supplier_invoice_vat_as_percentage_int(self, client):
+        """LLM sends vatType as integer percentage (25), not VAT type ID.
+
+        Based on real competition failure: vatType: 25 became {"id": 25}
+        which is invalid, causing 404 on voucher creation.
+        """
+        tag = uid()
+        result = run_handler(
+            client,
+            "create_voucher",
+            {
+                "description": f"VAT int {tag}",
+                "supplier": {"name": f"VATInt-{tag}"},
+                "postings": [
+                    {"account": 7300, "debit": 25000, "vatType": 25, "description": "Expense"},
+                    {"account": 2400, "credit": 25000, "description": "AP"},
+                ],
+            },
+        )
+        assert result["id"], f"Voucher not created: {result}"
+
     def test_supplier_invoice_3_posting_vat_merge(self, client):
         """LLM sends 3 postings (net+VAT+AP), should merge to 2."""
         tag = uid()
