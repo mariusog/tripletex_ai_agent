@@ -1,8 +1,8 @@
-"""Shared entity resolvers and finder utilities.
+"""Domain-specific API lookup utilities and infrastructure helpers.
 
-Entity resolution is delegated to entity_resolver.py. This module
-re-exports those functions for backward compatibility and provides
-travel/invoice-specific finder utilities.
+Contains finder functions for invoices, travel expenses, cost categories,
+payment types, and bank account setup. These are NOT entity resolution
+(find-or-create) — that lives in entity_resolver.py.
 """
 
 from __future__ import annotations
@@ -12,11 +12,6 @@ from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
 from src.constants import DEFAULT_BANK_ACCOUNT_NUMBER
-from src.handlers.entity_resolver import (
-    _resolve_customer,
-    _resolve_product,
-    resolve,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -56,16 +51,6 @@ def ensure_bank_account(api_client: TripletexClient) -> None:
         _bank_account_set[cache_key] = True
     except TripletexApiError as e:
         logger.warning("Failed to set bank account: %s", e)
-
-
-# Re-export entity resolvers under their original names
-resolve_customer = _resolve_customer
-resolve_product = _resolve_product
-
-
-def resolve_employee(api_client: TripletexClient, employee: Any) -> dict[str, int]:
-    """Resolve employee to {"id": N}. Creates or finds, then ensures ready."""
-    return resolve(api_client, "employee", employee)
 
 
 # Map common cost descriptions to Tripletex costCategory descriptions
@@ -198,18 +183,3 @@ def find_invoice_id(api_client: TripletexClient, params: dict[str, Any]) -> int 
         return values[0].get("id") if values else None
     except TripletexApiError:
         return None
-
-
-# Re-export everything needed by other modules
-__all__ = [
-    "COST_CATEGORY_MAP",
-    "ensure_bank_account",
-    "find_cost_category",
-    "find_invoice_id",
-    "find_travel_expense",
-    "get_travel_payment_type",
-    "resolve",
-    "resolve_customer",
-    "resolve_employee",
-    "resolve_product",
-]

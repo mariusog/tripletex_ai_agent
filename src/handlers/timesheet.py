@@ -8,9 +8,9 @@ from datetime import date as dt_date
 from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
-from src.handlers.base import BaseHandler, register_handler
+from src.handlers.api_helpers import ensure_bank_account
+from src.handlers.base import BaseHandler, ParamSpec, register_handler
 from src.handlers.entity_resolver import resolve
-from src.handlers.resolvers import ensure_bank_account
 
 logger = logging.getLogger(__name__)
 
@@ -69,12 +69,21 @@ def _create_project(
 class LogTimesheetHandler(BaseHandler):
     """Log timesheet hours and optionally generate a project invoice."""
 
+    tier = 3
+    description = "Log timesheet hours, optionally invoice"
+    param_schema = {
+        "employee": ParamSpec(description="Employee name or {firstName, lastName, email}"),
+        "hours": ParamSpec(required=False, type="number"),
+        "activity": ParamSpec(required=False, description="Activity name"),
+        "project": ParamSpec(required=False, description="Project name"),
+        "customer": ParamSpec(required=False, type="object"),
+        "hourlyRate": ParamSpec(required=False, type="number"),
+        "date": ParamSpec(required=False, type="date"),
+        "generateInvoice": ParamSpec(required=False, type="boolean"),
+    }
+
     def get_task_type(self) -> str:
         return "log_timesheet"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["employee"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         today = dt_date.today().isoformat()
