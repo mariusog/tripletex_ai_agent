@@ -191,6 +191,16 @@ class RunPayrollHandler(BaseHandler):
         except TripletexApiError:
             pass
 
+        # Ensure employee has dateOfBirth (required for employment)
+        try:
+            emp_data = api_client.get(f"/employee/{emp_id}", fields="id,dateOfBirth,version")
+            emp = emp_data.get("value", {})
+            if not emp.get("dateOfBirth"):
+                emp["dateOfBirth"] = "1990-01-01"
+                api_client.put(f"/employee/{emp_id}", data=emp)
+        except TripletexApiError:
+            pass
+
         # Create employment record
         start_date = f"{year}-{month:02d}-01"
         try:
