@@ -167,11 +167,24 @@ def _resolve_product(
             res = api_client.post("/product", data=prod_body)
             return {"id": res.get("value", {}).get("id")}
         except TripletexApiError:
+            # Number conflict — try without number
             try:
                 prod_body.pop("number", None)
-                prod_body.pop("priceExcludingVatCurrency", None)
                 res = api_client.post("/product", data=prod_body)
                 return {"id": res.get("value", {}).get("id")}
+            except TripletexApiError:
+                pass
+        # All creation failed — search by name as last resort
+        if name:
+            try:
+                resp = api_client.get(
+                    "/product", params={"name": name, "count": 5}, fields="id,name"
+                )
+                for v in resp.get("values", []):
+                    if v.get("name", "").strip().lower() == name.strip().lower():
+                        return {"id": v["id"]}
+                if resp.get("values"):
+                    return {"id": resp["values"][0]["id"]}
             except TripletexApiError:
                 pass
     return {"id": 0}

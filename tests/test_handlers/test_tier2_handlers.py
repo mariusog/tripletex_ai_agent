@@ -173,8 +173,8 @@ class TestSendInvoice:
         result = handler.execute(client, {"invoiceId": 100})
         assert result["id"] == 100
         assert result["action"] == "sent"
-        client.post.assert_called_once()
-        endpoint = client.post.call_args[0][0]
+        client.put.assert_called_once()
+        endpoint = client.put.call_args[0][0]
         assert "/:send" in endpoint
 
 

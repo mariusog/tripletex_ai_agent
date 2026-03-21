@@ -156,6 +156,13 @@ class CreateVoucherHandler(BaseHandler):
         # Resolve supplier if present (needed for supplier invoice vouchers)
         supplier_ref = _resolve_supplier(api_client, params.get("supplier"))
 
+        # Resolve customer if present (needed for accounts receivable postings)
+        customer_ref = None
+        if params.get("customer"):
+            from src.handlers.entity_resolver import resolve as _resolve_entity
+
+            customer_ref = _resolve_entity(api_client, "customer", params["customer"])
+
         # Normalize postings: split debitAccount/creditAccount into separate rows
         raw_postings = params.get("postings", [])
         postings: list[dict[str, Any]] = []
@@ -180,10 +187,19 @@ class CreateVoucherHandler(BaseHandler):
                 postings.append(p)
 
         if postings:
-            body["postings"] = [
-                _build_posting(api_client, p, row=i + 1, supplier=supplier_ref)
-                for i, p in enumerate(postings)
-            ]
+            built = []
+            for i, p in enumerate(postings):
+                posting = _build_posting(api_client, p, row=i + 1, supplier=supplier_ref)
+                # Add customer to accounts receivable postings (1500-1599)
+                acct = p.get("account") or p.get("debitAccount") or p.get("creditAccount")
+                try:
+                    acct_num = int(acct) if acct else 0
+                except (TypeError, ValueError):
+                    acct_num = 0
+                if customer_ref and 1500 <= acct_num <= 1599:
+                    posting["customer"] = customer_ref
+                built.append(posting)
+            body["postings"] = built
 
         body = self.strip_none_values(body)
         result = api_client.post(

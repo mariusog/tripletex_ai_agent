@@ -67,10 +67,15 @@ class SendInvoiceHandler(BaseHandler):
             send_body["overrideEmailAddress"] = params["overrideEmailAddress"]
 
         try:
-            api_client.post(f"/invoice/{invoice_id}/:send", data=send_body)
+            api_client.put(f"/invoice/{invoice_id}/:send", data=send_body)
             logger.info("Sent invoice id=%s", invoice_id)
-        except TripletexApiError as e:
-            logger.warning("Send invoice failed: %s", e)
+        except TripletexApiError:
+            # Fallback: try POST if PUT fails
+            try:
+                api_client.post(f"/invoice/{invoice_id}/:send", data=send_body)
+                logger.info("Sent invoice id=%s (via POST)", invoice_id)
+            except TripletexApiError as e:
+                logger.warning("Send invoice failed: %s", e)
         return {"id": invoice_id, "action": "sent"}
 
 
