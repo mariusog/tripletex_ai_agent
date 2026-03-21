@@ -137,7 +137,7 @@ class UpdateProjectHandler(BaseHandler):
         elif "name" in params and params["name"] != project.get("name"):
             project["name"] = params["name"]
 
-        for field in ("number", "isClosed", "isInternal"):
+        for field in ("number", "isClosed", "isInternal", "fixedPrice"):
             if field in params:
                 project[field] = params[field]
 
@@ -159,8 +159,18 @@ class UpdateProjectHandler(BaseHandler):
                 project["customer"] = self.ensure_ref(cust, "customer")
 
         # Strip internal read-only fields that cause 422 on PUT
-        for internal in ("projectRateTypes", "projectHourlyRates"):
+        for internal in (
+            "projectRateTypes",
+            "projectHourlyRates",
+            "projectActivities",
+            "displayName",
+            "description",
+        ):
             project.pop(internal, None)
+
+        # fixedPrice must be numeric, not a nested object
+        if "fixedPrice" in project and isinstance(project["fixedPrice"], dict):
+            project.pop("fixedPrice", None)
 
         result = api_client.put(f"/project/{proj_id}", data=project)
         logger.info("Updated project id=%s", proj_id)

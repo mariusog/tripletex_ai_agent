@@ -62,7 +62,10 @@ class CreateSupplierHandler(BaseHandler):
 def _resolve_account(
     api_client: TripletexClient, account: Any
 ) -> tuple[dict[str, int], dict[str, int] | None]:
-    """Resolve account number to ({"id": N}, vatType ref or None)."""
+    """Resolve account number to ({"id": N}, vatType ref or None).
+
+    If exact number not found, searches by number range to find the closest.
+    """
     if isinstance(account, dict) and "id" in account:
         return {"id": int(account["id"])}, None
     try:
@@ -73,14 +76,39 @@ def _resolve_account(
         f"account_{number}",
         "/ledger/account",
         params={"number": str(number), "count": 1},
-        fields="id,vatType(id)",
+        fields="id,number,vatType(id)",
     )
     values = resp.get("values", [])
     if values:
         vat = values[0].get("vatType")
         vat_ref = {"id": vat["id"]} if vat and vat.get("id") else None
         return {"id": values[0]["id"]}, vat_ref
-    logger.warning("Account %d not found", number)
+    # Account not found — search by number range (e.g. 6010 → look in 6000-6099)
+    range_start = (number // 100) * 100
+    range_end = range_start + 99
+    try:
+        range_resp = api_client.get(
+            "/ledger/account",
+            params={
+                "numberFrom": str(range_start),
+                "numberTo": str(range_end),
+                "count": 1,
+            },
+            fields="id,number,vatType(id)",
+        )
+        range_vals = range_resp.get("values", [])
+        if range_vals:
+            vat = range_vals[0].get("vatType")
+            vat_ref = {"id": vat["id"]} if vat and vat.get("id") else None
+            logger.info(
+                "Account %d not found, using %d instead",
+                number,
+                range_vals[0].get("number", 0),
+            )
+            return {"id": range_vals[0]["id"]}, vat_ref
+    except TripletexApiError:
+        pass
+    logger.warning("Account %d not found in range %d-%d", number, range_start, range_end)
     return {"id": 0}, None
 
 
@@ -283,12 +311,7 @@ class CreateVoucherHandler(BaseHandler):
         # Merge: expense gets gross amount (net + VAT), VAT posting removed
         merged = list(postings)
         expense = dict(merged[expense_idx])
-        net = (
-            expense.get("debit")
-            or expense.get("debitAmount")
-            or expense.get("amount")
-            or 0
-        )
+        net = expense.get("debit") or expense.get("debitAmount") or expense.get("amount") or 0
         gross = net + vat_amount
         expense["debit"] = gross
         expense["debitAmount"] = gross
@@ -301,7 +324,9 @@ class CreateVoucherHandler(BaseHandler):
         merged.pop(vat_idx)
         logger.info(
             "Merged VAT posting: net=%s + vat=%s = gross=%s",
-            net, vat_amount, gross,
+            net,
+            vat_amount,
+            gross,
         )
         return merged
 

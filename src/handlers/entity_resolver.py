@@ -39,20 +39,31 @@ def _ensure_employee_ready(api_client: TripletexClient, emp_id: int) -> None:
         )
         if not emp_resp.get("values"):
             start = dt_date.today().replace(day=1).isoformat()
-            api_client.post(
-                "/employee/employment",
-                data={
-                    "employee": {"id": emp_id},
-                    "startDate": start,
-                    "employmentDetails": [
-                        {
-                            "date": start,
-                            "employmentType": "ORDINARY",
-                            "percentageOfFullTimeEquivalent": 100,
-                        }
-                    ],
-                },
-            )
+            emp_data: dict[str, Any] = {
+                "employee": {"id": emp_id},
+                "startDate": start,
+                "employmentDetails": [
+                    {
+                        "date": start,
+                        "employmentType": "ORDINARY",
+                        "percentageOfFullTimeEquivalent": 100,
+                    }
+                ],
+            }
+            # Link to company division if one exists (required for payroll)
+            try:
+                div_resp = api_client.get_cached(
+                    "company_division",
+                    "/company/divisions",
+                    params={"count": 1},
+                    fields="id",
+                )
+                div_vals = div_resp.get("values", [])
+                if div_vals:
+                    emp_data["division"] = {"id": div_vals[0]["id"]}
+            except TripletexApiError:
+                pass
+            api_client.post("/employee/employment", data=emp_data)
     except TripletexApiError as e:
         logger.warning("Failed to ensure employee %s ready: %s", emp_id, e)
 

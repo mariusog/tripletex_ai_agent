@@ -56,11 +56,14 @@ class LedgerCorrectionHandler(BaseHandler):
             try:
                 api_client.put(
                     f"/ledger/voucher/{orig_id}/:reverse",
-                    data={"id": orig_id, "date": params["date"]},
+                    data={"id": orig_id, "date": date_val},
                 )
                 logger.info("Reversed original voucher id=%s", orig_id)
             except TripletexApiError:
                 logger.warning("Could not reverse voucher %s, proceeding", orig_id)
+
+        if not body.get("postings"):
+            return {"error": "no_postings", "action": "correction_skipped"}
 
         result = api_client.post("/ledger/voucher", data=body)
         value = result.get("value", {})

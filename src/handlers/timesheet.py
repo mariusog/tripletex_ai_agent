@@ -24,12 +24,16 @@ def _create_activity(
     act_ref = resolve(api_client, "activity", name)
     if not act_ref.get("id"):
         return {"id": 0}
-    # Link activity to project so it can be used in timesheet entries
+    # Link activity to project with chargeableHours enabled
     if project_ref and act_ref.get("id"):
         with contextlib.suppress(TripletexApiError):
             api_client.post(
                 "/project/projectActivity",
-                data={"project": project_ref, "activity": act_ref},
+                data={
+                    "project": project_ref,
+                    "activity": act_ref,
+                    "chargeableHours": True,
+                },
             )
     return act_ref
 
@@ -92,7 +96,9 @@ class LogTimesheetHandler(BaseHandler):
         emp_ref = resolve(api_client, "employee", params["employee"])
 
         # Step 2: Get PM (account owner) for project creation
-        pm_search = api_client.get("/employee", params={"count": 1}, fields="id")
+        pm_search = api_client.get_cached(
+            "account_owner", "/employee", params={"count": 1}, fields="id"
+        )
         pm_vals = pm_search.get("values", [])
         pm_ref = {"id": pm_vals[0]["id"]} if pm_vals else emp_ref
 
