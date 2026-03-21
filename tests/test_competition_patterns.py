@@ -509,6 +509,90 @@ class TestUpdateProjectFixedPrice:
 # ============================================================
 
 
+# ============================================================
+# PATTERN 11: Ledger correction with multiple error types
+# Competition: 'Find 4 errors in ledger, create corrective postings'
+# ============================================================
+
+
+class TestLedgerCorrectionMultipleErrors:
+    """Simulates: 'Find errors in ledger and create corrective vouchers'
+
+    Based on real competition prompt:
+    'Descobrimos erros no livro razão... um lançamento na conta errada,
+    um voucher duplicado, uma linha de IVA em falta, e um valor incorreto.
+    Corrija todos os erros com lançamentos corretivos.'
+    """
+
+    def test_corrections_from_structured_array(self, client):
+        """When LLM extracts corrections array instead of raw postings."""
+        tag = uid()
+        result = run_handler(
+            client,
+            "ledger_correction",
+            {
+                "description": f"Ledger corrections {tag}",
+                "date": "2026-02-28",
+                "corrections": [
+                    {
+                        "type": "wrong_account",
+                        "wrongAccount": 7300,
+                        "correctAccount": 7000,
+                        "amount": 7800,
+                        "description": "Wrong account correction",
+                    },
+                    {
+                        "type": "duplicate_voucher",
+                        "account": 6860,
+                        "amount": 3500,
+                        "description": "Duplicate reversal",
+                    },
+                    {
+                        "type": "missing_vat",
+                        "expenseAccount": 6500,
+                        "vatAccount": 2710,
+                        "netAmount": 18350,
+                        "description": "Missing VAT line",
+                    },
+                    {
+                        "type": "incorrect_amount",
+                        "account": 7300,
+                        "recordedAmount": 15000,
+                        "correctAmount": 10050,
+                        "difference": -4950,
+                        "description": "Amount correction",
+                    },
+                ],
+            },
+        )
+        assert result.get("id"), f"Correction voucher not created: {result}"
+
+        # Verify voucher has postings
+        v = client.get(
+            f"/ledger/voucher/{result['id']}",
+            fields="postings(account(number),amountGross)",
+        )["value"]
+        assert len(v["postings"]) >= 8, (
+            f"Expected 8+ postings (4 corrections × 2), got {len(v['postings'])}"
+        )
+
+    def test_corrections_with_explicit_postings(self, client):
+        """When LLM sends raw postings directly."""
+        tag = uid()
+        result = run_handler(
+            client,
+            "ledger_correction",
+            {
+                "description": f"Direct postings {tag}",
+                "postings": [
+                    {"account": 7000, "debit": 5000, "description": "Correction debit"},
+                    {"account": 7300, "credit": 5000, "description": "Correction credit"},
+                ],
+            },
+        )
+        assert result.get("id"), f"Correction voucher not created: {result}"
+
+
 class TestTimesheetLogging:
     """Simulates: 'Log hours for employee on activity in project'"""
 

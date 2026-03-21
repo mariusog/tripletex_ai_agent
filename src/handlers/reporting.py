@@ -43,8 +43,11 @@ class LedgerCorrectionHandler(BaseHandler):
         if "voucherType" in params:
             body["typeId"] = int(params["voucherType"])
 
-        # Build correction postings
+        # Build correction postings — from explicit postings or corrections array
         postings = params.get("postings", [])
+        corrections = params.get("corrections", [])
+        if not postings and corrections:
+            postings = self._corrections_to_postings(corrections)
         if postings:
             body["postings"] = [
                 _build_posting(api_client, p, row=i + 1) for i, p in enumerate(postings)
@@ -69,6 +72,53 @@ class LedgerCorrectionHandler(BaseHandler):
         value = result.get("value", {})
         logger.info("Created correction voucher id=%s", value.get("id"))
         return {"id": value.get("id"), "action": "correction_created"}
+
+    @staticmethod
+    def _corrections_to_postings(corrections: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Convert structured corrections into balanced debit/credit postings."""
+        postings: list[dict[str, Any]] = []
+        for c in corrections:
+            ctype = c.get("type", "")
+            desc = c.get("description", "Korreksjon")
+
+            if ctype == "wrong_account":
+                amt = c.get("amount", 0)
+                postings.append({"account": c["correctAccount"], "debit": amt, "description": desc})
+                postings.append({"account": c["wrongAccount"], "credit": amt, "description": desc})
+
+            elif ctype == "duplicate_voucher":
+                amt = c.get("amount", 0)
+                acct = c.get("account", 1920)
+                postings.append({"account": 1920, "debit": amt, "description": desc})
+                postings.append({"account": acct, "credit": amt, "description": desc})
+
+            elif ctype == "missing_vat":
+                net = c.get("netAmount", 0)
+                vat = round(net * 0.25, 2)
+                vat_acct = c.get("vatAccount", 2710)
+                exp_acct = c.get("expenseAccount", 6500)
+                postings.append({"account": vat_acct, "debit": vat, "description": desc})
+                postings.append({"account": exp_acct, "credit": vat, "description": desc})
+
+            elif ctype == "incorrect_amount":
+                diff = c.get("difference", 0)
+                acct = c.get("account", 7300)
+                if diff < 0:
+                    postings.append({"account": 1920, "debit": abs(diff), "description": desc})
+                    postings.append({"account": acct, "credit": abs(diff), "description": desc})
+                else:
+                    postings.append({"account": acct, "debit": abs(diff), "description": desc})
+                    postings.append({"account": 1920, "credit": abs(diff), "description": desc})
+            else:
+                # Generic: try to build from available fields
+                amt = c.get("amount", 0)
+                acct = c.get("account", c.get("debitAccount", 7300))
+                counter = c.get("counterAccount", c.get("creditAccount", 1920))
+                if amt:
+                    postings.append({"account": acct, "debit": abs(amt), "description": desc})
+                    postings.append({"account": counter, "credit": abs(amt), "description": desc})
+
+        return postings
 
 
 @register_handler
