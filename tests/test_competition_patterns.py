@@ -322,6 +322,47 @@ class TestInvoiceWithPayment:
 # ============================================================
 
 
+# ============================================================
+# PATTERN 3b: Invoice with pre-existing products (name conflict)
+# Competition: sandbox has pre-populated products
+# ============================================================
+
+
+class TestInvoiceWithExistingProducts:
+    """Simulates: products already exist, should find them not crash.
+
+    Based on real competition failure: product name 'Sessão de formação'
+    already exists, creation fails with 422, should search by name.
+    """
+
+    def test_product_found_by_name(self, client):
+        tag = uid()
+        prod_num = secrets.randbelow(90000) + 10000
+        # Create product first
+        run_handler(
+            client,
+            "create_product",
+            {"name": f"ExistProd-{tag}", "number": prod_num, "priceExcludingVatCurrency": 5000},
+        )
+        # Now create invoice using same product name — should find, not crash
+        result = run_handler(
+            client,
+            "create_invoice",
+            {
+                "customer": {"name": f"EPCust-{tag}"},
+                "orderLines": [
+                    {
+                        "product": f"ExistProd-{tag}",
+                        "productNumber": str(prod_num),
+                        "count": 1,
+                        "priceExcludingVatCurrency": 5000,
+                    }
+                ],
+            },
+        )
+        assert result["id"], f"Invoice not created: {result}"
+
+
 class TestProjectWithCustomerAndPM:
     """Simulates: 'Create project X linked to customer Y, PM is Z'"""
 

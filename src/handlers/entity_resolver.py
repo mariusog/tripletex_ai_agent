@@ -165,12 +165,14 @@ def _resolve_product(
     value: Any,
     price: Any = None,
 ) -> dict[str, int]:
-    """Resolve product: search by number first, then create."""
+    """Resolve product: search first (by number, then name), create if not found."""
     direct = _try_direct_id(value)
     if direct:
         return direct
     name = str(value) if not isinstance(value, dict) else value.get("name", "")
     number = value.get("number") if isinstance(value, dict) else None
+
+    # Search by number first (most precise)
     if number:
         try:
             resp = api_client.get(
@@ -182,6 +184,18 @@ def _resolve_product(
                 return {"id": resp["values"][0]["id"]}
         except TripletexApiError:
             pass
+
+    # Search by name before creating (avoids 422 on name conflict)
+    if name:
+        try:
+            resp = api_client.get("/product", params={"name": name, "count": 5}, fields="id,name")
+            for v in resp.get("values", []):
+                if v.get("name", "").strip().lower() == name.strip().lower():
+                    return {"id": v["id"]}
+        except TripletexApiError:
+            pass
+
+    # Not found — create
     if name or number:
         prod_body: dict[str, Any] = {"name": name or f"Product {number}"}
         if number:
@@ -197,19 +211,6 @@ def _resolve_product(
                 prod_body.pop("number", None)
                 res = api_client.post("/product", data=prod_body)
                 return {"id": res.get("value", {}).get("id")}
-            except TripletexApiError:
-                pass
-        # All creation failed — search by name as last resort
-        if name:
-            try:
-                resp = api_client.get(
-                    "/product", params={"name": name, "count": 5}, fields="id,name"
-                )
-                for v in resp.get("values", []):
-                    if v.get("name", "").strip().lower() == name.strip().lower():
-                        return {"id": v["id"]}
-                if resp.get("values"):
-                    return {"id": resp["values"][0]["id"]}
             except TripletexApiError:
                 pass
     return {"id": 0}

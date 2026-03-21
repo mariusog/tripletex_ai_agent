@@ -27,13 +27,21 @@ def build_and_post_order_lines(
     for line in lines:
         ol: dict[str, Any] = {"order": {"id": order_id}}
         if "product" in line:
+            # Normalize product ref: merge productNumber into product dict
+            prod_val = line["product"]
+            prod_num = line.get("productNumber") or line.get("number")
+            if isinstance(prod_val, str) and prod_num:
+                prod_val = {"name": prod_val, "number": prod_num}
             line_price = (
-                line.get("unitPriceExcludingVatCurrency") or line.get("amount") or line.get("price")
+                line.get("unitPriceExcludingVatCurrency")
+                or line.get("priceExcludingVatCurrency")
+                or line.get("amount")
+                or line.get("price")
             )
             ol["product"] = _resolve(
                 api_client,
                 "product",
-                line["product"],
+                prod_val,
                 extra_create_fields={"price": line_price},
             )
         if "description" in line:
@@ -41,6 +49,8 @@ def build_and_post_order_lines(
         ol["count"] = line.get("count", line.get("quantity", 1))
         if "unitPriceExcludingVatCurrency" in line:
             ol["unitPriceExcludingVatCurrency"] = line["unitPriceExcludingVatCurrency"]
+        elif "priceExcludingVatCurrency" in line:
+            ol["unitPriceExcludingVatCurrency"] = line["priceExcludingVatCurrency"]
         elif "amount" in line:
             ol["unitPriceExcludingVatCurrency"] = line["amount"]
         elif "price" in line:
