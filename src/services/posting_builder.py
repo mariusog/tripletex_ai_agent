@@ -15,6 +15,49 @@ from src.handlers.base import BaseHandler
 logger = logging.getLogger(__name__)
 
 
+# Norwegian accounting term → account number range mapping
+_ACCOUNT_NAME_RANGES: dict[str, tuple[int, int]] = {
+    "kostkonto": (6000, 6999),
+    "kostnadskonto": (6000, 6999),
+    "driftskostnad": (6000, 6999),
+    "expense": (6000, 6999),
+    "lønn": (5000, 5099),
+    "salary": (5000, 5099),
+    "avskrivning": (6010, 6020),
+    "depreciation": (6010, 6020),
+    "inntekt": (3000, 3999),
+    "revenue": (3000, 3999),
+}
+
+
+def _resolve_account_by_name(
+    api_client: TripletexClient, name: str
+) -> tuple[dict[str, int], dict[str, int] | None]:
+    """Resolve a non-numeric account identifier by name or keyword."""
+    name_lower = name.strip().lower()
+    # Try keyword mapping first
+    for keyword, (range_start, range_end) in _ACCOUNT_NAME_RANGES.items():
+        if keyword in name_lower:
+            try:
+                all_resp = api_client.get(
+                    "/ledger/account",
+                    params={"count": 1000},
+                    fields="id,number,vatType(id)",
+                )
+                for acct in all_resp.get("values", []):
+                    acct_num = acct.get("number", 0)
+                    if range_start <= acct_num <= range_end:
+                        vat = acct.get("vatType")
+                        vat_ref = {"id": vat["id"]} if vat and vat.get("id") else None
+                        logger.info("Resolved account name '%s' to %d", name, acct_num)
+                        return {"id": acct["id"]}, vat_ref
+            except TripletexApiError:
+                pass
+            break
+    logger.warning("Could not resolve account name '%s'", name)
+    return {"id": 0}, None
+
+
 def resolve_account(
     api_client: TripletexClient, account: Any
 ) -> tuple[dict[str, int], dict[str, int] | None]:
@@ -27,6 +70,9 @@ def resolve_account(
     try:
         number = int(account)
     except (TypeError, ValueError):
+        # Non-numeric account name — try to resolve by name search
+        if isinstance(account, str) and account.strip():
+            return _resolve_account_by_name(api_client, account)
         return {"id": 0}, None
     resp = api_client.get_cached(
         f"account_{number}",

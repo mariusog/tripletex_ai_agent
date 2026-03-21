@@ -1723,3 +1723,95 @@ class TestTimesheetLogging:
         )["value"]
         assert entry["hours"] == 5.0
         assert entry["date"] == "2026-03-15"
+
+
+# ============================================================
+# PATTERN 18: Monthly closing with non-numeric account name
+# Competition: LLM sends 'kostkonto' instead of a real account number
+# ============================================================
+
+
+class TestMonthlyClosingNonNumericAccount:
+    """Based on real 0/3 failure: LLM used 'kostkonto' as debitAccount.
+
+    Prompt: 'Periodiser forskuddsbetalt kostnad (10150 kr per måned fra konto 1720 til kostkonto)'
+    LLM sent debitAccount='kostkonto' → resolve_account returned id=0 → 422.
+    """
+
+    def test_voucher_with_text_account_name(self, client):
+        """Non-numeric account name should resolve to a real expense account."""
+        tag = uid()
+        result = run_handler(
+            client,
+            "create_voucher",
+            {
+                "description": f"Periodisering {tag}",
+                "date": "2026-03-31",
+                "postings": [
+                    {
+                        "debitAccount": "kostkonto",
+                        "creditAccount": "1720",
+                        "amount": 10150,
+                        "description": "Periodisering forskuddsbetalt kostnad",
+                    }
+                ],
+            },
+        )
+        assert result.get("id"), f"Voucher not created with text account: {result}"
+
+    def test_monthly_closing_three_vouchers(self, client):
+        """Full monthly closing: prepaid + depreciation + salary accrual."""
+        tag = uid()
+        # Step 1: Prepaid expense periodization
+        r1 = run_handler(
+            client,
+            "create_voucher",
+            {
+                "description": f"Periodisering {tag}",
+                "date": "2026-03-31",
+                "postings": [
+                    {
+                        "debitAccount": "6300",
+                        "creditAccount": "1720",
+                        "amount": 10150,
+                    }
+                ],
+            },
+        )
+        assert r1.get("id")
+
+        # Step 2: Depreciation
+        r2 = run_handler(
+            client,
+            "create_voucher",
+            {
+                "description": f"Avskrivning {tag}",
+                "date": "2026-03-31",
+                "postings": [
+                    {
+                        "debitAccount": "6020",
+                        "creditAccount": "1210",
+                        "amount": 2502.08,
+                    }
+                ],
+            },
+        )
+        assert r2.get("id")
+
+        # Step 3: Salary accrual
+        r3 = run_handler(
+            client,
+            "create_voucher",
+            {
+                "description": f"Lønnsavsetning {tag}",
+                "date": "2026-03-31",
+                "postings": [
+                    {
+                        "debitAccount": "5000",
+                        "creditAccount": "2900",
+                        "amount": 45000,
+                    }
+                ],
+            },
+        )
+        assert r3.get("id")

@@ -76,7 +76,11 @@ class CreateVoucherHandler(BaseHandler):
         "Tripletex handles it via the account's VAT type. "
         "From receipts/PDFs: extract supplier name, org number, date, "
         "invoice number, GROSS amount (total inkl MVA), and the correct "
-        "expense account based on what was purchased."
+        "expense account based on what was purchased. "
+        "CRITICAL: ALWAYS use NUMERIC account codes (e.g. 6300, 5000, 1720), "
+        "NEVER use text names like 'kostkonto' or 'expense'. "
+        "If the prompt says 'kostkonto' or 'cost account' without specifying "
+        "the number, use a standard expense account like 6300."
     )
 
     def get_task_type(self) -> str:
