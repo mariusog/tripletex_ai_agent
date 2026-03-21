@@ -20,7 +20,7 @@ _bank_account_set: dict[str, bool] = {}
 
 def ensure_bank_account(api_client: TripletexClient) -> None:
     """Ensure the company has a bank account on ledger account 1920."""
-    cache_key = getattr(api_client, "base_url", "default")
+    cache_key = getattr(api_client, "base_url", "") + getattr(api_client, "_token_prefix", "")
     if _bank_account_set.get(cache_key):
         return
     try:
