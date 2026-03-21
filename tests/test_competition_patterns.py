@@ -557,6 +557,41 @@ class TestLateFeeFlow:
         assert inv["amountOutstanding"] < inv["amount"], "Payment should reduce outstanding"
 
 
+# ============================================================
+# PATTERN 3d: Currency invoice with agio/disagio
+# Competition: 'Invoice in EUR, customer paid at different rate, book exchange diff'
+# ============================================================
+
+
+class TestCurrencyInvoiceWithAgio:
+    """Simulates: EUR invoice with exchange rate gain/loss.
+
+    Based on real competition prompt: invoice 16689 EUR at 11.66, paid at 12.24.
+    Agio = (12.24-11.66)*16689 = 9675.62 NOK.
+    """
+
+    def test_nested_posting_normalization(self, client):
+        """LLM sends nested debit/credit objects — should be flattened."""
+        tag = uid()
+        from src.services.param_normalizer import normalize_params
+
+        params = normalize_params({
+            "description": f"Agio {tag}",
+            "postings": [
+                {"debit": {"account": 1500, "amount": 9675.62, "description": "Agio"}},
+                {"credit": {"account": 8060, "amount": 9675.62, "description": "Agio"}},
+            ],
+            "customer": {"name": f"AgioCust-{tag}"},
+        })
+        # Verify normalization flattened the nested objects
+        assert params["postings"][0]["account"] == 1500
+        assert params["postings"][0]["debit"] == 9675.62
+        assert params["postings"][1]["credit"] == 9675.62
+
+        result = run_handler(client, "create_voucher", params)
+        assert result["id"]
+
+
 class TestProjectWithCustomerAndPM:
     """Simulates: 'Create project X linked to customer Y, PM is Z'"""
 
