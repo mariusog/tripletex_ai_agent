@@ -857,9 +857,7 @@ class TestBankReconciliation:
         # Use a different period to avoid "already exists" conflict
         from datetime import date as dt_date
 
-        periods = client.get(
-            "/ledger/accountingPeriod", params={"count": 12}, fields="id"
-        )
+        periods = client.get("/ledger/accountingPeriod", params={"count": 12}, fields="id")
         period_id = None
         for p in reversed(periods.get("values", [])):
             period_id = p["id"]

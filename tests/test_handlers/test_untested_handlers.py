@@ -182,9 +182,7 @@ class TestYearEndClosing:
             sample_api_response(values=[{"id": 870, "number": 8700}]),  # acct 8700
             sample_api_response(values=[{"id": 292, "number": 2920}]),  # acct 2920
         ]
-        client.get_cached.return_value = sample_api_response(
-            values=[{"id": 870, "number": 8700}]
-        )
+        client.get_cached.return_value = sample_api_response(values=[{"id": 870, "number": 8700}])
         client.post.return_value = sample_api_response(value={"id": 78})
         handler = get_handler("year_end_closing")
         assert handler is not None

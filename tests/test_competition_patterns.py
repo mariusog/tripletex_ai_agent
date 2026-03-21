@@ -178,6 +178,28 @@ class TestEmployeeOnboardingFull:
         assert d["annualSalary"] == 550000.0, f"salary: {d['annualSalary']}"
         assert d["shiftDurationHours"] == 6.0, f"hours: {d['shiftDurationHours']}"
 
+    def test_single_step_with_nonexistent_department(self, client):
+        """LLM classifies as single create_employee without create_department.
+        Department must be auto-created.
+
+        Based on real 0/22 failure: department 'Utvikling' not found.
+        """
+        tag = uid()
+        result = run_handler(
+            client,
+            "create_employee",
+            {
+                "firstName": f"Auto-{tag}",
+                "lastName": "Dept",
+                "email": f"auto-{tag}@example.org",
+                "department": f"NewDept-{tag}",
+            },
+        )
+        assert result["id"], f"Employee not created: {result}"
+        v = client.get(f"/employee/{result['id']}", fields="department(name)")["value"]
+        assert v["department"] is not None
+        assert v["department"]["name"] == f"NewDept-{tag}"
+
     def test_onboarding_minimal(self, client):
         """Simpler variant: just name + email + department."""
         tag = uid()
