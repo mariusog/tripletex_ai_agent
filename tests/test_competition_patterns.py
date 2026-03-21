@@ -663,6 +663,70 @@ class TestPayrollWithBonus:
 # ============================================================
 
 
+# ============================================================
+# PATTERN 8b: Payment reversal
+# Competition: 'Customer returned payment, reverse it'
+# ============================================================
+
+
+class TestPaymentReversal:
+    """Simulates: 'Customer X has returned payment. Reverse it.'
+
+    Based on real competition run:
+    Params: customer Vestfjord AS, amount -20000, reversal true,
+    orderLines: [{product: Analyserapport, amount: 16000}]
+    """
+
+    def test_reversal_creates_invoice_then_reverses(self, client):
+        """Create invoice, pay it, then reverse payment — outstanding should equal amount."""
+        tag = uid()
+        result = run_handler(
+            client,
+            "register_payment",
+            {
+                "customer": {"name": f"RevCust-{tag}", "organizationNumber": "880860666"},
+                "amount": -20000,
+                "reversal": True,
+                "orderLines": [
+                    {
+                        "product": {"name": f"RevProd-{tag}"},
+                        "amount": 16000,
+                        "count": 1,
+                    }
+                ],
+            },
+        )
+        inv_id = result.get("id")
+        assert inv_id, f"Invoice not created: {result}"
+        assert result.get("action") == "payment_reversed"
+
+        # Verify: invoice amount should be 16000 (net), outstanding should equal amount
+        inv = client.get(
+            f"/invoice/{inv_id}", fields="amount,amountOutstanding"
+        )["value"]
+        assert inv["amount"] > 0, "Invoice should have positive amount"
+        assert inv["amountOutstanding"] == inv["amount"], (
+            f"After reversal, outstanding ({inv['amountOutstanding']}) "
+            f"should equal amount ({inv['amount']})"
+        )
+
+    def test_reversal_with_negative_amount(self, client):
+        """Negative amount should be treated as reversal."""
+        tag = uid()
+        result = run_handler(
+            client,
+            "register_payment",
+            {
+                "customer": {"name": f"NegCust-{tag}"},
+                "amount": -15000,
+                "reversal": True,
+                "description": "Returned payment",
+            },
+        )
+        assert result.get("id")
+        assert result.get("action") == "payment_reversed"
+
+
 class TestCreditNoteFlow:
     """Simulates: 'Customer X complained about invoice, create credit note'"""
 
