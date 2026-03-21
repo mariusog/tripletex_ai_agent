@@ -92,11 +92,15 @@ costs, travelDetails (same as create_travel_expense if creating first)}}
 - create_asset: {{name, ...}}
 - update_asset: {{assetId or name (to find), fields to update...}}
 - create_supplier: {{name, organizationNumber, email, phoneNumber, postalAddress, ...}}
-- create_voucher: {{date, description, postings (debit/credit accounts, amounts), supplier, ...}}
+- create_voucher: {{date, description, postings (debit/credit accounts, amounts), \
+supplier (name/orgNr if supplier invoice), customer (name/orgNr if using account 1500 kundefordringer)}}
 - reverse_voucher: {{voucherId or search criteria...}}
 - bank_reconciliation: {{accountId or accountNumber (e.g. 1920), \
 reconciliationDate, adjustments: [{{amount, description, date}}]}}
-- ledger_correction: {{account, amount, date, description, ...}}
+- ledger_correction: {{corrections: [{{type, description, postings: [{{account, debit, credit, description}}]}}], \
+date, description}} — each correction MUST have balanced double-entry postings (total debit = total credit). \
+For wrong account: debit correct account, credit wrong account. For duplicate: credit the duplicate account, debit a balancing account. \
+For missing VAT: debit VAT account, credit supplier/AP account. For wrong amount: credit to reduce, debit to increase.
 - year_end_closing: {{year, ...}}
 - balance_sheet_report: {{dateFrom, dateTo, ...}}
 - update_department: {{name (to find), newName, departmentNumber, departmentManager, ...}}

@@ -1,0 +1,139 @@
+{
+  "timestamp": "2026-03-21 11:59:20",
+  "prompt": "We have discovered errors in the general ledger for January and February 2026. Review all vouchers and find the 4 errors: a posting to the wrong account (account 6540 used instead of 6860, amount 4800 NOK), a duplicate voucher (account 6500, amount 1050 NOK), a missing VAT line (account 7000, amount excl. 6750 NOK missing VAT on account 2710), and an incorrect amount (account 6500, 15700 NOK posted instead of 8100 NOK). Correct all errors with appropriate correction vouchers.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.49
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.75
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.35
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.49
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.27
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 422,
+      "duration_s": 0.85
+    }
+  ],
+  "errors": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 422,
+      "duration_s": 0.85
+    }
+  ],
+  "task_type": "ledger_correction",
+  "params": {
+    "date": "2026-02-28",
+    "description": "Correction of 4 ledger errors found in January and February 2026",
+    "corrections": [
+      {
+        "type": "wrong_account",
+        "description": "Posting to wrong account: 4800 NOK posted to account 6540 instead of correct account 6860",
+        "postings": [
+          {
+            "account": 6860,
+            "debit": 4800,
+            "credit": 0,
+            "description": "Correct account - should have been posted here"
+          },
+          {
+            "account": 6540,
+            "debit": 0,
+            "credit": 4800,
+            "description": "Wrong account - reversing incorrect posting"
+          }
+        ]
+      },
+      {
+        "type": "duplicate",
+        "description": "Duplicate voucher on account 6500, amount 1050 NOK - reversing the duplicate entry",
+        "postings": [
+          {
+            "account": 6500,
+            "debit": 0,
+            "credit": 1050,
+            "description": "Reversing duplicate posting on account 6500"
+          },
+          {
+            "account": 2400,
+            "debit": 1050,
+            "credit": 0,
+            "description": "Balancing entry - reversing duplicate against supplier/AP account"
+          }
+        ]
+      },
+      {
+        "type": "missing_vat",
+        "description": "Missing VAT line for account 7000 posting of 6750 NOK excl. VAT - adding missing 25% VAT (1687.50 NOK) on account 2710",
+        "postings": [
+          {
+            "account": 2710,
+            "debit": 1687.5,
+            "credit": 0,
+            "description": "Adding missing input VAT (25% of 6750 NOK)"
+          },
+          {
+            "account": 2400,
+            "debit": 0,
+            "credit": 1687.5,
+            "description": "Balancing entry - crediting supplier/AP for missing VAT amount"
+          }
+        ]
+      },
+      {
+        "type": "wrong_amount",
+        "description": "Incorrect amount on account 6500: 15700 NOK posted instead of correct 8100 NOK - reducing by 7600 NOK",
+        "postings": [
+          {
+            "account": 6500,
+            "debit": 0,
+            "credit": 7600,
+            "description": "Reducing overstated amount (15700 - 8100 = 7600 NOK)"
+          },
+          {
+            "account": 2400,
+            "debit": 7600,
+            "credit": 0,
+            "description": "Balancing entry - adjusting supplier/AP for amount correction"
+          }
+        ]
+      }
+    ]
+  },
+  "error_details": [
+    {
+      "status": 422,
+      "endpoint": "POST /ledger/voucher",
+      "message": "Validering feilet. | validation: [{'field': 'postings.supplier.id', 'message': 'Leverandør mangler.', 'path': None, 'rootId': None}]"
+    }
+  ],
+  "status": "error",
+  "service": "tripletex-agent-2"
+}

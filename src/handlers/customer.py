@@ -40,10 +40,14 @@ class CreateCustomerHandler(BaseHandler):
         if body.get("email") and not body.get("invoiceEmail"):
             body["invoiceEmail"] = body["email"]
 
-        # Address fields — Tripletex has postalAddress, physicalAddress, deliveryAddress
+        # Address fields — Tripletex expects objects, not strings
         for addr_field in ("postalAddress", "physicalAddress", "deliveryAddress"):
             if params.get(addr_field):
-                body[addr_field] = params[addr_field]
+                addr = params[addr_field]
+                if isinstance(addr, str):
+                    body[addr_field] = {"addressLine1": addr}
+                elif isinstance(addr, dict):
+                    body[addr_field] = addr
 
         # Sometimes LLM extracts a flat "address" — map to postalAddress
         if params.get("address") and "postalAddress" not in body:

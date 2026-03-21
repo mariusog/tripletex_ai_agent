@@ -40,7 +40,11 @@ class CreateSupplierHandler(BaseHandler):
             body["invoiceEmail"] = body["email"]
         for addr_field in ("postalAddress", "physicalAddress"):
             if params.get(addr_field):
-                body[addr_field] = params[addr_field]
+                addr = params[addr_field]
+                if isinstance(addr, str):
+                    body[addr_field] = {"addressLine1": addr}
+                elif isinstance(addr, dict):
+                    body[addr_field] = addr
         body = self.strip_none_values(body)
         result = api_client.post("/supplier", data=body)
         value = result.get("value", {})
@@ -78,6 +82,7 @@ def _build_posting(
     posting: dict[str, Any],
     row: int = 0,
     supplier: dict[str, int] | None = None,
+    customer: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     """Build a single voucher posting payload."""
     result: dict[str, Any] = {"row": row}
@@ -105,13 +110,29 @@ def _build_posting(
     result["amountGross"] = amount
     result["amountGrossCurrency"] = amount
     # Set VAT type from account default if not explicitly provided
+    # vatType=0 means explicitly no VAT (used when LLM provides separate VAT postings)
     if "vatType" in posting:
-        result["vatType"] = BaseHandler.ensure_ref(posting["vatType"], "vatType")
+        if posting["vatType"]:
+            result["vatType"] = BaseHandler.ensure_ref(posting["vatType"], "vatType")
+        # else: vatType=0/None/False → skip VAT entirely
     elif vat_ref:
         result["vatType"] = vat_ref
+
+    # Resolve account number for entity reference rules
+    acct_num = None
+    try:
+        acct_num = int(posting.get("account") or posting.get("debitAccount") or 0)
+    except (TypeError, ValueError):
+        pass
+
     # Add supplier ref if provided (required for AP/supplier invoice postings)
     if supplier:
         result["supplier"] = supplier
+
+    # Add customer ref on receivable accounts (1500-1599)
+    if customer and acct_num and 1500 <= acct_num < 1600:
+        result["customer"] = customer
+
     return {k: v for k, v in result.items() if v is not None}
 
 
@@ -145,6 +166,12 @@ class CreateVoucherHandler(BaseHandler):
         # Resolve supplier if present (needed for supplier invoice vouchers)
         supplier_ref = _resolve_supplier(api_client, params.get("supplier"))
 
+        # Resolve customer if present (needed for receivable account 1500 postings)
+        customer_ref = None
+        if params.get("customer"):
+            from src.handlers.invoice import _resolve_customer
+            customer_ref = _resolve_customer(api_client, params["customer"])
+
         # Normalize postings: split debitAccount/creditAccount into separate rows
         raw_postings = params.get("postings", [])
         postings: list[dict[str, Any]] = []
@@ -169,8 +196,24 @@ class CreateVoucherHandler(BaseHandler):
                 postings.append(p)
 
         if postings:
+            # If LLM provided explicit VAT postings (27xx), suppress auto-vatType
+            # on other postings to prevent double VAT decomposition
+            has_explicit_vat = any(
+                2700 <= int(p.get("account") or p.get("debitAccount") or 0) < 2800
+                for p in postings
+                if p.get("account") or p.get("debitAccount")
+            )
+            if has_explicit_vat:
+                for p in postings:
+                    acct = int(p.get("account") or p.get("debitAccount") or 0)
+                    if not (2700 <= acct < 2800):
+                        p["vatType"] = 0  # Force no-VAT
+
             body["postings"] = [
-                _build_posting(api_client, p, row=i + 1, supplier=supplier_ref)
+                _build_posting(
+                    api_client, p, row=i + 1,
+                    supplier=supplier_ref, customer=customer_ref,
+                )
                 for i, p in enumerate(postings)
             ]
 

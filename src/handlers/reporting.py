@@ -29,13 +29,41 @@ class LedgerCorrectionHandler(BaseHandler):
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         from datetime import date as dt_date
+        from src.handlers.ledger import _resolve_account
 
         date_val = self.validate_date(params.get("date"), "date")
         if not date_val:
             date_val = dt_date.today().isoformat()
-        body: dict[str, Any] = {"date": date_val}
 
-        body["description"] = params.get("description", "Korreksjon")
+        # Flatten corrections list into postings
+        # LLM sends: corrections: [{postings: [...], description: "..."}, ...]
+        corrections = params.get("corrections", [])
+        flat_postings = params.get("postings", [])
+        descriptions = []
+
+        if corrections and not flat_postings:
+            for corr in corrections:
+                if corr.get("description"):
+                    descriptions.append(corr["description"])
+                corr_postings = corr.get("postings", [])
+                for p in corr_postings:
+                    posting = dict(p)
+                    if "debitAmount" in posting:
+                        posting["debit"] = posting.pop("debitAmount", 0)
+                    if "creditAmount" in posting:
+                        posting["credit"] = posting.pop("creditAmount", 0)
+                    flat_postings.append(posting)
+
+        description = (
+            params.get("description")
+            or "; ".join(descriptions[:3])
+            or "Korreksjon"
+        )
+
+        body: dict[str, Any] = {
+            "date": date_val,
+            "description": description,
+        }
 
         for field in ("number", "tempNumber"):
             if field in params:
@@ -45,11 +73,27 @@ class LedgerCorrectionHandler(BaseHandler):
             body["typeId"] = int(params["voucherType"])
 
         # Build correction postings
-        postings = params.get("postings", [])
-        if postings:
-            body["postings"] = [
-                _build_posting(api_client, p, row=i + 1) for i, p in enumerate(postings)
+        if flat_postings:
+            built = [
+                _build_posting(api_client, p, row=i + 1)
+                for i, p in enumerate(flat_postings)
             ]
+
+            # Auto-balance: if postings don't sum to zero, add balancing entry
+            total = sum(p.get("amountGross", 0) for p in built)
+            if total != 0:
+                contra_acct = 1920 if total > 0 else 2400
+                contra_ref, _ = _resolve_account(api_client, contra_acct)
+                built.append({
+                    "row": len(built) + 1,
+                    "account": contra_ref,
+                    "amountGross": -total,
+                    "amountGrossCurrency": -total,
+                    "description": "Balansering",
+                })
+                logger.info("Auto-balanced correction: %s on account %s", -total, contra_acct)
+
+            body["postings"] = built
 
         # If correcting a specific voucher, reverse it first
         if "originalVoucherId" in params:
@@ -57,13 +101,16 @@ class LedgerCorrectionHandler(BaseHandler):
             try:
                 api_client.put(
                     f"/ledger/voucher/{orig_id}/:reverse",
-                    data={"id": orig_id, "date": params["date"]},
+                    data={"id": orig_id, "date": date_val},
                 )
                 logger.info("Reversed original voucher id=%s", orig_id)
             except TripletexApiError:
                 logger.warning("Could not reverse voucher %s, proceeding", orig_id)
 
-        result = api_client.post("/ledger/voucher", data=body)
+        body = self.strip_none_values(body)
+        result = api_client.post(
+            "/ledger/voucher", data=body, params={"sendToLedger": "true"},
+        )
         value = result.get("value", {})
         logger.info("Created correction voucher id=%s", value.get("id"))
         return {"id": value.get("id"), "action": "correction_created"}
