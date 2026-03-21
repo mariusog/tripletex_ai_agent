@@ -1,0 +1,73 @@
+{
+  "timestamp": "2026-03-21 00:01:25",
+  "prompt": "Recebemos a fatura INV-2026-6293 do fornecedor Montanha Lda (org. nº 980979431) no valor de 12050 NOK com IVA incluído. O montante refere-se a serviços de escritório (conta 7000). Registe a fatura do fornecedor com o IVA dedutível correto (25 %).",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/supplier",
+      "status": 200,
+      "duration_s": 0.28
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.2
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.21
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.22
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 201,
+      "duration_s": 0.52
+    }
+  ],
+  "errors": [],
+  "task_type": "create_voucher",
+  "params": {
+    "description": "Fatura fornecedor INV-2026-6293 - Montanha Lda - serviços de escritório",
+    "date": null,
+    "supplier": {
+      "name": "Montanha Lda",
+      "organizationNumber": "980979431"
+    },
+    "invoiceNumber": "INV-2026-6293",
+    "postings": [
+      {
+        "account": 7000,
+        "amount": 9640,
+        "description": "Serviços de escritório"
+      },
+      {
+        "account": 2710,
+        "amount": 2410,
+        "description": "IVA dedutível 25%"
+      },
+      {
+        "account": 2400,
+        "amount": -12050,
+        "description": "Fornecedor Montanha Lda"
+      }
+    ]
+  },
+  "handler": "CreateVoucherHandler",
+  "total_api_calls": 5,
+  "total_duration_s": 6.57,
+  "result": {
+    "id": 608879313,
+    "action": "created"
+  },
+  "service": "tripletex-agent-2"
+}
