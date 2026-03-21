@@ -177,12 +177,56 @@
 
 ---
 
+---
+
+## Day 2 Tasks (Saturday March 21)
+
+### T120: Integration tests for Tier 3 handlers [x3 multiplier]
+**Status**: open
+**Priority**: 3
+**Files**: `tests/test_all_handlers_sandbox.py`
+
+These 6 task types have NEVER been tested in competition. Each is worth x3 points.
+
+- [ ] `balance_sheet_report` — GET /balanceSheet with date range
+- [ ] `bank_reconciliation` — POST /bank/reconciliation with type + accountingPeriod
+- [ ] `ledger_correction` — POST /ledger/voucher with correction postings
+- [ ] `year_end_closing` — POST /ledger/voucher with closing entries from balance sheet
+- [ ] `reverse_voucher` — PUT /ledger/voucher/{id}/:reverse
+- [ ] `delete_voucher` — GET /ledger/voucher + DELETE
+
+For each:
+- [ ] Write sandbox integration test in test_all_handlers_sandbox.py
+- [ ] Run against sandbox to verify handler works end-to-end
+- [ ] Document any API quirks found
+
+### T121: Integration tests for Tier 2 handlers [x2 multiplier]
+**Status**: open
+**Priority**: 3
+**Files**: `tests/test_all_handlers_sandbox.py`
+
+5 task types never tested in competition:
+
+- [ ] `create_order` — POST /order + /order/orderline/list
+- [ ] `create_asset` — POST /asset
+- [ ] `update_asset` — GET /asset + PUT /asset/{id}
+- [ ] `approve_travel_expense` — PUT /travelExpense/{id}/:approve
+- [ ] `deliver_travel_expense` — PUT /travelExpense/{id}/:deliver
+
+### T122: Integration tests for Tier 1 handlers [x1 multiplier]
+**Status**: open
+**Priority**: 3
+**Files**: `tests/test_all_handlers_sandbox.py`
+
+4 task types never tested in competition:
+
+- [ ] `assign_role` — GET /employee + PUT /employee/{id} with userType
+- [ ] `enable_module` — GET /modules + PUT /modules
+- [ ] `update_customer` — GET /customer + PUT /customer/{id}
+- [ ] `update_employee` — GET /employee + PUT /employee/{id}
+
+---
+
 ## Escalations
 
-| Tag | Task | Description |
-|-----|------|-------------|
-| - | - | - |
-
-## Completed Tasks
-
-_None yet_
+_None_

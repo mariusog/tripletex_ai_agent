@@ -154,12 +154,43 @@
 
 ---
 
+---
+
+## Day 2 Tasks (Saturday March 21)
+
+### T100: Fix payment reversal scoring [CRITICAL]
+**Status**: open
+**Priority**: 1 (biggest single score improvement)
+**Files**: `src/handlers/invoice.py` (RegisterPaymentHandler)
+
+Current approach creates invoice WITHOUT payment for reversals → 2/8 score.
+Competition may want to see a paid invoice with the payment then reversed.
+
+- [ ] Check Tripletex API docs for payment reversal/cancellation endpoints
+- [ ] Try approach A: create invoice + pay + reverse with negative paidAmount
+- [ ] Try approach B: create invoice + pay, then use PUT /invoice/{id}/:createCreditNote
+- [ ] Try approach C: current approach (leave unpaid) — already scoring 2/8
+- [ ] Pick whichever scores highest, deploy
+- [ ] Verify with at least 2 competition submissions
+
+### T101: Verify product search-first fix
+**Status**: open
+**Priority**: 1
+**Files**: `src/handlers/resolvers.py` (resolve_product)
+
+- [ ] Confirm next invoice submission with pre-existing products scores >0
+- [ ] If still failing, check if order line unitPriceExcludingVatCurrency overrides product price
+
+### T102: Verify timesheet + salary fixes
+**Status**: open
+**Priority**: 1
+**Files**: `src/handlers/timesheet.py`, `src/handlers/salary.py`
+
+- [ ] Confirm next log_timesheet submission succeeds (projectChargeableHours removed)
+- [ ] Confirm next run_payroll submission succeeds (employment check added)
+
+---
+
 ## Escalations
 
-| Tag | Task | Description |
-|-----|------|-------------|
-| - | - | - |
-
-## Completed Tasks
-
-_None yet_
+_None_

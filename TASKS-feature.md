@@ -305,12 +305,53 @@
 
 ---
 
+---
+
+## Day 2 Tasks (Saturday March 21)
+
+### T110: Optimize create_invoice API calls
+**Status**: open
+**Priority**: 2
+**Files**: `src/handlers/invoice.py`, `src/handlers/resolvers.py`
+**Current**: 7-10 calls, **Target**: 4 calls
+
+- [ ] Use `get_cached("bank_acct_1920", ...)` for bank account check (saves 1 call on repeat)
+- [ ] Use `get_cached("invoice_payment_type", ...)` for payment type (already done in PUT /:invoice)
+- [ ] Skip bank account setup entirely if using `PUT /order/:invoice` (it may not need it)
+- [ ] Test: submit 3 invoice tasks, track call counts
+- [ ] Before/after metrics in this file
+
+### T111: Optimize register_payment API calls
+**Status**: open
+**Priority**: 2
+**Files**: `src/handlers/invoice.py`
+**Current**: 6-10 calls, **Target**: 4 calls
+
+- [ ] Same optimizations as T110 (shares CreateInvoiceHandler flow)
+- [ ] For reversals: investigate if just creating unpaid invoice is correct
+
+### T112: Optimize create_project API calls
+**Status**: open
+**Priority**: 2
+**Files**: `src/handlers/project.py`
+**Current**: 4-7 calls, **Target**: 2 calls
+
+- [ ] Use `get_cached("account_owner", ...)` for PM lookup
+- [ ] Skip employee resolve when sandbox already has the employee
+- [ ] Test: submit 2 project tasks, track call counts
+
+### T113: Optimize create_voucher API calls
+**Status**: open
+**Priority**: 2
+**Files**: `src/handlers/ledger.py`
+**Current**: 4-5 calls, **Target**: 2 calls
+
+- [ ] Use `get_cached(f"account_{num}", ...)` for ledger account lookups
+- [ ] Cache supplier lookups
+- [ ] Test: submit 2 voucher tasks, track call counts
+
+---
+
 ## Escalations
 
-| Tag | Task | Description |
-|-----|------|-------------|
-| - | - | - |
-
-## Completed Tasks
-
-_None yet_
+_None_
