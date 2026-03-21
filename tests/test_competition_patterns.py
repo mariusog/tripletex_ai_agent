@@ -970,11 +970,44 @@ class TestYearEndClosingFull:
         total = sum(p.get("amountGross", 0) for p in v["postings"])
         assert abs(total) < 0.01, f"Postings don't balance: {total}"
 
-    def test_tax_voucher_must_have_amount(self, client):
-        """Tax voucher must include actual amount, not empty postings."""
+    def test_tax_voucher_overrides_with_real_pnl(self, client):
+        """Tax voucher should use actual P&L profit, not LLM's estimate.
+
+        Based on real competition failure: LLM computed tax from depreciation
+        totals only, missing revenue. The handler should query the balance
+        sheet and compute 22% of actual taxable profit.
+        """
         tag = uid()
-        # Tax = 22% of some profit
-        tax_amount = round(100000 * 0.22, 2)
+        # First create some revenue so there's a profit to tax
+        run_handler(
+            client,
+            "create_voucher",
+            {
+                "description": f"Revenue {tag}",
+                "date": "2025-06-15",
+                "postings": [
+                    {"account": 1920, "debit": 500000},
+                    {"account": 3000, "credit": 500000},
+                ],
+            },
+        )
+        # Create some expenses
+        run_handler(
+            client,
+            "create_voucher",
+            {
+                "description": f"Expenses {tag}",
+                "date": "2025-06-15",
+                "postings": [
+                    {"account": 6010, "debit": 100000},
+                    {"account": 1920, "credit": 100000},
+                ],
+            },
+        )
+
+        # Now create tax voucher with LLM's WRONG amount (just expenses)
+        # The handler should override with real P&L: profit = 500000-100000 = 400000
+        # Tax = 22% × 400000 = 88000
         result = run_handler(
             client,
             "create_voucher",
@@ -982,12 +1015,26 @@ class TestYearEndClosingFull:
                 "description": f"Tax {tag}",
                 "date": "2025-12-31",
                 "postings": [
-                    {"account": 8700, "debit": tax_amount, "description": "Skattekostnad"},
-                    {"account": 2920, "credit": tax_amount, "description": "Betalbar skatt"},
+                    {"account": 8700, "debit": 22000, "description": "LLM wrong tax"},
+                    {"account": 2920, "credit": 22000, "description": "LLM wrong tax"},
                 ],
             },
         )
         assert result["id"]
+
+        # Verify the posted amount was overridden
+        v = client.get(
+            f"/ledger/voucher/{result['id']}",
+            fields="postings(account(number),amountGross)",
+        )["value"]
+        for p in v["postings"]:
+            num = p.get("account", {}).get("number", 0)
+            if num == 8700:
+                # Should be close to 88000, not the LLM's 22000
+                assert abs(p["amountGross"]) > 50000, (
+                    f"Tax amount {p['amountGross']} was not overridden "
+                    f"(expected ~88000, LLM sent 22000)"
+                )
 
     def test_year_end_closing_generates_postings(self, client):
         """Year-end closing should generate postings from balance sheet."""

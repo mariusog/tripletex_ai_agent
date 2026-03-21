@@ -114,8 +114,11 @@ class CreateVoucherHandler(BaseHandler):
                 except Exception:
                     logger.warning("Could not find customer for receivable posting")
 
-        # Merge manual VAT split if present
+        # Override tax amounts with actual P&L calculation
         raw_postings = params.get("postings", [])
+        raw_postings = self._fix_tax_amounts(api_client, raw_postings, date_val)
+
+        # Merge manual VAT split if present
         vat_rate = params.get("vatRate") or params.get("vat")
         raw_postings = merge_vat_postings(raw_postings, vat_rate)
 
@@ -166,6 +169,75 @@ class CreateVoucherHandler(BaseHandler):
         value = result.get("value", {})
         logger.info("Created voucher id=%s", value.get("id"))
         return {"id": value.get("id"), "action": "created"}
+
+    @staticmethod
+    def _fix_tax_amounts(
+        api_client: TripletexClient,
+        postings: list[dict[str, Any]],
+        date: str,
+    ) -> list[dict[str, Any]]:
+        """Override LLM tax amounts with actual P&L calculation.
+
+        When postings include account 8700 (tax expense), compute the real
+        taxable profit from the balance sheet and use 22% of that.
+        """
+        # Check if any posting targets tax accounts (8700-8799)
+        has_tax = False
+        for p in postings:
+            acct = p.get("account") or p.get("debitAccount") or ""
+            try:
+                if 8700 <= int(acct) <= 8799:
+                    has_tax = True
+                    break
+            except (TypeError, ValueError):
+                continue
+
+        if not has_tax:
+            return postings
+
+        # Compute actual taxable profit from balance sheet
+        try:
+            year = date[:4] if date else "2025"
+            resp = api_client.get(
+                "/balanceSheet",
+                params={
+                    "dateFrom": f"{year}-01-01",
+                    "dateTo": f"{year}-12-31",
+                    "accountNumberFrom": 3000,
+                    "accountNumberTo": 8699,
+                },
+            )
+            entries = resp.get("values", [])
+            total = sum(e.get("closingBalance", 0) or 0 for e in entries)
+            profit = -total  # Negative balance = profit
+            if profit <= 0:
+                return postings
+            real_tax = round(profit * 0.22, 2)
+            logger.info("Tax override: P&L profit=%s, tax 22%%=%s", profit, real_tax)
+        except Exception:
+            return postings
+
+        # Replace amounts in tax postings
+        fixed = []
+        for p in postings:
+            p = dict(p)
+            acct = p.get("account") or p.get("debitAccount") or ""
+            try:
+                acct_num = int(acct)
+            except (TypeError, ValueError):
+                acct_num = 0
+            if 8700 <= acct_num <= 8799:
+                # Tax expense — positive (debit)
+                for key in ("amount", "debit", "debitAmount", "amountGross"):
+                    if key in p:
+                        p[key] = real_tax
+            elif 2920 <= acct_num <= 2929:
+                # Tax payable — negative (credit)
+                for key in ("amount", "credit", "creditAmount", "amountGross"):
+                    if key in p:
+                        p[key] = -real_tax if p[key] < 0 else real_tax
+            fixed.append(p)
+        return fixed
 
     @staticmethod
     def _acct_num(posting: dict) -> int:
