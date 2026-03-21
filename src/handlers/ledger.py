@@ -193,10 +193,29 @@ class CreateVoucherHandler(BaseHandler):
         return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
+
+        # Handle multiple vouchers: "vouchers" array param
+        vouchers_list = params.get("vouchers", [])
+        if vouchers_list:
+            created_ids = []
+            for v_params in vouchers_list:
+                # Merge top-level params (employee, supplier) into each voucher
+                merged = {**params, **v_params}
+                merged.pop("vouchers", None)
+                result = self._create_single_voucher(api_client, merged)
+                if result.get("id"):
+                    created_ids.append(result["id"])
+            first = created_ids[0] if created_ids else None
+            return {"id": first, "ids": created_ids, "action": "created"}
+
+        return self._create_single_voucher(api_client, params)
+
+    def _create_single_voucher(
+        self, api_client: TripletexClient, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Create a single voucher with postings."""
         from datetime import date as dt_date
 
-        # Always use today's date — LLM sometimes extracts wrong dates
-        # and the accounting period on fresh sandboxes only covers current month
         date_val = dt_date.today().isoformat()
 
         body: dict[str, Any] = {"date": date_val}

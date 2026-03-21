@@ -75,6 +75,10 @@ classify as "ledger_correction"
 classify as "create_voucher" with salary account postings (debit 5000, credit 2920)
 - If the task asks to create MULTIPLE entities (e.g., "three departments", "deux produits"), \
 extract ALL names into a list param (e.g., departments: ["A", "B", "C"])
+- If the task asks for multiple accounting steps (e.g., accrual reversal + depreciation + \
+salary provision), extract each as a separate voucher in a "vouchers" array param
+- If the task asks to analyze the ledger and create projects based on findings, \
+classify as "create_project" (NOT ledger_correction)
 - If the task mentions a customer by name, pass the full name as "customer" \
 (string or object with "name")
 - If the task mentions products by name/number, include them in orderLines with product name/number
