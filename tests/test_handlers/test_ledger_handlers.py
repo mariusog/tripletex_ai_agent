@@ -85,7 +85,7 @@ class TestCreateSupplier:
         client = _mock_client(post_response=sample_api_response(value={"id": 201}))
         handler = get_handler("create_supplier")
         assert handler is not None
-        result = handler.execute(
+        handler.execute(
             client,
             {"name": "Sup AS", "email": "post@sup.no"},
         )
