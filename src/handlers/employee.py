@@ -24,6 +24,17 @@ class CreateEmployeeHandler(BaseHandler):
         "email": ParamSpec(required=False, description="Email address"),
         "phoneNumberMobile": ParamSpec(required=False, description="Mobile phone"),
         "userType": ParamSpec(required=False, description="STANDARD or ADMINISTRATOR"),
+        "dateOfBirth": ParamSpec(required=False, type="date", description="Birth date yyyy-MM-dd"),
+        "nationalIdentityNumber": ParamSpec(required=False, description="Personnummer/SSN"),
+        "bankAccountNumber": ParamSpec(required=False, description="Bank account number"),
+        "startDate": ParamSpec(required=False, type="date", description="Employment start date"),
+        "annualSalary": ParamSpec(required=False, type="number", description="Annual salary"),
+        "employmentPercentage": ParamSpec(required=False, type="number", description="Stilling %"),
+        "hoursPerDay": ParamSpec(
+            required=False, type="number", description="Working hours per day"
+        ),
+        "department": ParamSpec(required=False, description="Department name or ref"),
+        "jobCode": ParamSpec(required=False, description="Stillingskode/occupation code"),
     }
 
     def get_task_type(self) -> str:
