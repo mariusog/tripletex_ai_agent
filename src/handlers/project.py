@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from src.api_client import TripletexClient
-from src.handlers.base import BaseHandler, register_handler
+from src.handlers.base import BaseHandler, ParamSpec, register_handler
 from src.handlers.entity_resolver import resolve as _resolve
 
 logger = logging.getLogger(__name__)
@@ -16,12 +16,19 @@ logger = logging.getLogger(__name__)
 class CreateProjectHandler(BaseHandler):
     """POST /project with extracted fields. 1 API call."""
 
+    tier = 1
+    description = "Create a new project"
+    param_schema = {
+        "name": ParamSpec(description="Project name"),
+        "number": ParamSpec(required=False),
+        "startDate": ParamSpec(required=False, type="date"),
+        "endDate": ParamSpec(required=False, type="date"),
+        "customer": ParamSpec(required=False, description="Customer name or ref"),
+        "projectManager": ParamSpec(required=False, description="PM name or ref"),
+    }
+
     def get_task_type(self) -> str:
         return "create_project"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["name"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         import secrets
@@ -114,12 +121,11 @@ def _find_project(api_client: TripletexClient, params: dict[str, Any]) -> dict[s
 class UpdateProjectHandler(BaseHandler):
     """GET /project (search by name or ID) then PUT. 2 API calls."""
 
+    tier = 2
+    description = "Update an existing project"
+
     def get_task_type(self) -> str:
         return "update_project"
-
-    @property
-    def required_params(self) -> list[str]:
-        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         project = _find_project(api_client, params)
@@ -163,12 +169,12 @@ class UpdateProjectHandler(BaseHandler):
 class LinkProjectCustomerHandler(BaseHandler):
     """Find project by name/ID, resolve customer, then PUT. 2-3 API calls."""
 
+    tier = 2
+    description = "Link a customer to a project"
+    param_schema = {"customer": ParamSpec(description="Customer name or ref")}
+
     def get_task_type(self) -> str:
         return "link_project_customer"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["customer"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         proj_data = _find_project(api_client, params)
@@ -191,12 +197,12 @@ class LinkProjectCustomerHandler(BaseHandler):
 class CreateActivityHandler(BaseHandler):
     """POST /activity with name and optional fields. 1 API call."""
 
+    tier = 2
+    description = "Create a new activity"
+    param_schema = {"name": ParamSpec(description="Activity name")}
+
     def get_task_type(self) -> str:
         return "create_activity"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["name"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         body: dict[str, Any] = {

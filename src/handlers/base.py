@@ -8,7 +8,8 @@ from __future__ import annotations
 import logging
 import re
 from abc import ABC, abstractmethod
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, ClassVar
 
 from src.api_client import TripletexClient
 
@@ -17,33 +18,47 @@ logger = logging.getLogger(__name__)
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
+@dataclass(frozen=True)
+class ParamSpec:
+    """Schema for a single handler parameter, used for LLM prompt generation."""
+
+    type: str = "string"
+    required: bool = True
+    description: str = ""
+
+
 class BaseHandler(ABC):
     """Abstract base class for all Tripletex task handlers.
 
     Each handler maps to one task_type and executes the minimum
     API calls needed to complete the task.
+
+    Schema attributes (used by build_system_prompt):
+        tier: Competition tier (1, 2, or 3)
+        description: One-line purpose for LLM classification
+        param_schema: Dict of param name -> ParamSpec
+        disambiguation: Optional classification edge-case notes
     """
+
+    tier: ClassVar[int] = 1
+    description: ClassVar[str] = ""
+    param_schema: ClassVar[dict[str, ParamSpec]] = {}
+    disambiguation: ClassVar[str | None] = None
 
     @abstractmethod
     def get_task_type(self) -> str:
         """Return the task_type string this handler processes."""
 
     @property
-    @abstractmethod
     def required_params(self) -> list[str]:
         """Parameter names that must be present in params dict."""
+        if self.param_schema:
+            return [k for k, v in self.param_schema.items() if v.required]
+        return []
 
     @abstractmethod
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        """Execute the task using the Tripletex API.
-
-        Args:
-            api_client: Authenticated Tripletex API client.
-            params: Extracted parameters from the LLM classification.
-
-        Returns:
-            Dict with result details (e.g., created entity ID).
-        """
+        """Execute the task using the Tripletex API."""
 
     def validate_params(self, params: dict[str, Any]) -> list[str]:
         """Check that all required params are present. Returns missing names."""
@@ -51,11 +66,7 @@ class BaseHandler(ABC):
 
     @staticmethod
     def ensure_ref(value: Any, field_name: str = "") -> dict[str, Any]:
-        """Convert int or dict to Tripletex object reference {"id": N}.
-
-        Safely handles int, str-of-int, and dict inputs.
-        Logs a warning for unexpected types.
-        """
+        """Convert int or dict to Tripletex object reference {"id": N}."""
         if isinstance(value, dict):
             if "id" in value:
                 return value

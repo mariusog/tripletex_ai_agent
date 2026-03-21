@@ -18,12 +18,11 @@ class BankReconciliationHandler(BaseHandler):
     Resolves account by number if no ID provided.
     """
 
+    tier = 3
+    description = "Perform bank reconciliation"
+
     def get_task_type(self) -> str:
         return "bank_reconciliation"
-
-    @property
-    def required_params(self) -> list[str]:
-        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         # Resolve account: by ID, or by account number

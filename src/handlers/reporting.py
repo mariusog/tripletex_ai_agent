@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
-from src.handlers.base import BaseHandler, register_handler
+from src.handlers.base import BaseHandler, ParamSpec, register_handler
 from src.handlers.ledger import _build_posting
 
 logger = logging.getLogger(__name__)
@@ -20,12 +20,11 @@ class LedgerCorrectionHandler(BaseHandler):
     with corrected values. API: POST /ledger/voucher with correction postings.
     """
 
+    tier = 3
+    description = "Create a ledger correction voucher"
+
     def get_task_type(self) -> str:
         return "ledger_correction"
-
-    @property
-    def required_params(self) -> list[str]:
-        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         from datetime import date as dt_date
@@ -78,12 +77,12 @@ class YearEndClosingHandler(BaseHandler):
     that zero out revenue/expense accounts to equity (8800).
     """
 
+    tier = 3
+    description = "Execute year-end closing"
+    param_schema = {"year": ParamSpec(type="number", description="Fiscal year")}
+
     def get_task_type(self) -> str:
         return "year_end_closing"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["year"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         year = int(params["year"])
@@ -194,12 +193,15 @@ class BalanceSheetReportHandler(BaseHandler):
     Returns balance sheet data for the specified date range.
     """
 
+    tier = 3
+    description = "Query balance sheet report"
+    param_schema = {
+        "dateFrom": ParamSpec(type="date"),
+        "dateTo": ParamSpec(type="date"),
+    }
+
     def get_task_type(self) -> str:
         return "balance_sheet_report"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["dateFrom", "dateTo"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         query: dict[str, Any] = {

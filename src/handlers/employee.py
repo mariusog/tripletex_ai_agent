@@ -7,7 +7,7 @@ from datetime import date as dt_date
 from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
-from src.handlers.base import BaseHandler, register_handler
+from src.handlers.base import BaseHandler, ParamSpec, register_handler
 
 logger = logging.getLogger(__name__)
 
@@ -16,12 +16,18 @@ logger = logging.getLogger(__name__)
 class CreateEmployeeHandler(BaseHandler):
     """POST /employee with extracted fields. Optimal: 1 API call."""
 
+    tier = 1
+    description = "Create a new employee in Tripletex"
+    param_schema = {
+        "firstName": ParamSpec(description="Employee first name"),
+        "lastName": ParamSpec(description="Employee last name"),
+        "email": ParamSpec(required=False, description="Email address"),
+        "phoneNumberMobile": ParamSpec(required=False, description="Mobile phone"),
+        "userType": ParamSpec(required=False, description="STANDARD or ADMINISTRATOR"),
+    }
+
     def get_task_type(self) -> str:
         return "create_employee"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["firstName", "lastName"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         today = dt_date.today().isoformat()
@@ -99,12 +105,15 @@ class CreateEmployeeHandler(BaseHandler):
 class UpdateEmployeeHandler(BaseHandler):
     """GET /employee (search) then PUT /employee/{id}. 2 API calls."""
 
+    tier = 1
+    description = "Update an existing employee"
+    param_schema = {
+        "firstName": ParamSpec(description="First name to find employee"),
+        "lastName": ParamSpec(description="Last name to find employee"),
+    }
+
     def get_task_type(self) -> str:
         return "update_employee"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["firstName", "lastName"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         first = params["firstName"]

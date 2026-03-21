@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from src.api_client import TripletexClient
-from src.handlers.base import BaseHandler, register_handler
+from src.handlers.base import BaseHandler, ParamSpec, register_handler
 
 logger = logging.getLogger(__name__)
 
@@ -15,12 +15,16 @@ logger = logging.getLogger(__name__)
 class CreateDepartmentHandler(BaseHandler):
     """POST /department with extracted fields. 1 API call."""
 
+    tier = 1
+    description = "Create a new department"
+    param_schema = {
+        "name": ParamSpec(description="Department name"),
+        "departmentNumber": ParamSpec(required=False),
+        "departmentManager": ParamSpec(required=False, description="Manager name or ref"),
+    }
+
     def get_task_type(self) -> str:
         return "create_department"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["name"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         # Handle batch creation via "items" array
@@ -63,12 +67,17 @@ class CreateDepartmentHandler(BaseHandler):
 class UpdateDepartmentHandler(BaseHandler):
     """GET /department (search) then PUT /department/{id}. 2 API calls."""
 
+    tier = 1
+    description = "Update an existing department"
+    param_schema = {
+        "name": ParamSpec(description="Department name to find"),
+        "newName": ParamSpec(required=False),
+        "departmentNumber": ParamSpec(required=False),
+        "departmentManager": ParamSpec(required=False),
+    }
+
     def get_task_type(self) -> str:
         return "update_department"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["name"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         name = params["name"]

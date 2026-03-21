@@ -7,7 +7,7 @@ from datetime import date as dt_date
 from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
-from src.handlers.base import BaseHandler, register_handler
+from src.handlers.base import BaseHandler, ParamSpec, register_handler
 from src.handlers.entity_resolver import resolve
 
 logger = logging.getLogger(__name__)
@@ -75,12 +75,20 @@ def _find_salary_type(
 class RunPayrollHandler(BaseHandler):
     """Create a salary transaction with payslip for an employee."""
 
+    tier = 3
+    description = "Run payroll for an employee"
+    param_schema = {
+        "employee": ParamSpec(description="Employee name or {firstName, lastName, email}"),
+        "baseSalary": ParamSpec(required=False, type="number", description="Base monthly salary"),
+        "bonus": ParamSpec(required=False, type="number"),
+        "bonusDescription": ParamSpec(required=False),
+        "month": ParamSpec(required=False, type="number"),
+        "year": ParamSpec(required=False, type="number"),
+        "extras": ParamSpec(required=False, type="list", description="Additional salary lines"),
+    }
+
     def get_task_type(self) -> str:
         return "run_payroll"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["employee"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         today = dt_date.today()

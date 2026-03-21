@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
-from src.handlers.base import BaseHandler, register_handler
+from src.handlers.base import BaseHandler, ParamSpec, register_handler
 
 logger = logging.getLogger(__name__)
 
@@ -19,12 +19,12 @@ class EnableModuleHandler(BaseHandler):
     The module name is mapped to the corresponding API field.
     """
 
+    tier = 1
+    description = "Enable a Tripletex module"
+    param_schema = {"moduleName": ParamSpec(description="Module field name to enable")}
+
     def get_task_type(self) -> str:
         return "enable_module"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["moduleName"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         module_name = params["moduleName"]
@@ -57,12 +57,16 @@ class AssignRoleHandler(BaseHandler):
     Finds employee by name/ID, updates userType or entitlements.
     """
 
+    tier = 1
+    description = "Assign a role to an employee"
+    param_schema = {
+        "employee": ParamSpec(description="Employee name, ID, or {firstName, lastName}"),
+        "role": ParamSpec(required=False, description="administrator/standard/no_access"),
+        "userType": ParamSpec(required=False),
+    }
+
     def get_task_type(self) -> str:
         return "assign_role"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["employee"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         from src.handlers.entity_resolver import resolve as _resolve

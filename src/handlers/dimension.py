@@ -67,12 +67,11 @@ def _find_or_create_dimension_value(
 class CreateDimensionVoucherHandler(BaseHandler):
     """Create accounting dimensions with values, then post a voucher linked to them."""
 
+    tier = 3
+    description = "Create dimension with values and linked voucher"
+
     def get_task_type(self) -> str:
         return "create_dimension_voucher"
-
-    @property
-    def required_params(self) -> list[str]:
-        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         today = dt_date.today().isoformat()
