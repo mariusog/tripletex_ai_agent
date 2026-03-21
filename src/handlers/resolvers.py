@@ -1,7 +1,8 @@
-"""Shared entity resolvers: find-or-create customers, products, employees.
+"""Shared entity resolvers and finder utilities.
 
-These utilities are used across multiple handler modules to resolve
-entity references (names, IDs) into Tripletex API object refs.
+Entity resolution is delegated to entity_resolver.py. This module
+re-exports those functions for backward compatibility and provides
+travel/invoice-specific finder utilities.
 """
 
 from __future__ import annotations
@@ -11,43 +12,19 @@ from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
 from src.constants import DEFAULT_BANK_ACCOUNT_NUMBER
+from src.handlers.entity_resolver import (
+    _resolve_customer,
+    _resolve_product,
+    resolve,
+)
 
 logger = logging.getLogger(__name__)
 
 _bank_account_set: dict[str, bool] = {}
 
-# Map common cost descriptions to Tripletex costCategory descriptions
-COST_CATEGORY_MAP = {
-    "fly": "Fly",
-    "flybillett": "Fly",
-    "flight": "Fly",
-    "taxi": "Taxi",
-    "hotell": "Hotell",
-    "hotel": "Hotell",
-    "mat": "Mat",
-    "food": "Mat",
-    "parkering": "Parkering",
-    "parking": "Parkering",
-    "buss": "Buss",
-    "bus": "Buss",
-    "tog": "Tog",
-    "train": "Tog",
-    "drivstoff": "Drivstoff",
-    "fuel": "Drivstoff",
-    "ferge": "Ferge",
-    "ferry": "Ferge",
-    "kollektiv": "Kollektivtransport",
-    "public transport": "Kollektivtransport",
-}
-
 
 def ensure_bank_account(api_client: TripletexClient) -> None:
-    """Ensure the company has a bank account on ledger account 1920.
-
-    Tripletex requires a bank account number before invoices can be created.
-    Caches the result to avoid repeated API calls.
-    """
-    # Cache per base_url — each sandbox is different
+    """Ensure the company has a bank account on ledger account 1920."""
     cache_key = getattr(api_client, "base_url", "default")
     if _bank_account_set.get(cache_key):
         return
@@ -81,244 +58,39 @@ def ensure_bank_account(api_client: TripletexClient) -> None:
         logger.warning("Failed to set bank account: %s", e)
 
 
-def resolve_customer(api_client: TripletexClient, customer: Any) -> dict[str, int]:
-    """Resolve customer to {"id": N}. Creates if not found by name."""
-    if customer is None:
-        return {"id": 0}
-    if isinstance(customer, dict) and "id" in customer:
-        return {"id": int(customer["id"])}
-    if isinstance(customer, (int, float)):
-        return {"id": int(customer)}
-    try:
-        return {"id": int(customer)}
-    except (TypeError, ValueError):
-        pass
-    name = str(customer) if not isinstance(customer, dict) else customer.get("name", "")
-    if not name:
-        return {"id": 0}
-    org_nr = customer.get("organizationNumber") if isinstance(customer, dict) else None
-    email = customer.get("email") if isinstance(customer, dict) else None
-    # Always create when we have specific attributes the competition checks
-    if org_nr or email:
-        cust_body: dict[str, Any] = {"name": name}
-        if org_nr:
-            cust_body["organizationNumber"] = str(org_nr)
-        if email:
-            cust_body["email"] = email
-        try:
-            result = api_client.post("/customer", data=cust_body)
-            cust_id = result.get("value", {}).get("id")
-            logger.info("Created customer '%s' id=%s", name, cust_id)
-            return {"id": cust_id}
-        except TripletexApiError:
-            pass  # Fall through to search
-    resp = api_client.get("/customer", params={"name": name, "count": 5}, fields="id,name")
-    values = resp.get("values", [])
-    for v in values:
-        if v.get("name", "").strip().lower() == name.strip().lower():
-            return {"id": v["id"]}
-    # Create without org number
-    cust_body = {"name": name}
-    result = api_client.post("/customer", data=cust_body)
-    cust_id = result.get("value", {}).get("id")
-    logger.info("Auto-created customer '%s' id=%s", name, cust_id)
-    return {"id": cust_id}
-
-
-def resolve_product(api_client: TripletexClient, product: Any, price: Any = None) -> dict[str, int]:
-    """Resolve product to {"id": N}. Creates if not found."""
-    if isinstance(product, dict) and "id" in product:
-        return {"id": int(product["id"])}
-    if isinstance(product, (int, float)):
-        return {"id": int(product)}
-    try:
-        return {"id": int(product)}
-    except (TypeError, ValueError):
-        pass
-    name = str(product) if not isinstance(product, dict) else product.get("name", "")
-    number = product.get("number") if isinstance(product, dict) else None
-
-    # Search by number first (products often pre-exist in sandbox)
-    if number:
-        try:
-            resp = api_client.get(
-                "/product", params={"number": str(number), "count": 1}, fields="id"
-            )
-            values = resp.get("values", [])
-            if values:
-                return {"id": values[0]["id"]}
-        except TripletexApiError:
-            pass
-
-    # Create the product
-    if name or number:
-        prod_body: dict[str, Any] = {"name": name or f"Product {number}"}
-        if number:
-            prod_body["number"] = int(number)
-        if price is not None:
-            prod_body["priceExcludingVatCurrency"] = price
-        try:
-            result = api_client.post("/product", data=prod_body)
-            prod_id = result.get("value", {}).get("id")
-            logger.info("Created product '%s' id=%s", name, prod_id)
-            return {"id": prod_id}
-        except TripletexApiError:
-            # Retry without number/price
-            try:
-                prod_body.pop("number", None)
-                prod_body.pop("priceExcludingVatCurrency", None)
-                result = api_client.post("/product", data=prod_body)
-                prod_id = result.get("value", {}).get("id")
-                return {"id": prod_id}
-            except TripletexApiError:
-                pass
-
-    return {"id": 0}
-
-
-def _ensure_employee_ready(api_client: TripletexClient, emp_id: int) -> None:
-    """Ensure an existing employee has required fields for all operations.
-
-    Sandbox employees may lack dateOfBirth, department, or employment records.
-    This ensures they're usable for invoicing, payroll, timesheet, etc.
-    """
-    try:
-        emp = api_client.get(
-            f"/employee/{emp_id}",
-            fields="id,dateOfBirth,department(id),version",
-        ).get("value", {})
-        if not emp:
-            return
-
-        needs_update = False
-        if not emp.get("dateOfBirth"):
-            emp["dateOfBirth"] = "1990-01-01"
-            needs_update = True
-        if not emp.get("department") or not emp["department"].get("id"):
-            dept = api_client.get_cached(
-                "default_dept", "/department", params={"count": 1}, fields="id"
-            )
-            dept_vals = dept.get("values", [])
-            if dept_vals:
-                emp["department"] = {"id": dept_vals[0]["id"]}
-                needs_update = True
-        if needs_update:
-            api_client.put(f"/employee/{emp_id}", data=emp)
-            logger.info("Updated employee %s with missing fields", emp_id)
-
-        # Ensure employment exists
-        emp_resp = api_client.get(
-            "/employee/employment",
-            params={"employeeId": emp_id, "count": 1},
-            fields="id",
-        )
-        if not emp_resp.get("values"):
-            from datetime import date as dt_date
-
-            start = dt_date.today().replace(day=1).isoformat()
-            api_client.post(
-                "/employee/employment",
-                data={
-                    "employee": {"id": emp_id},
-                    "startDate": start,
-                    "employmentDetails": [
-                        {
-                            "date": start,
-                            "employmentType": "ORDINARY",
-                            "percentageOfFullTimeEquivalent": 100,
-                        }
-                    ],
-                },
-            )
-            logger.info("Created employment for employee %s", emp_id)
-    except TripletexApiError as e:
-        logger.warning("Failed to ensure employee %s ready: %s", emp_id, e)
+# Re-export entity resolvers under their original names
+resolve_customer = _resolve_customer
+resolve_product = _resolve_product
 
 
 def resolve_employee(api_client: TripletexClient, employee: Any) -> dict[str, int]:
     """Resolve employee to {"id": N}. Creates or finds, then ensures ready."""
-    if isinstance(employee, dict) and "id" in employee:
-        return {"id": int(employee["id"])}
-    if isinstance(employee, (int, float)):
-        return {"id": int(employee)}
-    try:
-        return {"id": int(employee)}
-    except (TypeError, ValueError):
-        pass
+    return resolve(api_client, "employee", employee)
 
-    first = ""
-    last = ""
-    email = None
-    if isinstance(employee, dict):
-        first = employee.get("firstName", "")
-        last = employee.get("lastName", "")
-        email = employee.get("email")
-    elif isinstance(employee, str):
-        parts = employee.strip().split()
-        first = parts[0] if parts else ""
-        last = parts[-1] if len(parts) > 1 else ""
 
-    # Try to create — competition checks employee attributes
-    if first and last:
-        from src.handlers import HANDLER_REGISTRY
-
-        emp_handler = HANDLER_REGISTRY["create_employee"]
-        emp_params: dict[str, Any] = {
-            "firstName": first,
-            "lastName": last,
-        }
-        if email:
-            emp_params["email"] = email
-        try:
-            result = emp_handler.execute(api_client, emp_params)
-            emp_id = result.get("id")
-            if emp_id:
-                logger.info("Created employee '%s %s' id=%s", first, last, emp_id)
-                return {"id": emp_id}
-        except TripletexApiError:
-            pass  # Fall through to search
-
-    # Search by email (sandbox may have employee with same email)
-    if email:
-        try:
-            resp = api_client.get("/employee", params={"email": email, "count": 1}, fields="id")
-            vals = resp.get("values", [])
-            if vals:
-                emp_id = vals[0]["id"]
-                _ensure_employee_ready(api_client, emp_id)
-                return {"id": emp_id}
-        except TripletexApiError:
-            pass
-
-    # Search by name
-    search_params: dict[str, Any] = {"count": 5}
-    if first:
-        search_params["firstName"] = first
-    if last:
-        search_params["lastName"] = last
-    resp = api_client.get("/employee", params=search_params, fields="id,firstName,lastName")
-    for v in resp.get("values", []):
-        v_first = (v.get("firstName") or "").strip().lower()
-        v_last = (v.get("lastName") or "").strip().lower()
-        if v_first == first.strip().lower() and v_last == last.strip().lower():
-            _ensure_employee_ready(api_client, v["id"])
-            return {"id": v["id"]}
-
-    # Last resort: create without email
-    from src.handlers import HANDLER_REGISTRY
-
-    emp_handler = HANDLER_REGISTRY["create_employee"]
-    try:
-        result = emp_handler.execute(
-            api_client,
-            {"firstName": first or "Unknown", "lastName": last or "Employee"},
-        )
-        emp_id = result.get("id")
-        if emp_id:
-            return {"id": emp_id}
-    except TripletexApiError as e:
-        logger.warning("Failed to create employee: %s", e)
-        return {"id": 0}
+# Map common cost descriptions to Tripletex costCategory descriptions
+COST_CATEGORY_MAP = {
+    "fly": "Fly",
+    "flybillett": "Fly",
+    "flight": "Fly",
+    "taxi": "Taxi",
+    "hotell": "Hotell",
+    "hotel": "Hotell",
+    "mat": "Mat",
+    "food": "Mat",
+    "parkering": "Parkering",
+    "parking": "Parkering",
+    "buss": "Buss",
+    "bus": "Buss",
+    "tog": "Tog",
+    "train": "Tog",
+    "drivstoff": "Drivstoff",
+    "fuel": "Drivstoff",
+    "ferge": "Ferge",
+    "ferry": "Ferge",
+    "kollektiv": "Kollektivtransport",
+    "public transport": "Kollektivtransport",
+}
 
 
 def find_cost_category(
@@ -336,17 +108,14 @@ def find_cost_category(
             fields="id,description",
         )
         cache["categories"] = resp.get("values", [])
-
     desc_lower = description.lower().strip()
     mapped = COST_CATEGORY_MAP.get(desc_lower)
-
     for cat in cache["categories"]:
         cat_desc = cat.get("description", "").lower()
         if mapped and cat_desc == mapped.lower():
             return {"id": cat["id"]}
         if desc_lower in cat_desc or cat_desc in desc_lower:
             return {"id": cat["id"]}
-
     if cache["categories"]:
         return {"id": cache["categories"][0]["id"]}
     return None
@@ -354,15 +123,9 @@ def find_cost_category(
 
 def get_travel_payment_type(api_client: TripletexClient) -> dict[str, int] | None:
     """Get the first available travel payment type."""
-    resp = api_client.get(
-        "/travelExpense/paymentType",
-        params={"count": 1},
-        fields="id",
-    )
+    resp = api_client.get("/travelExpense/paymentType", params={"count": 1}, fields="id")
     values = resp.get("values", [])
-    if values:
-        return {"id": values[0]["id"]}
-    return None
+    return {"id": values[0]["id"]} if values else None
 
 
 def find_travel_expense(api_client: TripletexClient, params: dict[str, Any]) -> int | None:
@@ -389,8 +152,7 @@ def find_travel_expense(api_client: TripletexClient, params: dict[str, Any]) -> 
                 return v["id"]
     emp = params.get("employee")
     if emp and isinstance(emp, (str, dict)):
-        first = ""
-        last = ""
+        first, last = "", ""
         if isinstance(emp, str):
             parts = emp.strip().split()
             first = parts[0].lower() if parts else ""
@@ -421,8 +183,6 @@ def find_invoice_id(api_client: TripletexClient, params: dict[str, Any]) -> int 
         if isinstance(cust, dict):
             if "id" in cust:
                 search_params["customerId"] = int(cust["id"])
-            elif "name" in cust:
-                return None
             else:
                 return None
         else:
@@ -435,8 +195,21 @@ def find_invoice_id(api_client: TripletexClient, params: dict[str, Any]) -> int 
     try:
         resp = api_client.get("/invoice", params=search_params)
         values = resp.get("values", [])
-        if not values:
-            return None
-        return values[0].get("id")
+        return values[0].get("id") if values else None
     except TripletexApiError:
         return None
+
+
+# Re-export everything needed by other modules
+__all__ = [
+    "COST_CATEGORY_MAP",
+    "ensure_bank_account",
+    "find_cost_category",
+    "find_invoice_id",
+    "find_travel_expense",
+    "get_travel_payment_type",
+    "resolve",
+    "resolve_customer",
+    "resolve_employee",
+    "resolve_product",
+]

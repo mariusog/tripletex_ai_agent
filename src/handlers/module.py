@@ -65,7 +65,7 @@ class AssignRoleHandler(BaseHandler):
         return ["employee"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        from src.handlers.resolvers import resolve_employee as _resolve_employee
+        from src.handlers.entity_resolver import resolve as _resolve
 
         emp_param = params["employee"]
 
@@ -74,7 +74,7 @@ class AssignRoleHandler(BaseHandler):
             emp_data = api_client.get(f"/employee/{int(emp_param)}", fields="*")
             employee = emp_data.get("value", {})
         elif isinstance(emp_param, dict):
-            emp_ref = _resolve_employee(api_client, emp_param)
+            emp_ref = _resolve(api_client, "employee", emp_param)
             emp_data = api_client.get(f"/employee/{emp_ref['id']}", fields="*")
             employee = emp_data.get("value", {})
         else:

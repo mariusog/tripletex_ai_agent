@@ -8,8 +8,7 @@ from typing import Any
 
 from src.api_client import TripletexClient
 from src.handlers.base import BaseHandler, register_handler
-from src.handlers.resolvers import resolve_customer as _resolve_customer
-from src.handlers.resolvers import resolve_product as _resolve_product
+from src.handlers.entity_resolver import resolve as _resolve
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,7 @@ class CreateOrderHandler(BaseHandler):
         return ["customer"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        customer_ref = _resolve_customer(api_client, params.get("customer"))
+        customer_ref = _resolve(api_client, "customer", params.get("customer"))
         today = dt_date.today().isoformat()
 
         body: dict[str, Any] = {
@@ -57,7 +56,12 @@ class CreateOrderHandler(BaseHandler):
                         or line.get("amount")
                         or line.get("price")
                     )
-                    ol["product"] = _resolve_product(api_client, line["product"], price=line_price)
+                    ol["product"] = _resolve(
+                        api_client,
+                        "product",
+                        line["product"],
+                        extra_create_fields={"price": line_price},
+                    )
                 if "description" in line:
                     ol["description"] = line["description"]
                 ol["count"] = line.get("count", line.get("quantity", 1))

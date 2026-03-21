@@ -7,46 +7,9 @@ from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
 from src.handlers.base import BaseHandler, register_handler
+from src.handlers.entity_resolver import _resolve_supplier
 
 logger = logging.getLogger(__name__)
-
-
-def _resolve_supplier(api_client: TripletexClient, supplier: Any) -> dict[str, int] | None:
-    """Resolve supplier to {"id": N}. Creates if not found."""
-    if supplier is None:
-        return None
-    if isinstance(supplier, dict) and "id" in supplier:
-        return {"id": int(supplier["id"])}
-    if isinstance(supplier, (int, float)):
-        return {"id": int(supplier)}
-    name = str(supplier) if not isinstance(supplier, dict) else supplier.get("name", "")
-    org_nr = supplier.get("organizationNumber") if isinstance(supplier, dict) else None
-    email = supplier.get("email") if isinstance(supplier, dict) else None
-    if not name:
-        return None
-    # Always create to ensure correct attributes
-    sup_body: dict[str, Any] = {"name": name}
-    if org_nr:
-        sup_body["organizationNumber"] = str(org_nr)
-    if email:
-        sup_body["email"] = email
-        sup_body["invoiceEmail"] = email
-    try:
-        result = api_client.post("/supplier", data=sup_body)
-        sup_id = result.get("value", {}).get("id")
-        logger.info("Created supplier '%s' id=%s", name, sup_id)
-        return {"id": sup_id}
-    except TripletexApiError:
-        pass
-    # Fallback: search
-    try:
-        resp = api_client.get("/supplier", params={"name": name, "count": 5}, fields="id,name")
-        for v in resp.get("values", []):
-            if v.get("name", "").strip().lower() == name.strip().lower():
-                return {"id": v["id"]}
-    except TripletexApiError:
-        pass
-    return None
 
 
 @register_handler

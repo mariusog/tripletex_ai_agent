@@ -9,18 +9,10 @@ from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
 from src.handlers.base import BaseHandler, register_handler
-from src.handlers.resolvers import (
-    find_cost_category as _find_cost_category,
-)
-from src.handlers.resolvers import (
-    find_travel_expense as _find_travel_expense,
-)
-from src.handlers.resolvers import (
-    get_travel_payment_type as _get_payment_type,
-)
-from src.handlers.resolvers import (
-    resolve_employee as _resolve_employee,
-)
+from src.handlers.entity_resolver import resolve as _resolve
+from src.handlers.resolvers import find_cost_category as _find_cost_category
+from src.handlers.resolvers import find_travel_expense as _find_travel_expense
+from src.handlers.resolvers import get_travel_payment_type as _get_payment_type
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +32,7 @@ class CreateTravelExpenseHandler(BaseHandler):
         today = dt_date.today().isoformat()
 
         # Step 1: Resolve employee
-        employee_ref = _resolve_employee(api_client, params["employee"])
+        employee_ref = _resolve(api_client, "employee", params["employee"])
 
         # Step 2: Create travel expense
         body: dict[str, Any] = {

@@ -46,9 +46,9 @@ class CreateDepartmentHandler(BaseHandler):
         if "departmentManager" in params:
             mgr = params["departmentManager"]
             if isinstance(mgr, dict) and "id" not in mgr:
-                from src.handlers.resolvers import resolve_employee as _resolve_employee
+                from src.handlers.entity_resolver import resolve as _resolve
 
-                body["departmentManager"] = _resolve_employee(api_client, mgr)
+                body["departmentManager"] = _resolve(api_client, "employee", mgr)
             else:
                 body["departmentManager"] = self.ensure_ref(mgr, "departmentManager")
 
@@ -93,9 +93,9 @@ class UpdateDepartmentHandler(BaseHandler):
         if "departmentManager" in params:
             mgr = params["departmentManager"]
             if isinstance(mgr, dict) and "id" not in mgr:
-                from src.handlers.resolvers import resolve_employee as _resolve_employee
+                from src.handlers.entity_resolver import resolve as _resolve
 
-                dept["departmentManager"] = _resolve_employee(api_client, mgr)
+                dept["departmentManager"] = _resolve(api_client, "employee", mgr)
             else:
                 dept["departmentManager"] = self.ensure_ref(mgr, "departmentManager")
 

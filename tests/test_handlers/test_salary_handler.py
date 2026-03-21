@@ -81,7 +81,7 @@ class TestSalaryRegistration:
 
 
 class TestRunPayrollHandler:
-    @patch("src.handlers.salary.resolve_employee", return_value={"id": 1})
+    @patch("src.handlers.salary.resolve", return_value={"id": 1})
     @patch("src.handlers.salary._find_salary_type", return_value={"id": 10})
     def test_happy_path_base_salary(self, _mock_type, _mock_emp):
         client = MagicMock()
@@ -100,7 +100,7 @@ class TestRunPayrollHandler:
         assert result["id"] == 500
         assert result["action"] == "payroll_created"
 
-    @patch("src.handlers.salary.resolve_employee", return_value={"id": 1})
+    @patch("src.handlers.salary.resolve", return_value={"id": 1})
     @patch("src.handlers.salary._find_salary_type", return_value={"id": 10})
     def test_with_bonus(self, _mock_type, _mock_emp):
         client = MagicMock()
@@ -118,7 +118,7 @@ class TestRunPayrollHandler:
         assert result["id"] == 501
         assert result["action"] == "payroll_created"
 
-    @patch("src.handlers.salary.resolve_employee", return_value={"id": 1})
+    @patch("src.handlers.salary.resolve", return_value={"id": 1})
     @patch("src.handlers.salary._find_salary_type", return_value={"id": 10})
     def test_with_extras(self, _mock_type, _mock_emp):
         client = MagicMock()
@@ -135,14 +135,14 @@ class TestRunPayrollHandler:
         )
         assert result["id"] == 502
 
-    @patch("src.handlers.salary.resolve_employee", return_value={"id": 1})
+    @patch("src.handlers.salary.resolve", return_value={"id": 1})
     def test_no_salary_lines_returns_error(self, _mock_emp):
         client = MagicMock()
         handler = get_handler("run_payroll")
         result = handler.execute(client, {"employee": 1})
         assert result == {"error": "no_salary_lines"}
 
-    @patch("src.handlers.salary.resolve_employee", return_value={"id": 1})
+    @patch("src.handlers.salary.resolve", return_value={"id": 1})
     @patch("src.handlers.salary._find_salary_type", return_value={"id": 10})
     def test_api_error_returns_error(self, _mock_type, _mock_emp):
         client = MagicMock()
@@ -158,7 +158,7 @@ class TestRunPayrollHandler:
         )
         assert "error" in result
 
-    @patch("src.handlers.salary.resolve_employee", return_value={"id": 1})
+    @patch("src.handlers.salary.resolve", return_value={"id": 1})
     @patch("src.handlers.salary._find_salary_type", return_value={"id": 10})
     def test_extras_as_single_dict(self, _mock_type, _mock_emp):
         client = MagicMock()

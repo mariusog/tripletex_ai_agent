@@ -8,7 +8,7 @@ from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
 from src.handlers.base import BaseHandler, register_handler
-from src.handlers.resolvers import resolve_employee
+from src.handlers.entity_resolver import resolve
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +89,7 @@ class RunPayrollHandler(BaseHandler):
         date = params.get("date", today.isoformat())
 
         # Step 1: Resolve employee (ensures dateOfBirth, dept, employment)
-        emp_ref = resolve_employee(api_client, params["employee"])
+        emp_ref = resolve(api_client, "employee", params["employee"])
 
         # Step 2: Build salary specifications
         specifications = []

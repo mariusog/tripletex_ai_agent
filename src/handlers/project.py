@@ -7,8 +7,7 @@ from typing import Any
 
 from src.api_client import TripletexClient
 from src.handlers.base import BaseHandler, register_handler
-from src.handlers.resolvers import resolve_customer as _resolve_customer
-from src.handlers.resolvers import resolve_employee as _resolve_employee
+from src.handlers.entity_resolver import resolve as _resolve
 
 logger = logging.getLogger(__name__)
 
@@ -44,11 +43,11 @@ class CreateProjectHandler(BaseHandler):
             pm_last = pm.get("lastName", "")
             if pm_first and pm_last:
                 try:
-                    _resolve_employee(api_client, pm)
+                    _resolve(api_client, "employee", pm)
                 except Exception:
                     logger.warning("PM employee creation failed, continuing")
             else:
-                _resolve_employee(api_client, pm)
+                _resolve(api_client, "employee", pm)
 
         proj_num = str(params.get("number", secrets.randbelow(90000) + 10000))
 
@@ -84,7 +83,7 @@ class CreateProjectHandler(BaseHandler):
                     cust_result = api_client.post("/customer", data=cust_body)
                     body["customer"] = {"id": cust_result.get("value", {}).get("id")}
                 except TripletexApiError:
-                    body["customer"] = _resolve_customer(api_client, cust)
+                    body["customer"] = _resolve(api_client, "customer", cust)
             else:
                 body["customer"] = self.ensure_ref(cust, "customer")
 
@@ -154,7 +153,7 @@ class UpdateProjectHandler(BaseHandler):
         if "customer" in params:
             cust = params["customer"]
             if isinstance(cust, dict) and "id" not in cust:
-                project["customer"] = _resolve_customer(api_client, cust)
+                project["customer"] = _resolve(api_client, "customer", cust)
             else:
                 project["customer"] = self.ensure_ref(cust, "customer")
 
@@ -182,7 +181,7 @@ class LinkProjectCustomerHandler(BaseHandler):
         proj_id = proj_data["id"]
         cust = params["customer"]
         if isinstance(cust, dict) and "id" not in cust:
-            proj_data["customer"] = _resolve_customer(api_client, cust)
+            proj_data["customer"] = _resolve(api_client, "customer", cust)
         else:
             proj_data["customer"] = self.ensure_ref(cust, "customer")
 

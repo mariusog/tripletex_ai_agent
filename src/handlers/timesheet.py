@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from datetime import date as dt_date
 from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
 from src.handlers.base import BaseHandler, register_handler
-from src.handlers.resolvers import (
-    ensure_bank_account,
-    resolve_customer,
-    resolve_employee,
-)
+from src.handlers.entity_resolver import resolve
+from src.handlers.resolvers import ensure_bank_account
 
 logger = logging.getLogger(__name__)
 
@@ -22,45 +20,17 @@ def _create_activity(
     name: str,
     project_ref: dict[str, int] | None = None,
 ) -> dict[str, int]:
-    """Create an activity and link it to a project if provided."""
-    act_ref = None
-    try:
-        result = api_client.post(
-            "/activity",
-            data={"name": name, "activityType": "GENERAL_ACTIVITY"},
-        )
-        act_id = result.get("value", {}).get("id")
-        logger.info("Created activity '%s' id=%s", name, act_id)
-        act_ref = {"id": act_id}
-    except TripletexApiError:
-        # Name might already exist — search for it
-        resp = api_client.get("/activity", params={"name": name, "count": 5}, fields="id,name")
-        for v in resp.get("values", []):
-            if (v.get("name") or "").strip().lower() == name.strip().lower():
-                act_ref = {"id": v["id"]}
-                break
-
-    if not act_ref:
+    """Resolve an activity by name and link it to a project if provided."""
+    act_ref = resolve(api_client, "activity", name)
+    if not act_ref.get("id"):
         return {"id": 0}
-
     # Link activity to project so it can be used in timesheet entries
     if project_ref and act_ref.get("id"):
-        try:
+        with contextlib.suppress(TripletexApiError):
             api_client.post(
                 "/project/projectActivity",
-                data={
-                    "project": project_ref,
-                    "activity": act_ref,
-                },
+                data={"project": project_ref, "activity": act_ref},
             )
-            logger.info(
-                "Linked activity %s to project %s",
-                act_ref["id"],
-                project_ref["id"],
-            )
-        except TripletexApiError:
-            pass  # May already be linked
-
     return act_ref
 
 
@@ -110,7 +80,7 @@ class LogTimesheetHandler(BaseHandler):
         today = dt_date.today().isoformat()
 
         # Step 1: Resolve employee
-        emp_ref = resolve_employee(api_client, params["employee"])
+        emp_ref = resolve(api_client, "employee", params["employee"])
 
         # Step 2: Get PM (account owner) for project creation
         pm_search = api_client.get("/employee", params={"count": 1}, fields="id")
@@ -125,7 +95,7 @@ class LogTimesheetHandler(BaseHandler):
                 org = params.get("organizationNumber")
                 if org:
                     cust = {"name": cust, "organizationNumber": org}
-            customer_ref = resolve_customer(api_client, cust)
+            customer_ref = resolve(api_client, "customer", cust)
 
         # Step 4: Find or create project
         project_ref = None

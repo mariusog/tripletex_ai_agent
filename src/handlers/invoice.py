@@ -8,18 +8,9 @@ from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
 from src.handlers.base import BaseHandler, register_handler
-from src.handlers.resolvers import (
-    ensure_bank_account as _ensure_bank_account,
-)
-from src.handlers.resolvers import (
-    find_invoice_id as _find_invoice_id,
-)
-from src.handlers.resolvers import (
-    resolve_customer as _resolve_customer,
-)
-from src.handlers.resolvers import (
-    resolve_product as _resolve_product,
-)
+from src.handlers.entity_resolver import resolve as _resolve
+from src.handlers.resolvers import ensure_bank_account as _ensure_bank_account
+from src.handlers.resolvers import find_invoice_id as _find_invoice_id
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +40,7 @@ class CreateInvoiceHandler(BaseHandler):
         # Merge top-level organizationNumber into customer if it's a string
         if isinstance(cust_param, str) and params.get("organizationNumber"):
             cust_param = {"name": cust_param, "organizationNumber": params["organizationNumber"]}
-        customer_ref = _resolve_customer(api_client, cust_param)
+        customer_ref = _resolve(api_client, "customer", cust_param)
 
         # Step 1b: Create project if specified
         project_ref = None
@@ -67,9 +58,7 @@ class CreateInvoiceHandler(BaseHandler):
                 # Also create the requested PM employee (competition checks they exist)
                 pm_info = proj.get("projectManager") if isinstance(proj, dict) else None
                 if pm_info and isinstance(pm_info, dict) and "id" not in pm_info:
-                    from src.handlers.resolvers import resolve_employee
-
-                    resolve_employee(api_client, pm_info)
+                    _resolve(api_client, "employee", pm_info)
                 import secrets
 
                 proj_num = (
@@ -116,7 +105,12 @@ class CreateInvoiceHandler(BaseHandler):
                         or line.get("amount")
                         or line.get("price")
                     )
-                    ol["product"] = _resolve_product(api_client, line["product"], price=line_price)
+                    ol["product"] = _resolve(
+                        api_client,
+                        "product",
+                        line["product"],
+                        extra_create_fields={"price": line_price},
+                    )
                 if "description" in line:
                     ol["description"] = line["description"]
                 ol["count"] = line.get("count", line.get("quantity", 1))
@@ -368,9 +362,7 @@ class CreateCreditNoteHandler(BaseHandler):
             cn_params["comment"] = params["comment"]
 
         try:
-            result = api_client.put(
-                f"/invoice/{invoice_id}/:createCreditNote", params=cn_params
-            )
+            result = api_client.put(f"/invoice/{invoice_id}/:createCreditNote", params=cn_params)
             credit_note = result.get("value", {}) if result else {}
             cn_id = credit_note.get("id")
             logger.info("Created credit note id=%s for invoice id=%s", cn_id, invoice_id)
