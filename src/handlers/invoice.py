@@ -58,7 +58,9 @@ class CreateInvoiceHandler(BaseHandler):
             proj_name = proj.get("name") if isinstance(proj, dict) else str(proj)
             if proj_name:
                 # Use account owner as PM (guaranteed to have PM access)
-                emp_search = api_client.get("/employee", params={"count": 1}, fields="id")
+                emp_search = api_client.get_cached(
+                    "account_owner", "/employee", params={"count": 1}, fields="id"
+                )
                 emp_values = emp_search.get("values", [])
                 pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
 
@@ -242,19 +244,42 @@ class RegisterPaymentHandler(BaseHandler):
                     }
                 ]
 
-            # For reversals: create invoice WITHOUT payment — the result
-            # should be an unpaid invoice (payment was reversed)
+            # For reversals: create invoice WITH payment, then reverse it
+            # so the invoice shows payment history + outstanding amount
             if is_reversal:
-                inv_params.pop("register_payment", None)
                 inv_params.pop("reversal", None)
-                inv_params.pop("payment", None)
+                # Ensure positive payment is registered during invoice creation
+                inv_params["register_payment"] = {"amount": abs_amount}
 
             invoice_handler = CreateInvoiceHandler()
             inv_result = invoice_handler.execute(api_client, inv_params)
             invoice_id = inv_result.get("id")
 
-            # For reversals, we're done — invoice is unpaid (outstanding)
+            # For reversals: register negative payment to reverse
             if is_reversal and invoice_id:
+                try:
+                    # Get actual invoice amount (incl. VAT) for exact reversal
+                    inv_data = api_client.get(f"/invoice/{invoice_id}", fields="amount")
+                    rev_amount = inv_data.get("value", {}).get("amount", abs_amount)
+
+                    pt_resp = api_client.get_cached(
+                        "invoice_payment_type",
+                        "/invoice/paymentType",
+                        params={"count": 1},
+                        fields="id",
+                    )
+                    pt_values = pt_resp.get("values", [])
+                    pt_id = pt_values[0]["id"] if pt_values else 0
+                    today = dt_date.today().isoformat()
+                    rev_params: dict[str, Any] = {
+                        "paymentDate": params.get("paymentDate", today),
+                        "paymentTypeId": pt_id,
+                        "paidAmount": -rev_amount,
+                    }
+                    api_client.put(f"/invoice/{invoice_id}/:payment", params=rev_params)
+                    logger.info("Reversed payment on invoice id=%s", invoice_id)
+                except TripletexApiError as e:
+                    logger.warning("Payment reversal failed: %s", e)
                 return {"id": invoice_id, "action": "payment_reversed"}
 
         if not invoice_id:
@@ -267,8 +292,13 @@ class RegisterPaymentHandler(BaseHandler):
             if date_val:
                 pay_date = date_val
 
-        # Look up payment type
-        pt_resp = api_client.get("/invoice/paymentType", params={"count": 1}, fields="id")
+        # Look up payment type (cached to avoid repeated calls)
+        pt_resp = api_client.get_cached(
+            "invoice_payment_type",
+            "/invoice/paymentType",
+            params={"count": 1},
+            fields="id",
+        )
         pt_values = pt_resp.get("values", [])
         pt_id = int(params.get("paymentTypeId", pt_values[0]["id"] if pt_values else 0))
 

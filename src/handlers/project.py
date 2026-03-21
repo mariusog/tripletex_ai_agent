@@ -31,7 +31,9 @@ class CreateProjectHandler(BaseHandler):
         from src.api_client import TripletexApiError
 
         # projectManager must have PM access — use account owner as PM
-        emp_search = api_client.get("/employee", params={"count": 1}, fields="id")
+        emp_search = api_client.get_cached(
+            "account_owner", "/employee", params={"count": 1}, fields="id"
+        )
         emp_values = emp_search.get("values", [])
         pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
 
