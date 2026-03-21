@@ -213,9 +213,25 @@ class TripletexClient:
         # Should not reach here, but handle defensively
         raise TripletexApiError(ApiError(status=429, message="Rate limit retries exhausted"))
 
-    @staticmethod
+    # Fields that should never be stripped by retry-with-fix
+    _PROTECTED_FIELDS = frozenset(
+        {
+            "email",
+            "name",
+            "firstName",
+            "lastName",
+            "date",
+            "postings",
+            "employee",
+            "customer",
+            "account",
+            "amount",
+        }
+    )
+
+    @classmethod
     def _try_fix_payload(
-        data: dict[str, Any], validation_messages: list[dict[str, Any]]
+        cls, data: dict[str, Any], validation_messages: list[dict[str, Any]]
     ) -> dict[str, Any] | None:
         """Try to fix a payload by stripping fields mentioned in validation errors."""
         fixed = dict(data)
@@ -227,14 +243,14 @@ class TripletexClient:
             # Strip "Internt felt (fieldName)" format
             if field.startswith("Internt felt"):
                 inner = field.split("(")[-1].rstrip(")")
-                if inner in fixed:
+                if inner in fixed and inner not in cls._PROTECTED_FIELDS:
                     fixed.pop(inner)
                     changed = True
-            # Strip dotted paths like "postings.customer.id" — skip, too complex
+            # Strip dotted paths like "postings.customer.id" — skip
             elif "." in field:
                 continue
-            # Strip direct field names
-            elif field in fixed:
+            # Strip direct field names (if not protected)
+            elif field in fixed and field not in cls._PROTECTED_FIELDS:
                 fixed.pop(field)
                 changed = True
         return fixed if changed else None
