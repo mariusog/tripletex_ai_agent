@@ -206,6 +206,8 @@ class TaskRouter:
             # This handles tasks like "analyze expenses and create projects"
             if all_read_only and step_results:
                 logger.info("All steps read-only, re-classifying with data")
+                # Pre-compute expense analysis if we have multiple balance sheets
+                step_results = self._enrich_with_analysis(step_results)
                 new_tasks = self._reclassify_with_data(request, step_results)
                 write_tasks = [t for t in new_tasks if t.task_type != "balance_sheet_report"]
                 if write_tasks:
@@ -263,6 +265,54 @@ class TaskRouter:
             f"and extract parameters:\n\n{request.prompt}"
         )
         return self._llm.classify_and_extract(prompt=rephrased, files=request.files or None)
+
+    @staticmethod
+    def _enrich_with_analysis(
+        step_results: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Pre-compute expense analysis when we have multiple balance sheets."""
+        balance_sheets = [sr for sr in step_results if sr.get("action") == "report_retrieved"]
+        if len(balance_sheets) < 2:
+            return step_results
+        # Compare expense accounts (5000-9999) between periods
+        period1 = {
+            e["account"]["number"]: e
+            for e in balance_sheets[0].get("entries", [])
+            if e.get("account", {}).get("number", 0) >= 5000
+        }
+        period2 = {
+            e["account"]["number"]: e
+            for e in balance_sheets[1].get("entries", [])
+            if e.get("account", {}).get("number", 0) >= 5000
+        }
+        increases = []
+        for num, e2 in period2.items():
+            e1 = period1.get(num, {})
+            change1 = e1.get("balanceChange", 0)
+            change2 = e2.get("balanceChange", 0)
+            diff = change2 - change1
+            if diff > 0:
+                increases.append(
+                    {
+                        "account_number": num,
+                        "account_name": e2["account"]["name"],
+                        "period1_change": change1,
+                        "period2_change": change2,
+                        "increase": diff,
+                    }
+                )
+        increases.sort(key=lambda x: x["increase"], reverse=True)
+        if increases:
+            analysis = {
+                "action": "expense_analysis",
+                "top_increases": increases[:5],
+                "summary": "; ".join(
+                    f"{i['account_name']}: +{i['increase']:.0f}" for i in increases[:5]
+                ),
+            }
+            logger.info("Expense analysis: %s", analysis["summary"])
+            return [*step_results, analysis]
+        return step_results
 
     def _validate_classifications(
         self,
@@ -323,19 +373,39 @@ class TaskRouter:
         step_results: list[dict[str, Any]],
     ) -> list[TaskClassification]:
         """Re-classify after read-only steps, passing API data to LLM for analysis."""
-        data_summary = []
-        for sr in step_results:
-            data_summary.append(str(sr)[:2000])
-        augmented_prompt = (
-            f"{request.prompt}\n\n"
-            f"DATA FROM TRIPLETEX API:\n"
-            + "\n---\n".join(data_summary)
-            + "\n\nINSTRUCTIONS: Based on the data above, determine what actions to take. "
-            "For expense analysis tasks: identify the accounts with the biggest INCREASE "
-            "(compare balanceChange values). Create projects with isInternal=true "
-            "and name them EXACTLY after the account name from the data. "
-            "Create one activity per project."
+        # Check if we have pre-computed expense analysis
+        analysis = next(
+            (sr for sr in step_results if sr.get("action") == "expense_analysis"),
+            None,
         )
+        if analysis and analysis.get("top_increases"):
+            top = analysis["top_increases"][:3]
+            lines = []
+            for item in top:
+                lines.append(f"- {item['account_name']} (increase: {item['increase']:.0f} NOK)")
+            augmented_prompt = (
+                f"{request.prompt}\n\n"
+                f"ANALYSIS RESULT — Top expense increases:\n"
+                + "\n".join(lines)
+                + "\n\nCRITICAL: You MUST create these tasks:\n"
+                "For EACH account listed above:\n"
+                "1. create_project with name=EXACT account name, isInternal=true\n"
+                "2. create_activity with name=EXACT account name\n"
+                f"That means {len(top)} create_project + {len(top)} create_activity tasks."
+            )
+        else:
+            data_summary = []
+            for sr in step_results:
+                data_summary.append(str(sr)[:2000])
+            augmented_prompt = (
+                f"{request.prompt}\n\n"
+                f"DATA FROM TRIPLETEX API:\n"
+                + "\n---\n".join(data_summary)
+                + "\n\nINSTRUCTIONS: Based on the data above, determine what "
+                "actions to take. Create projects with isInternal=true and name "
+                "them EXACTLY after the account name from the data. "
+                "Create one activity per project."
+            )
         try:
             return self._llm.classify_and_extract(
                 prompt=augmented_prompt,
