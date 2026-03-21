@@ -100,6 +100,20 @@ class CreateVoucherHandler(BaseHandler):
 
             customer_ref = _resolve_entity(api_client, "customer", params["customer"])
 
+        # If postings use account 1500 (receivable) but no customer, find one
+        if not customer_ref:
+            needs_customer = any(
+                1500 <= self._acct_num(p) <= 1599 for p in params.get("postings", [])
+            )
+            if needs_customer:
+                try:
+                    resp = api_client.get("/customer", params={"count": 1}, fields="id")
+                    vals = resp.get("values", [])
+                    if vals:
+                        customer_ref = {"id": vals[0]["id"]}
+                except Exception:
+                    logger.warning("Could not find customer for receivable posting")
+
         # Merge manual VAT split if present
         raw_postings = params.get("postings", [])
         vat_rate = params.get("vatRate") or params.get("vat")
@@ -152,6 +166,19 @@ class CreateVoucherHandler(BaseHandler):
         value = result.get("value", {})
         logger.info("Created voucher id=%s", value.get("id"))
         return {"id": value.get("id"), "action": "created"}
+
+    @staticmethod
+    def _acct_num(posting: dict) -> int:
+        acct = (
+            posting.get("account")
+            or posting.get("debitAccount")
+            or posting.get("creditAccount")
+            or 0
+        )
+        try:
+            return int(acct)
+        except (TypeError, ValueError):
+            return 0
 
 
 @register_handler

@@ -61,8 +61,7 @@ class SendInvoiceHandler(BaseHandler):
             return {"error": "invoice_not_found"}
 
         send_body: dict[str, Any] = {"id": invoice_id}
-        if params.get("sendType"):
-            send_body["sendType"] = params["sendType"]
+        send_body["sendType"] = params.get("sendType", "EMAIL")
         if params.get("overrideEmailAddress"):
             send_body["overrideEmailAddress"] = params["overrideEmailAddress"]
 
