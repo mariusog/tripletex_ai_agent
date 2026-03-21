@@ -176,8 +176,67 @@ def resolve_product(api_client: TripletexClient, product: Any, price: Any = None
     return {"id": 0}
 
 
+def _ensure_employee_ready(api_client: TripletexClient, emp_id: int) -> None:
+    """Ensure an existing employee has required fields for all operations.
+
+    Sandbox employees may lack dateOfBirth, department, or employment records.
+    This ensures they're usable for invoicing, payroll, timesheet, etc.
+    """
+    try:
+        emp = api_client.get(
+            f"/employee/{emp_id}",
+            fields="id,dateOfBirth,department(id),version",
+        ).get("value", {})
+        if not emp:
+            return
+
+        needs_update = False
+        if not emp.get("dateOfBirth"):
+            emp["dateOfBirth"] = "1990-01-01"
+            needs_update = True
+        if not emp.get("department") or not emp["department"].get("id"):
+            dept = api_client.get_cached(
+                "default_dept", "/department", params={"count": 1}, fields="id"
+            )
+            dept_vals = dept.get("values", [])
+            if dept_vals:
+                emp["department"] = {"id": dept_vals[0]["id"]}
+                needs_update = True
+        if needs_update:
+            api_client.put(f"/employee/{emp_id}", data=emp)
+            logger.info("Updated employee %s with missing fields", emp_id)
+
+        # Ensure employment exists
+        emp_resp = api_client.get(
+            "/employee/employment",
+            params={"employeeId": emp_id, "count": 1},
+            fields="id",
+        )
+        if not emp_resp.get("values"):
+            from datetime import date as dt_date
+
+            start = dt_date.today().replace(day=1).isoformat()
+            api_client.post(
+                "/employee/employment",
+                data={
+                    "employee": {"id": emp_id},
+                    "startDate": start,
+                    "employmentDetails": [
+                        {
+                            "date": start,
+                            "employmentType": "ORDINARY",
+                            "percentageOfFullTimeEquivalent": 100,
+                        }
+                    ],
+                },
+            )
+            logger.info("Created employment for employee %s", emp_id)
+    except TripletexApiError as e:
+        logger.warning("Failed to ensure employee %s ready: %s", emp_id, e)
+
+
 def resolve_employee(api_client: TripletexClient, employee: Any) -> dict[str, int]:
-    """Resolve employee to {"id": N}. Searches by name or creates."""
+    """Resolve employee to {"id": N}. Creates or finds, then ensures ready."""
     if isinstance(employee, dict) and "id" in employee:
         return {"id": int(employee["id"])}
     if isinstance(employee, (int, float)):
@@ -199,7 +258,7 @@ def resolve_employee(api_client: TripletexClient, employee: Any) -> dict[str, in
         first = parts[0] if parts else ""
         last = parts[-1] if len(parts) > 1 else ""
 
-    # Always create when we have first+last name (competition checks attributes)
+    # Try to create — competition checks employee attributes
     if first and last:
         from src.handlers import HANDLER_REGISTRY
 
@@ -219,44 +278,44 @@ def resolve_employee(api_client: TripletexClient, employee: Any) -> dict[str, in
         except TripletexApiError:
             pass  # Fall through to search
 
+    # Search by email (sandbox may have employee with same email)
+    if email:
+        try:
+            resp = api_client.get("/employee", params={"email": email, "count": 1}, fields="id")
+            vals = resp.get("values", [])
+            if vals:
+                emp_id = vals[0]["id"]
+                _ensure_employee_ready(api_client, emp_id)
+                return {"id": emp_id}
+        except TripletexApiError:
+            pass
+
+    # Search by name
     search_params: dict[str, Any] = {"count": 5}
     if first:
         search_params["firstName"] = first
     if last:
         search_params["lastName"] = last
     resp = api_client.get("/employee", params=search_params, fields="id,firstName,lastName")
-    values = resp.get("values", [])
-    for v in values:
+    for v in resp.get("values", []):
         v_first = (v.get("firstName") or "").strip().lower()
         v_last = (v.get("lastName") or "").strip().lower()
         if v_first == first.strip().lower() and v_last == last.strip().lower():
+            _ensure_employee_ready(api_client, v["id"])
             return {"id": v["id"]}
 
-    # Search by email if name didn't match
-    if email:
-        try:
-            resp = api_client.get("/employee", params={"email": email, "count": 1}, fields="id")
-            vals = resp.get("values", [])
-            if vals:
-                return {"id": vals[0]["id"]}
-        except TripletexApiError:
-            pass
-
+    # Last resort: create without email
     from src.handlers import HANDLER_REGISTRY
 
     emp_handler = HANDLER_REGISTRY["create_employee"]
-    emp_params: dict[str, Any] = {
-        "firstName": first or "Unknown",
-        "lastName": last or "Employee",
-    }
-    if email:
-        emp_params["email"] = email
-
     try:
-        result = emp_handler.execute(api_client, emp_params)
+        result = emp_handler.execute(
+            api_client,
+            {"firstName": first or "Unknown", "lastName": last or "Employee"},
+        )
         emp_id = result.get("id")
-        logger.info("Auto-created employee '%s %s' id=%s", first, last, emp_id)
-        return {"id": emp_id}
+        if emp_id:
+            return {"id": emp_id}
     except TripletexApiError as e:
         logger.warning("Failed to create employee: %s", e)
         return {"id": 0}

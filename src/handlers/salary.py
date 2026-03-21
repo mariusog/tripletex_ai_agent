@@ -88,11 +88,8 @@ class RunPayrollHandler(BaseHandler):
         year = params.get("year", today.year)
         date = params.get("date", today.isoformat())
 
-        # Step 1: Resolve employee
+        # Step 1: Resolve employee (ensures dateOfBirth, dept, employment)
         emp_ref = resolve_employee(api_client, params["employee"])
-
-        # Ensure employee has an employment record for the payroll period
-        self._ensure_employment(api_client, emp_ref["id"], year, month)
 
         # Step 2: Build salary specifications
         specifications = []
@@ -176,48 +173,3 @@ class RunPayrollHandler(BaseHandler):
         except TripletexApiError as e:
             logger.warning("Salary transaction failed: %s", e)
             return {"error": str(e)}
-
-    @staticmethod
-    def _ensure_employment(api_client: TripletexClient, emp_id: int, year: int, month: int) -> None:
-        """Ensure employee has an employment record covering the payroll period."""
-        try:
-            resp = api_client.get(
-                "/employee/employment",
-                params={"employeeId": emp_id, "count": 1},
-                fields="id",
-            )
-            if resp.get("values"):
-                return  # Already has employment
-        except TripletexApiError:
-            pass
-
-        # Ensure employee has dateOfBirth (required for employment)
-        try:
-            emp_data = api_client.get(f"/employee/{emp_id}", fields="id,dateOfBirth,version")
-            emp = emp_data.get("value", {})
-            if not emp.get("dateOfBirth"):
-                emp["dateOfBirth"] = "1990-01-01"
-                api_client.put(f"/employee/{emp_id}", data=emp)
-        except TripletexApiError:
-            pass
-
-        # Create employment record
-        start_date = f"{year}-{month:02d}-01"
-        try:
-            api_client.post(
-                "/employee/employment",
-                data={
-                    "employee": {"id": emp_id},
-                    "startDate": start_date,
-                    "employmentDetails": [
-                        {
-                            "date": start_date,
-                            "employmentType": "ORDINARY",
-                            "percentageOfFullTimeEquivalent": 100,
-                        }
-                    ],
-                },
-            )
-            logger.info("Created employment for employee %s", emp_id)
-        except TripletexApiError as e:
-            logger.warning("Employment creation failed: %s", e)
