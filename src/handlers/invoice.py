@@ -129,63 +129,42 @@ class CreateInvoiceHandler(BaseHandler):
                 api_client.post("/order/orderline/list", data=payloads)
                 logger.info("Added %d order lines", len(payloads))
 
-        # Step 4: Create invoice from order
+        # Step 4: Create invoice from order using PUT /order/:invoice
+        # This single call creates the invoice AND optionally registers payment
         inv_id = None
         try:
-            inv_body: dict[str, Any] = {
+            invoice_params: dict[str, Any] = {
                 "invoiceDate": params.get("invoiceDate") or today,
-                "invoiceDueDate": params.get("invoiceDueDate") or today,
-                "orders": [{"id": order_id}],
             }
-            inv_body = self.strip_none_values(inv_body)
-            inv_result = api_client.post("/invoice", data=inv_body)
+
+            # Include payment in the same call if requested
+            payment = params.get("register_payment", params.get("payment"))
+            if payment:
+                pay_amount = payment.get("amount") if isinstance(payment, dict) else payment
+                if not pay_amount and "totalAmount" in params:
+                    pay_amount = params["totalAmount"]
+                if pay_amount:
+                    pt_resp = api_client.get_cached(
+                        "invoice_payment_type",
+                        "/invoice/paymentType",
+                        params={"count": 1},
+                        fields="id",
+                    )
+                    pt_values = pt_resp.get("values", [])
+                    if pt_values:
+                        invoice_params["paymentTypeId"] = pt_values[0]["id"]
+                        invoice_params["paidAmount"] = pay_amount
+
+            # Send invoice if requested
+            if params.get("send_invoice"):
+                invoice_params["sendToCustomer"] = "true"
+
+            inv_result = api_client.put(f"/order/{order_id}/:invoice", params=invoice_params)
             invoice = inv_result.get("value", {})
             inv_id = invoice.get("id")
             logger.info("Created invoice id=%s from order id=%s", inv_id, order_id)
         except TripletexApiError as e:
             logger.warning("Invoice creation failed: %s", e)
-
-        # Step 5: Register payment if requested (PUT with query params)
-        payment = params.get("register_payment", params.get("payment"))
-        if payment and inv_id:
-            if isinstance(payment, dict):
-                pay_amount = payment.get("amount")
-                pay_date = payment.get("paymentDate")
-            else:
-                pay_amount = payment
-                pay_date = None
-
-            # Use the invoice's actual amount (incl. VAT) for full payment
-            if inv_id:
-                try:
-                    inv_data = api_client.get(f"/invoice/{inv_id}", fields="amount")
-                    actual_amount = inv_data.get("value", {}).get("amount")
-                    if actual_amount:
-                        pay_amount = actual_amount
-                except TripletexApiError:
-                    pass
-
-            if not pay_amount and "totalAmount" in params:
-                pay_amount = params["totalAmount"]
-
-            if pay_amount:
-                try:
-                    # Look up a payment type
-                    pt_resp = api_client.get(
-                        "/invoice/paymentType", params={"count": 1}, fields="id"
-                    )
-                    pt_values = pt_resp.get("values", [])
-                    pt_id = pt_values[0]["id"] if pt_values else 0
-
-                    pay_params: dict[str, Any] = {
-                        "paymentDate": pay_date or today,
-                        "paymentTypeId": pt_id,
-                        "paidAmount": pay_amount,
-                    }
-                    api_client.put(f"/invoice/{inv_id}/:payment", params=pay_params)
-                    logger.info("Registered payment of %s on invoice %s", pay_amount, inv_id)
-                except TripletexApiError as e:
-                    logger.warning("Payment failed: %s", e)
 
         return {"id": inv_id, "orderId": order_id, "action": "created"}
 

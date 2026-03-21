@@ -20,9 +20,17 @@ def llm_client() -> LLMClient:
 
 
 def _make_response(text: str) -> MagicMock:
-    """Build a mock Claude API response with the given text content."""
+    """Build a mock Claude API response with tool_use content."""
+    import json as _json
+
     block = MagicMock()
-    block.text = text
+    block.type = "tool_use"
+    block.name = "classify_task"
+    try:
+        parsed = _json.loads(text.strip().strip("`").removeprefix("json\n"))
+    except _json.JSONDecodeError:
+        parsed = {"task_type": "unknown", "params": {}}
+    block.input = parsed
     response = MagicMock()
     response.content = [block]
     return response

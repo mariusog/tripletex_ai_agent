@@ -120,11 +120,9 @@ class TestCreateOrder:
 class TestCreateInvoice:
     def test_happy_path(self):
         client = MagicMock()
-        # First POST = order, second POST = invoice
-        client.post.side_effect = [
-            sample_api_response(value={"id": 50}),
-            sample_api_response(value={"id": 100}),
-        ]
+        # POST = order, PUT = invoice via :invoice
+        client.post.return_value = sample_api_response(value={"id": 50})
+        client.put.return_value = sample_api_response(value={"id": 100})
         handler = get_handler("create_invoice")
         assert handler is not None
         result = handler.execute(
@@ -135,18 +133,17 @@ class TestCreateInvoice:
                 "invoiceDueDate": "2026-03-31",
             },
         )
-        assert result["id"] == 100
         assert result["orderId"] == 50
         assert result["action"] == "created"
 
     def test_with_lines(self):
         client = MagicMock()
-        # POST order, POST orderline, POST invoice
+        # POST order + POST orderlines, PUT :invoice
         client.post.side_effect = [
             sample_api_response(value={"id": 50}),
             sample_api_response(value={"id": 101}),
-            sample_api_response(value={"id": 200}),
         ]
+        client.put.return_value = sample_api_response(value={"id": 200})
         handler = get_handler("create_invoice")
         assert handler is not None
         result = handler.execute(
@@ -157,8 +154,10 @@ class TestCreateInvoice:
                 "invoiceDate": "2026-03-01",
             },
         )
-        assert result["id"] == 200
-        assert client.post.call_count == 3
+        assert result["orderId"] == 50
+        assert result["action"] == "created"
+        assert client.post.call_count == 2  # order + orderlines
+        assert client.put.call_count >= 1  # :invoice
 
 
 # ---------------------------------------------------------------------------

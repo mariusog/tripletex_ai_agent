@@ -32,6 +32,9 @@ class TripletexApiError(Exception):
         super().__init__(f"Tripletex API error {error.status}: {error.message}")
 
 
+_global_cache: dict[tuple[str, str], Any] = {}
+
+
 class TripletexClient:
     """HTTP client for the Tripletex REST API v2.
 
@@ -42,6 +45,7 @@ class TripletexClient:
     def __init__(self, base_url: str, session_token: str) -> None:
         self.base_url = base_url.rstrip("/")
         self._api_call_count = 0
+        self._cache: dict[str, Any] = {}
         self._client = httpx.Client(
             auth=(API_AUTH_USERNAME, session_token),
             headers={"Content-Type": API_CONTENT_TYPE},
@@ -68,6 +72,22 @@ class TripletexClient:
         if fields:
             params["fields"] = fields
         return self._request("GET", endpoint, params=params)
+
+    def get_cached(
+        self,
+        cache_key: str,
+        endpoint: str,
+        params: dict[str, Any] | None = None,
+        fields: str | None = None,
+    ) -> Any:
+        """GET with caching. Checks global process cache first."""
+        global_key = (self.base_url, cache_key)
+        if global_key in _global_cache:
+            return _global_cache[global_key]
+        if cache_key not in self._cache:
+            self._cache[cache_key] = self.get(endpoint, params=params, fields=fields)
+        _global_cache[global_key] = self._cache[cache_key]
+        return self._cache[cache_key]
 
     def post(
         self,
