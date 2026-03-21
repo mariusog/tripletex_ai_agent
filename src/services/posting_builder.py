@@ -105,7 +105,12 @@ def build_posting(
     # Set VAT type: use account's default (respects locked accounts)
     if "vatType" in posting:
         vt_val = posting["vatType"]
+        # Percentage string ("25%") or small int (25) → use account default
         if isinstance(vt_val, str) and "%" in vt_val:
+            if vat_ref:
+                result["vatType"] = vat_ref
+        elif isinstance(vt_val, (int, float)) and vt_val in (0, 6, 12, 15, 25):
+            # Looks like a percentage, not an ID — use account default
             if vat_ref:
                 result["vatType"] = vat_ref
         else:
