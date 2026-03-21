@@ -138,7 +138,19 @@ def resolve_product(api_client: TripletexClient, product: Any, price: Any = None
     name = str(product) if not isinstance(product, dict) else product.get("name", "")
     number = product.get("number") if isinstance(product, dict) else None
 
-    # Always create when we have a product number (competition checks it)
+    # Search by number first (products often pre-exist in sandbox)
+    if number:
+        try:
+            resp = api_client.get(
+                "/product", params={"number": str(number), "count": 1}, fields="id"
+            )
+            values = resp.get("values", [])
+            if values:
+                return {"id": values[0]["id"]}
+        except TripletexApiError:
+            pass
+
+    # Create the product
     if name or number:
         prod_body: dict[str, Any] = {"name": name or f"Product {number}"}
         if number:
@@ -151,22 +163,10 @@ def resolve_product(api_client: TripletexClient, product: Any, price: Any = None
             logger.info("Created product '%s' id=%s", name, prod_id)
             return {"id": prod_id}
         except TripletexApiError:
-            # Product number taken — just find and use existing
-            if number:
-                try:
-                    resp = api_client.get(
-                        "/product",
-                        params={"number": str(number), "count": 1},
-                        fields="id",
-                    )
-                    values = resp.get("values", [])
-                    if values:
-                        return {"id": values[0]["id"]}
-                except TripletexApiError:
-                    pass
-            # Retry without number
+            # Retry without number/price
             try:
                 prod_body.pop("number", None)
+                prod_body.pop("priceExcludingVatCurrency", None)
                 result = api_client.post("/product", data=prod_body)
                 prod_id = result.get("value", {}).get("id")
                 return {"id": prod_id}
