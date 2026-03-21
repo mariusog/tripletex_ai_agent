@@ -131,7 +131,14 @@ def _build_posting(
     # Handle debit/credit amounts
     debit = posting.get("debit", 0) or 0
     credit = posting.get("credit", 0) or 0
-    if debit and not credit:
+    # If debit/credit are booleans (LLM sent True/False), use amount field
+    if isinstance(debit, bool):
+        raw_amount = posting.get("amount") or posting.get("amountGross") or 0
+        amount = abs(raw_amount) if debit else -abs(raw_amount)
+    elif isinstance(credit, bool):
+        raw_amount = posting.get("amount") or posting.get("amountGross") or 0
+        amount = -abs(raw_amount) if credit else abs(raw_amount)
+    elif debit and not credit:
         amount = abs(debit)
     elif credit and not debit:
         amount = -abs(credit)
@@ -145,7 +152,13 @@ def _build_posting(
     result["amountGrossCurrency"] = amount
     # Set VAT type: use account's default (which respects locked accounts)
     if "vatType" in posting:
-        result["vatType"] = BaseHandler.ensure_ref(posting["vatType"], "vatType")
+        vt_val = posting["vatType"]
+        # Handle percentage strings like "25%" — don't override account default
+        if isinstance(vt_val, str) and "%" in vt_val:
+            if vat_ref:
+                result["vatType"] = vat_ref
+        else:
+            result["vatType"] = BaseHandler.ensure_ref(vt_val, "vatType")
     elif vat_ref:
         result["vatType"] = vat_ref
     # Add supplier ref if provided (required for AP/supplier invoice postings)
