@@ -401,6 +401,61 @@ class TestTravelExpenseWithCosts:
 # ============================================================
 
 
+# ============================================================
+# PATTERN 5b: Employee with pre-existing email (email conflict)
+# Competition: sandbox has pre-existing employees, must find them
+# ============================================================
+
+
+class TestEmployeeEmailConflict:
+    """Simulates: employee already exists with same email.
+
+    Based on real competition failure: retry-with-fix stripped email,
+    then 'email required for Tripletex users' error. Should instead
+    find existing employee by email.
+    """
+
+    def test_create_twice_same_email(self, client):
+        """Second create with same email should return existing employee."""
+        tag = uid()
+        email = f"conflict-{tag}@example.org"
+        # First create
+        r1 = run_handler(
+            client,
+            "create_employee",
+            {"firstName": f"First-{tag}", "lastName": "Test", "email": email},
+        )
+        assert r1["id"]
+
+        # Second create with same email — should find existing, not crash
+        r2 = run_handler(
+            client,
+            "create_employee",
+            {"firstName": f"Second-{tag}", "lastName": "Test", "email": email},
+        )
+        assert r2["id"], f"Employee not found/created: {r2}"
+        assert r2["id"] == r1["id"], "Should return same employee ID"
+
+    def test_entity_resolver_email_conflict(self, client):
+        """Entity resolver should find employee by email on conflict."""
+        from src.handlers.entity_resolver import resolve
+
+        tag = uid()
+        email = f"resolve-{tag}@example.org"
+        # Create employee first
+        r1 = run_handler(
+            client,
+            "create_employee",
+            {"firstName": f"Res-{tag}", "lastName": "Test", "email": email},
+        )
+        # Resolve same employee — should find by email, not crash
+        ref = resolve(
+            client, "employee",
+            {"firstName": f"Res-{tag}", "lastName": "Test", "email": email},
+        )
+        assert ref["id"] == r1["id"]
+
+
 class TestBatchDepartments:
     """Simulates: 'Create three departments: Utvikling, Admin, Lager'"""
 
