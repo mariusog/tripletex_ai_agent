@@ -635,9 +635,7 @@ class TestUpdateAsset:
     def test_update_description(self, client):
         tag = uid()
         try:
-            create_result = run_handler(
-                client, "create_asset", {"name": f"UpdAsset-{tag}"}
-            )
+            create_result = run_handler(client, "create_asset", {"name": f"UpdAsset-{tag}"})
         except Exception:
             pytest.skip("Asset module not available on this sandbox")
         result = run_handler(
@@ -774,9 +772,7 @@ class TestDeleteTravelExpense:
                 "title": f"Del trip {tag}",
             },
         )
-        result = run_handler(
-            client, "delete_travel_expense", {"id": create_result["id"]}
-        )
+        result = run_handler(client, "delete_travel_expense", {"id": create_result["id"]})
         assert result.get("action") == "deleted"
 
 

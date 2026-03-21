@@ -14,6 +14,8 @@ from src.handlers.api_helpers import (
 )
 from src.handlers.entity_resolver import (
     _resolve_customer as resolve_customer,
+)
+from src.handlers.entity_resolver import (
     _resolve_product as resolve_product,
 )
 from src.models import ApiError

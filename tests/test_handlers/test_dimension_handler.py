@@ -37,9 +37,13 @@ class TestFindOrCreateDimension:
         # First GET: search existing (none found), POST: create, second GET: re-fetch all
         client.get.side_effect = [
             sample_api_response(values=[]),
-            sample_api_response(values=[
-                {"id": 1}, {"id": 2}, {"id": 10},
-            ]),
+            sample_api_response(
+                values=[
+                    {"id": 1},
+                    {"id": 2},
+                    {"id": 10},
+                ]
+            ),
         ]
         client.post.return_value = sample_api_response(value={"id": 10})
         dim_id, dim_index = _find_or_create_dimension(client, "Segment")

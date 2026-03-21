@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.llm import LLMClient
-from src.models import FileAttachment, TaskClassification
+from src.models import FileAttachment
 
 
 @pytest.fixture

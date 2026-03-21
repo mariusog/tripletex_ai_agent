@@ -59,9 +59,7 @@ class TestEmployeeOnboardingFull:
     def test_onboarding_with_all_fields(self, client):
         tag = uid()
         # Step 1: Create department
-        dept_result = run_handler(
-            client, "create_department", {"name": f"Logistikk-{tag}"}
-        )
+        dept_result = run_handler(client, "create_department", {"name": f"Logistikk-{tag}"})
         assert dept_result["id"]
 
         # Step 2: Create employee with ALL competition-verified fields
@@ -174,7 +172,9 @@ class TestEmployeeOnboardingFull:
         assert len(details) >= 1, "No employment details"
         d = details[0]
         assert d["employmentType"] == "ORDINARY", f"type: {d['employmentType']}"
-        assert d["percentageOfFullTimeEquivalent"] == 80.0, f"pct: {d['percentageOfFullTimeEquivalent']}"
+        assert d["percentageOfFullTimeEquivalent"] == 80.0, (
+            f"pct: {d['percentageOfFullTimeEquivalent']}"
+        )
         assert d["annualSalary"] == 550000.0, f"salary: {d['annualSalary']}"
         assert d["shiftDurationHours"] == 6.0, f"hours: {d['shiftDurationHours']}"
 
@@ -193,9 +193,7 @@ class TestEmployeeOnboardingFull:
             },
         )
         assert emp_result["id"]
-        v = client.get(
-            f"/employee/{emp_result['id']}", fields="department(name)"
-        )["value"]
+        v = client.get(f"/employee/{emp_result['id']}", fields="department(name)")["value"]
         assert v["department"] is not None
 
 
@@ -391,12 +389,18 @@ class TestInvoiceWithPayment:
                 },
                 "orderLines": [
                     {
-                        "product": {"name": f"Prod-A-{tag}", "number": str(secrets.randbelow(90000) + 10000)},
+                        "product": {
+                            "name": f"Prod-A-{tag}",
+                            "number": str(secrets.randbelow(90000) + 10000),
+                        },
                         "count": 2,
                         "unitPriceExcludingVatCurrency": 15000,
                     },
                     {
-                        "product": {"name": f"Prod-B-{tag}", "number": str(secrets.randbelow(90000) + 10000)},
+                        "product": {
+                            "name": f"Prod-B-{tag}",
+                            "number": str(secrets.randbelow(90000) + 10000),
+                        },
                         "count": 1,
                         "unitPriceExcludingVatCurrency": 25000,
                     },
@@ -540,8 +544,9 @@ class TestLateFeeFlow:
         """
         tag = uid()
         # Simulate pre-existing customer + overdue invoice
-        cust_result = run_handler(
-            client, "create_customer",
+        run_handler(
+            client,
+            "create_customer",
             {"name": f"LateFull-{tag}", "organizationNumber": "880860666"},
         )
         # Create an "overdue" invoice (unpaid)
@@ -551,7 +556,11 @@ class TestLateFeeFlow:
             {
                 "customer": {"name": f"LateFull-{tag}"},
                 "orderLines": [
-                    {"description": "Original service", "unitPriceExcludingVatCurrency": 20000, "count": 1}
+                    {
+                        "description": "Original service",
+                        "unitPriceExcludingVatCurrency": 20000,
+                        "count": 1,
+                    }
                 ],
             },
         )
@@ -587,9 +596,7 @@ class TestLateFeeFlow:
         assert fee_inv["id"]
 
         # Step 3: Send fee invoice
-        send_result = run_handler(
-            client, "send_invoice", {"invoiceId": fee_inv["id"]}
-        )
+        send_result = run_handler(client, "send_invoice", {"invoiceId": fee_inv["id"]})
         assert send_result.get("action") == "sent"
 
         # Step 4: Partial payment on OVERDUE invoice (not the fee)
@@ -658,14 +665,16 @@ class TestCurrencyInvoiceWithAgio:
         tag = uid()
         from src.services.param_normalizer import normalize_params
 
-        params = normalize_params({
-            "description": f"Agio {tag}",
-            "postings": [
-                {"debit": {"account": 1500, "amount": 9675.62, "description": "Agio"}},
-                {"credit": {"account": 8060, "amount": 9675.62, "description": "Agio"}},
-            ],
-            "customer": {"name": f"AgioCust-{tag}"},
-        })
+        params = normalize_params(
+            {
+                "description": f"Agio {tag}",
+                "postings": [
+                    {"debit": {"account": 1500, "amount": 9675.62, "description": "Agio"}},
+                    {"credit": {"account": 8060, "amount": 9675.62, "description": "Agio"}},
+                ],
+                "customer": {"name": f"AgioCust-{tag}"},
+            }
+        )
         # Verify normalization flattened the nested objects
         assert params["postings"][0]["account"] == 1500
         assert params["postings"][0]["debit"] == 9675.62
@@ -699,7 +708,11 @@ class TestCurrencyPaymentAmount:
             {
                 "customer": {"name": f"EURCust-{tag}"},
                 "orderLines": [
-                    {"description": "EUR service", "unitPriceExcludingVatCurrency": 100000, "count": 1}
+                    {
+                        "description": "EUR service",
+                        "unitPriceExcludingVatCurrency": 100000,
+                        "count": 1,
+                    }
                 ],
             },
         )
@@ -743,9 +756,7 @@ class TestProjectWithCustomerAndPM:
         assert v["customer"] is not None
 
         # PM employee should exist
-        emps = client.get(
-            "/employee", params={"firstName": f"PM-{tag}", "count": 1}, fields="id"
-        )
+        emps = client.get("/employee", params={"firstName": f"PM-{tag}", "count": 1}, fields="id")
         assert len(emps["values"]) > 0
 
 
@@ -847,7 +858,8 @@ class TestEmployeeEmailConflict:
         )
         # Resolve same employee — should find by email, not crash
         ref = resolve(
-            client, "employee",
+            client,
+            "employee",
             {"firstName": f"Res-{tag}", "lastName": "Test", "email": email},
         )
         assert ref["id"] == r1["id"]
@@ -948,9 +960,7 @@ class TestPaymentReversal:
         assert result.get("action") == "payment_reversed"
 
         # Verify: invoice amount should be 16000 (net), outstanding should equal amount
-        inv = client.get(
-            f"/invoice/{inv_id}", fields="amount,amountOutstanding"
-        )["value"]
+        inv = client.get(f"/invoice/{inv_id}", fields="amount,amountOutstanding")["value"]
         assert inv["amount"] > 0, "Invoice should have positive amount"
         assert inv["amountOutstanding"] == inv["amount"], (
             f"After reversal, outstanding ({inv['amountOutstanding']}) "
@@ -1025,9 +1035,7 @@ class TestProjectFixedPriceAndMilestone:
         )
         assert result["id"]
         # PM employee should exist
-        emps = client.get(
-            "/employee", params={"firstName": f"PM-{tag}", "count": 1}, fields="id"
-        )
+        emps = client.get("/employee", params={"firstName": f"PM-{tag}", "count": 1}, fields="id")
         assert len(emps["values"]) > 0, "PM employee not created from string name"
 
     def test_full_project_milestone_flow(self, client):
@@ -1041,12 +1049,12 @@ class TestProjectFixedPriceAndMilestone:
         """
         tag = uid()
         # Step 1: Create customer
-        cust_result = run_handler(
+        cust = run_handler(
             client,
             "create_customer",
             {"name": f"Cascade-{tag}", "organizationNumber": "913754689"},
         )
-        assert cust_result["id"]
+        assert cust["id"]
 
         # Step 2: Create PM employee
         emp_result = run_handler(
@@ -1175,7 +1183,7 @@ class TestLedgerCorrectionMultipleErrors:
             fields="postings(account(number),amountGross)",
         )["value"]
         assert len(v["postings"]) >= 8, (
-            f"Expected 8+ postings (4 corrections × 2), got {len(v['postings'])}"
+            f"Expected 8+ postings (4 corrections x 2), got {len(v['postings'])}"
         )
 
     def test_corrections_with_explicit_postings(self, client):
@@ -1276,7 +1284,7 @@ class TestYearEndClosingFull:
 
         # Now create tax voucher with LLM's WRONG amount (just expenses)
         # The handler should override with real P&L: profit = 500000-100000 = 400000
-        # Tax = 22% × 400000 = 88000
+        # Tax = 22% x 400000 = 88000
         result = run_handler(
             client,
             "create_voucher",
