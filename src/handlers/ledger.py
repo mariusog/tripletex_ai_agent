@@ -264,21 +264,21 @@ class CreateVoucherHandler(BaseHandler):
         if expanded:
             has_credits = any(p.get("credit") for p in expanded)
             has_debits = any(
-                p.get("debit") or p.get("amountGross", p.get("amount", 0)) > 0
-                for p in expanded
+                p.get("debit") or p.get("amountGross", p.get("amount", 0)) > 0 for p in expanded
             )
             if not has_credits and has_debits:
                 # Only debit postings — add balancing credit on bank (1920)
                 total_debit = sum(
-                    p.get("amountGross", p.get("amount", p.get("debit", 0) or 0))
-                    for p in expanded
+                    p.get("amountGross", p.get("amount", p.get("debit", 0) or 0)) for p in expanded
                 )
                 if total_debit > 0:
-                    expanded.append({
-                        "account": 1920,
-                        "amountGross": -total_debit,
-                        "description": body.get("description", ""),
-                    })
+                    expanded.append(
+                        {
+                            "account": 1920,
+                            "amountGross": -total_debit,
+                            "description": body.get("description", ""),
+                        }
+                    )
 
             body["postings"] = [
                 _build_posting(
