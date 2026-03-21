@@ -1,0 +1,72 @@
+{
+  "timestamp": "2026-03-21 00:27:26",
+  "prompt": "El pago de Costa Brava SL (org. nº 866888426) por la factura \"Mantenimiento\" (39250 NOK sin IVA) fue devuelto por el banco. Revierta el pago para que la factura vuelva a mostrar el importe pendiente.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 3.77
+    },
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "status": 201,
+      "duration_s": 4.07
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "status": 201,
+      "duration_s": 3.92
+    },
+    {
+      "method": "POST",
+      "endpoint": "/product",
+      "status": 201,
+      "duration_s": 3.38
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order/orderline/list",
+      "status": 201,
+      "duration_s": 3.34
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/order/401980950/:invoice",
+      "status": 200,
+      "duration_s": 4.42
+    }
+  ],
+  "errors": [],
+  "task_type": "register_payment",
+  "params": {
+    "customer": {
+      "name": "Costa Brava SL",
+      "organizationNumber": "866888426"
+    },
+    "amount": -39250,
+    "paymentDate": "<UNKNOWN>",
+    "description": "Reversión de pago devuelto por el banco - Factura Mantenimiento",
+    "reversal": true,
+    "orderLines": [
+      {
+        "product": {
+          "name": "Mantenimiento"
+        },
+        "count": 1,
+        "unitPriceExcludingVatCurrency": 39250
+      }
+    ]
+  },
+  "handler": "RegisterPaymentHandler",
+  "total_api_calls": 6,
+  "total_duration_s": 27.31,
+  "result": {
+    "id": 2147558951,
+    "action": "payment_reversed"
+  },
+  "service": "tripletex-agent-2"
+}

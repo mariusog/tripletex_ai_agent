@@ -1,0 +1,107 @@
+{
+  "timestamp": "2026-03-20 22:25:21",
+  "prompt": "Erstellen Sie eine Rechnung fÃ¼r den Kunden Silberberg GmbH (Org.-Nr. 977792827) mit drei Produktzeilen: Wartung (8747) zu 16950 NOK mit 25 % MwSt., Softwarelizenz (8391) zu 3250 NOK mit 15 % MwSt. (Le",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.21
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/ledger/account/458671587",
+      "status": 200,
+      "duration_s": 0.23
+    },
+    {
+      "method": "GET",
+      "endpoint": "/customer",
+      "status": 200,
+      "duration_s": 0.21
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "status": 201,
+      "duration_s": 0.3
+    },
+    {
+      "method": "GET",
+      "endpoint": "/product",
+      "status": 200,
+      "duration_s": 0.2
+    },
+    {
+      "method": "GET",
+      "endpoint": "/product",
+      "status": 200,
+      "duration_s": 0.27
+    },
+    {
+      "method": "GET",
+      "endpoint": "/product",
+      "status": 200,
+      "duration_s": 0.21
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order/orderline/list",
+      "status": 201,
+      "duration_s": 0.28
+    },
+    {
+      "method": "POST",
+      "endpoint": "/invoice",
+      "status": 201,
+      "duration_s": 0.61
+    }
+  ],
+  "errors": [],
+  "task_type": "create_invoice",
+  "params": {
+    "customer": {
+      "name": "Silberberg GmbH",
+      "organizationNumber": "977792827"
+    },
+    "orderLines": [
+      {
+        "product": {
+          "name": "Wartung",
+          "number": "8747"
+        },
+        "count": 1,
+        "unitPriceExcludingVatCurrency": 16950,
+        "vatType": "25%"
+      },
+      {
+        "product": {
+          "name": "Softwarelizenz",
+          "number": "8391"
+        },
+        "count": 1,
+        "unitPriceExcludingVatCurrency": 3250,
+        "vatType": "15% food"
+      },
+      {
+        "product": {
+          "name": "Netzwerkdienst",
+          "number": "4819"
+        },
+        "count": 1,
+        "unitPriceExcludingVatCurrency": 5550,
+        "vatType": "0% exempt"
+      }
+    ]
+  },
+  "handler": "CreateInvoiceHandler",
+  "total_api_calls": 9,
+  "total_duration_s": 6.96,
+  "result": {
+    "id": 2147551335,
+    "orderId": 401975082,
+    "action": "created"
+  },
+  "service": "tripletex-agent-2"
+}

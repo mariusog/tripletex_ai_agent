@@ -1,0 +1,114 @@
+{
+  "timestamp": "2026-03-21 00:18:46",
+  "prompt": "Opprett en fri regnskapsdimensjon \"Kostsenter\" med verdiene \"IT\" og \"Innkjøp\". Bokfør deretter et bilag på konto 7300 for 25700 kr, knyttet til dimensjonsverdien \"IT\".",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2 git=unknown",
+  "api_calls": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionName",
+      "status": 201,
+      "duration_s": 6.69
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionValue",
+      "status": 201,
+      "duration_s": 6.78
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionValue",
+      "status": 201,
+      "duration_s": 6.76
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 6.99
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 201,
+      "duration_s": 7.66
+    }
+  ],
+  "errors": [],
+  "task_type": "create_voucher",
+  "params": {
+    "date": null,
+    "description": "Bilag knyttet til kostsenter IT",
+    "postings": [
+      {
+        "account": 7300,
+        "amount": 25700,
+        "customDimensionValue": "IT"
+      }
+    ],
+    "customDimension": {
+      "name": "Kostsenter",
+      "values": [
+        "IT",
+        "Innkjøp"
+      ],
+      "linkedValue": "IT"
+    }
+  },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionName",
+      "body": "{\"dimensionName\": \"Kostsenter\", \"active\": true}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionValue",
+      "body": "{\"displayName\": \"IT\", \"number\": \"IT\", \"active\": true, \"showInVoucherRegistration\": true, \"dimensionIndex\": 1}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionValue",
+      "body": "{\"displayName\": \"Innkjøp\", \"number\": \"Innkjøp\", \"active\": true, \"showInVoucherRegistration\": true, \"dimensionIndex\": 1}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "body": "{\"date\": \"2026-03-21\", \"description\": \"Bilag knyttet til kostsenter IT\", \"postings\": [{\"row\": 1, \"account\": {\"id\": 364760491}, \"amount\": 25700, \"amountGross\": 0, \"amountGrossCurrency\": 0, \"vatType\": {\"id\": 1}, \"freeAccountingDimension1\": {\"id\": 17048}}]}"
+    }
+  ],
+  "created_entities": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionName",
+      "id": "1675",
+      "fields": "{}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionValue",
+      "id": "17048",
+      "fields": "{'number': 'IT'}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionValue",
+      "id": "17049",
+      "fields": "{'number': 'Innkjøp'}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "id": "608880318",
+      "fields": "{'date': '2026-03-21', 'number': 1, 'description': 'Bilag knyttet til kostsenter IT'}"
+    }
+  ],
+  "handler": "CreateVoucherHandler",
+  "total_api_calls": 5,
+  "total_duration_s": 38.0,
+  "result": {
+    "id": 608880318,
+    "action": "created"
+  },
+  "service": "tripletex-agent-magnus"
+}

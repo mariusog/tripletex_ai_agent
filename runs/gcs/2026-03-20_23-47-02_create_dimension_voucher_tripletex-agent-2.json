@@ -1,0 +1,87 @@
+{
+  "timestamp": "2026-03-20 23:47:02",
+  "prompt": "Opprett en fri regnskapsdimensjon \"Prosjekttype\" med verdiene \"Forskning\" og \"Utvikling\". Bokfør deretter et bilag på konto 6590 for 10800 kr, knyttet til dimensjonsverdien \"Forskning\".",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/ledger/accountingDimensionName",
+      "status": 200,
+      "duration_s": 0.22
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionName",
+      "status": 201,
+      "duration_s": 0.27
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/accountingDimensionValue/search",
+      "status": 200,
+      "duration_s": 0.24
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionValue",
+      "status": 201,
+      "duration_s": 0.26
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/accountingDimensionValue/search",
+      "status": 200,
+      "duration_s": 0.23
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionValue",
+      "status": 201,
+      "duration_s": 0.24
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.22
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.23
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 201,
+      "duration_s": 0.5
+    }
+  ],
+  "errors": [],
+  "task_type": "create_dimension_voucher",
+  "params": {
+    "dimensionName": "Prosjekttype",
+    "dimensionValues": [
+      "Forskning",
+      "Utvikling"
+    ],
+    "linkedValue": "Forskning",
+    "postings": [
+      {
+        "account": 6590,
+        "amount": 10800
+      }
+    ],
+    "description": "Bilag knyttet til dimensjonsverdien Forskning"
+  },
+  "handler": "CreateDimensionVoucherHandler",
+  "total_api_calls": 9,
+  "total_duration_s": 5.49,
+  "result": {
+    "id": 608878065,
+    "dimensionId": 1621,
+    "action": "voucher_with_dimension_created"
+  },
+  "service": "tripletex-agent-2"
+}

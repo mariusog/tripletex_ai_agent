@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-03-20 22:55:09",
+  "prompt": "Enregistrez le fournisseur Océan SARL avec le numéro d'organisation 975630749. E-mail : faktura@ocansarl.no.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "POST",
+      "endpoint": "/supplier",
+      "status": 201,
+      "duration_s": 2.3
+    }
+  ],
+  "errors": [],
+  "task_type": "create_supplier",
+  "params": {
+    "name": "Océan SARL",
+    "organizationNumber": "975630749",
+    "email": "faktura@ocansarl.no"
+  },
+  "handler": "CreateSupplierHandler",
+  "total_api_calls": 1,
+  "total_duration_s": 5.65,
+  "result": {
+    "id": 108288712,
+    "action": "created"
+  },
+  "service": "tripletex-agent-magnus"
+}

@@ -1,0 +1,76 @@
+{
+  "timestamp": "2026-03-21 07:32:40",
+  "prompt": "Registrer en reiseregning for Lars Johansen (lars.johansen@example.org) for \"Kundebesøk Stavanger\". Reisen varte 3 dager med diett (dagsats 800 kr). Utlegg: flybillett 3900 kr og taxi 350 kr.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2 git=unknown",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/employee",
+      "status": 200,
+      "duration_s": 1.06
+    },
+    {
+      "method": "POST",
+      "endpoint": "/travelExpense",
+      "status": 201,
+      "duration_s": 1.18
+    },
+    {
+      "method": "GET",
+      "endpoint": "/travelExpense/paymentType",
+      "status": 200,
+      "duration_s": 1.04
+    }
+  ],
+  "errors": [],
+  "task_type": "create_travel_expense",
+  "params": {
+    "employee": {
+      "firstName": "Lars",
+      "lastName": "Johansen",
+      "email": "lars.johansen@example.org"
+    },
+    "title": "Kundebesøk Stavanger",
+    "travelDetails": {
+      "duration": 3,
+      "durationUnit": "days"
+    },
+    "costs": {
+      "perDiem": {
+        "days": 3,
+        "dailyRate": 800,
+        "totalAmount": 2400,
+        "currency": "NOK"
+      },
+      "expenses": [
+        {
+          "description": "Flybillett",
+          "amount": 3900,
+          "currency": "NOK"
+        },
+        {
+          "description": "Taxi",
+          "amount": 350,
+          "currency": "NOK"
+        }
+      ]
+    }
+  },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/travelExpense",
+      "body": "{\"employee\": {\"id\": 18608551}, \"title\": \"Kundebesøk Stavanger\", \"travelDetails\": {\"departureDate\": \"2026-03-21\", \"returnDate\": \"2026-03-21\", \"destination\": \"\", \"purpose\": \"Kundebesøk Stavanger\"}}"
+    }
+  ],
+  "created_entities": [
+    {
+      "method": "POST",
+      "endpoint": "/travelExpense",
+      "id": "11147194",
+      "fields": "{'date': '2026-03-21', 'amount': 0, 'number': 1, 'title': 'Kundebesøk Stavanger'}"
+    }
+  ],
+  "status": "error",
+  "service": "tripletex-agent-magnus"
+}

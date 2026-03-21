@@ -1,0 +1,80 @@
+{
+  "timestamp": "2026-03-20 23:56:22",
+  "prompt": "Kunden Skogheim AS (org.nr 954143260) har ein uteståande faktura på 14300 kr eksklusiv MVA for \"Datarådgjeving\". Registrer full betaling på denne fakturaen.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 1.42
+    },
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "status": 201,
+      "duration_s": 1.2
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "status": 201,
+      "duration_s": 1.57
+    },
+    {
+      "method": "POST",
+      "endpoint": "/product",
+      "status": 201,
+      "duration_s": 1.44
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order/orderline/list",
+      "status": 201,
+      "duration_s": 1.35
+    },
+    {
+      "method": "POST",
+      "endpoint": "/invoice",
+      "status": 201,
+      "duration_s": 1.41
+    },
+    {
+      "method": "GET",
+      "endpoint": "/invoice/paymentType",
+      "status": 200,
+      "duration_s": 1.15
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/invoice/2147556763/:payment",
+      "status": 200,
+      "duration_s": 1.44
+    }
+  ],
+  "errors": [],
+  "task_type": "register_payment",
+  "params": {
+    "customer": "Skogheim AS",
+    "organizationNumber": "954143260",
+    "amount": 14300,
+    "description": "Betaling for faktura - Datarådgjeving",
+    "orderLines": [
+      {
+        "product": {
+          "name": "Datarådgjeving"
+        },
+        "unitPriceExcludingVatCurrency": 14300,
+        "count": 1
+      }
+    ]
+  },
+  "handler": "RegisterPaymentHandler",
+  "total_api_calls": 8,
+  "total_duration_s": 14.76,
+  "result": {
+    "id": 2147556763,
+    "action": "payment_registered"
+  },
+  "service": "tripletex-agent-stian"
+}

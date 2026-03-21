@@ -1,0 +1,57 @@
+{
+  "timestamp": "2026-03-20 22:15:53",
+  "prompt": "Führen Sie die Gehaltsabrechnung für Laura Schneider (laura.schneider@example.org) für diesen Monat durch. Das Grundgehalt beträgt 33000 NOK. Fügen Sie einen einmaligen Bonus von 17850 NOK zum Grundgehalt hinzu.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 422,
+      "duration_s": 0.24
+    }
+  ],
+  "errors": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 422,
+      "duration_s": 0.24
+    }
+  ],
+  "task_type": "create_voucher",
+  "params": {
+    "description": "Gehaltsabrechnung Laura Schneider - Grundgehalt + Bonus",
+    "employee": {
+      "firstName": "Laura",
+      "lastName": "Schneider",
+      "email": "laura.schneider@example.org"
+    },
+    "postings": [
+      {
+        "description": "Grundgehalt Laura Schneider",
+        "debitAccount": "5000",
+        "creditAccount": "2930",
+        "amountGross": 33000,
+        "currency": "NOK"
+      },
+      {
+        "description": "Einmaliger Bonus Laura Schneider",
+        "debitAccount": "5000",
+        "creditAccount": "2930",
+        "amountGross": 17850,
+        "currency": "NOK"
+      }
+    ],
+    "totalAmount": 50850,
+    "currency": "NOK"
+  },
+  "error_details": [
+    {
+      "status": 422,
+      "endpoint": "POST /ledger/voucher",
+      "message": "Validering feilet. | validation: [{'field': 'Internt felt (account)', 'message': 'Feltet må fylles ut.', 'path': None, 'rootId': None}]"
+    }
+  ],
+  "status": "error",
+  "service": "tripletex-agent-magnus"
+}

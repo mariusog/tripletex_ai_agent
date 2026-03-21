@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-21_15-46-52",
+  "prompt": "Vi sendte en faktura på 16689 EUR til Polaris AS (org.nr 957486282) da kursen var 11.66 NOK/EUR. Kunden har nå betalt, men kursen er 12.24 NOK/EUR. Registrer betalingen og bokfør valutadifferansen (agio) på korrekt konto.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 16.47,
+  "service": "tripletex-agent-2"
+}
