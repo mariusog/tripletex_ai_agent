@@ -155,8 +155,12 @@ class UpdateProjectHandler(BaseHandler):
 
         # Strip readOnly/rate fields that cause 422 on PUT
         for readonly_field in (
-            "projectRateTypes", "hourlyRates", "changes", "url",
-            "displayName", "displayNameWithoutNumber",
+            "projectRateTypes",
+            "hourlyRates",
+            "changes",
+            "url",
+            "displayName",
+            "displayNameWithoutNumber",
         ):
             project.pop(readonly_field, None)
 

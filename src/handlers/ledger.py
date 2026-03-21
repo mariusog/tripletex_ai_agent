@@ -215,7 +215,21 @@ class CreateVoucherHandler(BaseHandler):
             dim_value_ref = _create_custom_dimension(api_client, params["customDimension"])
 
         # Resolve supplier if present (needed for supplier invoice vouchers)
+        # Also auto-create supplier if postings reference AP accounts (2400-2499)
         supplier_ref = _resolve_supplier(api_client, params.get("supplier"))
+        if not supplier_ref:
+            raw = params.get("postings", [])
+            ap_accounts = {2400, 2410, 2420, 2430, 2440, 2450, 2460, 2470, 2480, 2490}
+            for p in raw:
+                acct = p.get("account") or p.get("creditAccount") or 0
+                try:
+                    if int(acct) in ap_accounts:
+                        supplier_ref = _resolve_supplier(
+                            api_client, params.get("description", "Leverandør")
+                        )
+                        break
+                except (TypeError, ValueError):
+                    pass
 
         # Build postings — resolve account numbers to IDs
         # Handle split debit/credit format: expand into two postings
