@@ -81,36 +81,51 @@ class LedgerCorrectionHandler(BaseHandler):
             ctype = c.get("type", "")
             desc = c.get("description", "Korreksjon")
 
+            # Auto-detect type from fields if not specified
+            if not ctype:
+                if "wrongAccount" in c and "correctAccount" in c:
+                    ctype = "wrong_account"
+                elif "recordedAmount" in c and "correctAmount" in c:
+                    ctype = "incorrect_amount"
+                elif "vatAccount" in c:
+                    ctype = "missing_vat"
+
             if ctype == "wrong_account":
                 amt = c.get("amount", 0)
                 postings.append({"account": c["correctAccount"], "debit": amt, "description": desc})
                 postings.append({"account": c["wrongAccount"], "credit": amt, "description": desc})
 
-            elif ctype == "duplicate_voucher":
+            elif ctype in ("duplicate_voucher", "duplicate_reversal", "duplicate"):
                 amt = c.get("amount", 0)
                 acct = c.get("account", 1920)
                 postings.append({"account": 1920, "debit": amt, "description": desc})
                 postings.append({"account": acct, "credit": amt, "description": desc})
 
             elif ctype == "missing_vat":
-                net = c.get("netAmount", 0)
+                net = c.get("netAmount") or c.get("amount") or 0
                 vat = round(net * 0.25, 2)
                 vat_acct = c.get("vatAccount", 2710)
-                exp_acct = c.get("expenseAccount", 6500)
+                exp_acct = c.get("expenseAccount") or c.get("account") or 6500
                 postings.append({"account": vat_acct, "debit": vat, "description": desc})
                 postings.append({"account": exp_acct, "credit": vat, "description": desc})
 
             elif ctype == "incorrect_amount":
-                diff = c.get("difference", 0)
+                diff = c.get("difference")
+                if diff is None:
+                    recorded = c.get("recordedAmount", 0)
+                    correct = c.get("correctAmount", 0)
+                    diff = recorded - correct
                 acct = c.get("account", 7300)
-                if diff < 0:
+                if diff > 0:
+                    # Overstated — reduce: credit expense, debit bank
                     postings.append({"account": 1920, "debit": abs(diff), "description": desc})
                     postings.append({"account": acct, "credit": abs(diff), "description": desc})
-                else:
+                elif diff < 0:
+                    # Understated — increase: debit expense, credit bank
                     postings.append({"account": acct, "debit": abs(diff), "description": desc})
                     postings.append({"account": 1920, "credit": abs(diff), "description": desc})
             else:
-                # Generic: try to build from available fields
+                # Generic fallback
                 amt = c.get("amount", 0)
                 acct = c.get("account", c.get("debitAccount", 7300))
                 counter = c.get("counterAccount", c.get("creditAccount", 1920))
