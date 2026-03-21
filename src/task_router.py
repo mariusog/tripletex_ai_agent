@@ -16,6 +16,20 @@ from src.models import SolveRequest, SolveResponse, TaskClassification
 
 logger = logging.getLogger(__name__)
 
+_PLACEHOLDER_VALUES = {"<UNKNOWN>", "UNKNOWN", "unknown", "<unknown>", "TBD", "N/A", "n/a", ""}
+
+
+def _strip_placeholders(params: dict) -> dict:
+    """Remove params with placeholder values the LLM couldn't extract."""
+    cleaned = {}
+    for k, v in params.items():
+        if isinstance(v, str) and v.strip() in _PLACEHOLDER_VALUES:
+            continue
+        if isinstance(v, dict):
+            v = _strip_placeholders(v)
+        cleaned[k] = v
+    return cleaned
+
 
 class TaskRouter:
     """Routes classified tasks to the correct handler and executes them."""
@@ -39,7 +53,7 @@ class TaskRouter:
         try:
             classification = self._classify(request)
             task_type = classification.task_type
-            params = classification.params
+            params = _strip_placeholders(classification.params)
             logger.info("Classified as task_type=%s params=%s", task_type, params)
 
             handler = self._registry.get(task_type)
