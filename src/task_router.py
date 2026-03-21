@@ -117,6 +117,8 @@ class TaskRouter:
 
         try:
             classifications = self._classify(request)
+            # Validate and fix under-classified project lifecycle prompts
+            classifications = self._validate_classifications(classifications, request)
             logger.info(
                 "Classified %d task(s): %s",
                 len(classifications),
@@ -261,6 +263,59 @@ class TaskRouter:
             f"and extract parameters:\n\n{request.prompt}"
         )
         return self._llm.classify_and_extract(prompt=rephrased, files=request.files or None)
+
+    def _validate_classifications(
+        self,
+        classifications: list[TaskClassification],
+        request: SolveRequest,
+    ) -> list[TaskClassification]:
+        """Detect under-classified prompts and force re-classification."""
+        task_types = {c.task_type for c in classifications}
+        prompt_lower = request.prompt.lower()
+
+        # Detect project lifecycle: mentions project + hours + invoice
+        lifecycle_keywords = [
+            ("proyecto", "horas", "factura"),  # Spanish
+            ("projet", "heures", "facture"),  # French
+            ("prosjekt", "timer", "faktura"),  # Norwegian
+            ("project", "hours", "invoice"),  # English
+            ("projekt", "stunden", "rechnung"),  # German
+            ("projeto", "horas", "fatura"),  # Portuguese
+        ]
+        is_lifecycle = any(all(kw in prompt_lower for kw in kws) for kws in lifecycle_keywords)
+        has_workflow = task_types & {
+            "create_project",
+            "log_timesheet",
+            "create_invoice",
+        }
+
+        if is_lifecycle and not has_workflow:
+            logger.warning(
+                "Project lifecycle detected but no workflow tasks classified. "
+                "Re-classifying with explicit instructions."
+            )
+            augmented = (
+                f"{request.prompt}\n\n"
+                "CRITICAL INSTRUCTION: This is a PROJECT LIFECYCLE task. "
+                "You MUST decompose it into these task types IN ORDER:\n"
+                "1. create_project (with customer and budget)\n"
+                "2. log_timesheet (one per employee, with hours)\n"
+                "3. create_voucher (for supplier costs)\n"
+                "4. create_invoice (for billing the customer)\n"
+                "Do NOT just create entities. Execute the FULL workflow."
+            )
+            try:
+                new_cls = self._llm.classify_and_extract(
+                    prompt=augmented, files=request.files or None
+                )
+                new_types = {c.task_type for c in new_cls}
+                if new_types & {"create_project", "log_timesheet", "create_invoice"}:
+                    logger.info("Re-classified to: %s", [c.task_type for c in new_cls])
+                    return new_cls
+            except Exception:
+                logger.exception("Re-classification failed")
+
+        return classifications
 
     def _reclassify_with_data(
         self,
