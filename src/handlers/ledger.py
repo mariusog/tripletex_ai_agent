@@ -117,23 +117,17 @@ class CreateVoucherHandler(BaseHandler):
             if needs_customer:
                 try:
                     # Search for invoices with outstanding amount (overdue)
-                    from datetime import date as _dt
-
                     inv_resp = api_client.get(
                         "/invoice",
-                        params={
-                            "count": 5,
-                            "invoiceDateFrom": f"{_dt.today().year}-01-01",
-                            "invoiceDateTo": _dt.today().isoformat(),
-                        },
-                        fields="id,customer(id),amountOutstanding",
+                        params={"count": 20},
+                        fields="id,customer(id,name),amountOutstanding,amountRest",
                     )
                     for inv in inv_resp.get("values", []):
-                        if (inv.get("amountOutstanding") or 0) > 0:
+                        outstanding = inv.get("amountOutstanding") or inv.get("amountRest") or 0
+                        if outstanding > 0:
                             cust = inv.get("customer")
                             if cust and cust.get("id"):
                                 customer_ref = {"id": cust["id"]}
-                                # Store for context propagation to next steps
                                 params["customer"] = customer_ref
                                 params["_overdue_invoice_id"] = inv["id"]
                                 logger.info(
@@ -147,6 +141,7 @@ class CreateVoucherHandler(BaseHandler):
                         vals = resp.get("values", [])
                         if vals:
                             customer_ref = {"id": vals[0]["id"]}
+                            params["customer"] = customer_ref
                 except Exception:
                     logger.warning("Could not find customer for receivable posting")
 
