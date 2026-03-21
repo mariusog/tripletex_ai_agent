@@ -134,6 +134,19 @@ class RegisterPaymentHandler(BaseHandler):
             abs_amount = abs(pay_amount) if pay_amount else 0
 
             inv_params = dict(params)
+
+            # Fix order line amounts for currency payments
+            # If orderLines amount == currencyAmount, it's in foreign currency
+            # Use the NOK payment amount instead
+            currency_amt = params.get("currencyAmount")
+            existing_lines = inv_params.get("orderLines", [])
+            if currency_amt and existing_lines:
+                for line in existing_lines:
+                    line_amt = line.get("amount") or line.get("unitPriceExcludingVatCurrency") or 0
+                    if abs(line_amt - currency_amt) < 1:
+                        line["unitPriceExcludingVatCurrency"] = abs_amount
+                        line.pop("amount", None)
+
             if not inv_params.get("orderLines") and abs_amount:
                 inv_params["orderLines"] = [
                     {

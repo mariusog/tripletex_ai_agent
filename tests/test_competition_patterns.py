@@ -832,6 +832,32 @@ class TestCurrencyPaymentAmount:
     Check 2 failed because we paid 144994.92 instead of 158201.66
     """
 
+    def test_currency_order_line_amount_fixed(self, client):
+        """When order line amount equals currencyAmount (EUR), fix to NOK.
+
+        Based on real 7/10: LLM sent orderLines: [{amount: 11671}] which is
+        the EUR value. Invoice should be for 136686.41 NOK (EUR x payment rate).
+        """
+        tag = uid()
+        result = run_handler(
+            client,
+            "register_payment",
+            {
+                "customer": {"name": f"CurrFix-{tag}"},
+                "currencyAmount": 11671,
+                "exchangeRate": 11.71,
+                "amount": 136686.41,
+                "orderLines": [{"product": "Invoice", "amount": 11671}],
+            },
+        )
+        assert result.get("id")
+        inv = client.get(f"/invoice/{result['id']}", fields="amount,amountOutstanding")["value"]
+        # Invoice amount should be close to 136686 NOK, not 11671
+        assert inv["amount"] > 100000, (
+            f"Invoice amount {inv['amount']} is too low — should be ~136686 NOK, not 11671 EUR"
+        )
+        assert inv["amountOutstanding"] == 0, "Should be fully paid"
+
     def test_payment_uses_payment_rate(self, client):
         tag = uid()
         # Create invoice at original rate
