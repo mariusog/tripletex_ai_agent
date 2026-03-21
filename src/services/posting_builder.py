@@ -111,6 +111,22 @@ def build_posting(
         result["vatType"] = vat_ref
     if supplier:
         result["supplier"] = supplier
+    # Department ref on posting (resolve name to ID if string)
+    dept = posting.get("department")
+    if dept:
+        if isinstance(dept, dict) and "id" in dept:
+            result["department"] = dept
+        elif isinstance(dept, str):
+            try:
+                dept_resp = api_client.get(
+                    "/department", params={"name": dept, "count": 5}, fields="id,name"
+                )
+                for dv in dept_resp.get("values", []):
+                    if dv.get("name", "").strip().lower() == dept.strip().lower():
+                        result["department"] = {"id": dv["id"]}
+                        break
+            except Exception:
+                logger.warning("Could not resolve department '%s'", dept)
     return {k: v for k, v in result.items() if v is not None}
 
 
