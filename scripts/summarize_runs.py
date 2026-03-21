@@ -97,3 +97,49 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+def check_regressions() -> None:
+    """Compare latest run per task vs best run — flag regressions."""
+    runs = []
+    for f in sorted(RUNS_DIR.glob("*.json")):
+        with open(f) as fh:
+            try:
+                runs.append(json.load(fh))
+            except json.JSONDecodeError:
+                continue
+
+    # Group by task type, track best and latest
+    from collections import defaultdict
+    by_task: dict[str, list] = defaultdict(list)
+    for r in runs:
+        task = r.get("task_type", "?")
+        if task in ("?", "unknown"):
+            continue
+        by_task[task].append(r)
+
+    regressions = []
+    for task, task_runs in by_task.items():
+        if len(task_runs) < 2:
+            continue
+        # Best = fewest errors, then fewest calls
+        best = min(task_runs, key=lambda r: (len(r.get("errors", [])), r.get("total_api_calls", 99)))
+        latest = task_runs[-1]
+        best_err = len(best.get("errors", []))
+        latest_err = len(latest.get("errors", []))
+        if latest_err > best_err:
+            regressions.append(f"  {task}: latest has {latest_err} errors (best had {best_err})")
+        best_calls = best.get("total_api_calls", 0)
+        latest_calls = latest.get("total_api_calls", 0)
+        if latest_calls and best_calls and latest_calls > best_calls + 2:
+            regressions.append(f"  {task}: latest uses {latest_calls} calls (best was {best_calls})")
+
+    if regressions:
+        print("\n⚠️  REGRESSIONS DETECTED:")
+        for r in regressions:
+            print(r)
+
+
+if __name__ == "__main__":
+    main()
+    check_regressions()
