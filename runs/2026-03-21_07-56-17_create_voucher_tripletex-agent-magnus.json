@@ -1,0 +1,74 @@
+{
+  "timestamp": "2026-03-21 07:56:17",
+  "prompt": "Opprett en fri regnskapsdimensjon \"Region\" med verdiene \"Østlandet\" og \"Sør-Norge\". Bokfør deretter et bilag på konto 6340 for 32850 kr, knyttet til dimensjonsverdien \"Sør-Norge\".",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2 git=unknown",
+  "api_calls": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionName",
+      "status": 201,
+      "duration_s": 1.09
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionValue",
+      "status": 201,
+      "duration_s": 1.11
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionValue",
+      "status": 201,
+      "duration_s": 1.13
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 1.26
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 422,
+      "duration_s": 1.23
+    }
+  ],
+  "errors": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 422,
+      "duration_s": 1.23
+    }
+  ],
+  "task_type": "create_voucher",
+  "params": {
+    "date": null,
+    "description": "Bilag bokført på konto 6340, knyttet til dimensjon Region - Sør-Norge",
+    "postings": [
+      {
+        "account": 6340,
+        "amount": 32850,
+        "currency": "NOK"
+      }
+    ],
+    "customDimension": {
+      "name": "Region",
+      "values": [
+        "Østlandet",
+        "Sør-Norge"
+      ],
+      "linkedValue": "Sør-Norge"
+    }
+  },
+  "error_details": [
+    {
+      "status": 422,
+      "endpoint": "POST /ledger/voucher",
+      "message": "Validering feilet. | validation: [{'field': '', 'message': 'Summen av posteringene for 2026-03-21 er ikke lik 0.', 'path': None, 'rootId': None}]"
+    }
+  ],
+  "status": "error",
+  "service": "tripletex-agent-magnus"
+}

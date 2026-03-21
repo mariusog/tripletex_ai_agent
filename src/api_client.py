@@ -45,6 +45,8 @@ class TripletexClient:
     def __init__(self, base_url: str, session_token: str) -> None:
         self.base_url = base_url.rstrip("/")
         self._api_call_count = 0
+        self._write_call_count = 0
+        self._error_count = 0
         self._cache: dict[str, Any] = {}
         self._client = httpx.Client(
             auth=(API_AUTH_USERNAME, session_token),
@@ -56,6 +58,16 @@ class TripletexClient:
     def api_call_count(self) -> int:
         """Total number of API calls made (excluding retries)."""
         return self._api_call_count
+
+    @property
+    def write_call_count(self) -> int:
+        """POST/PUT/DELETE/PATCH calls (counted for efficiency scoring)."""
+        return self._write_call_count
+
+    @property
+    def error_count(self) -> int:
+        """4xx error count (reduces efficiency bonus)."""
+        return self._error_count
 
     def close(self) -> None:
         """Close the underlying HTTP client."""
@@ -121,6 +133,8 @@ class TripletexClient:
         """Execute HTTP request with rate limit retry and error handling."""
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         self._api_call_count += 1
+        if method in ("POST", "PUT", "DELETE", "PATCH"):
+            self._write_call_count += 1
 
         # Pre-validation: strip None values from POST/PUT bodies
         if json_data is not None and method in ("POST", "PUT"):
@@ -164,6 +178,8 @@ class TripletexClient:
                 raise TripletexApiError(self._parse_error(response, response.status_code))
 
             if response.status_code >= 400:
+                if 400 <= response.status_code < 500:
+                    self._error_count += 1
                 error = self._parse_error(response, response.status_code)
                 logger.warning(
                     "API error %d on %s %s: %s | validation: %s",

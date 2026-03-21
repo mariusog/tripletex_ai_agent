@@ -150,11 +150,13 @@ class TaskRouter:
                     elapsed = time.monotonic() - start
                     logger.info(
                         "Handler result step=%d task_type=%s handler=%s "
-                        "api_calls=%d duration=%.2fs result=%s",
+                        "api_calls=%d writes=%d errors=%d duration=%.2fs result=%s",
                         i + 1,
                         task_type,
                         type(handler).__name__,
                         api_client.api_call_count,
+                        api_client.write_call_count,
+                        api_client.error_count,
                         elapsed,
                         result,
                     )

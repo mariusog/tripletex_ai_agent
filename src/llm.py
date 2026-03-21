@@ -70,6 +70,11 @@ name/reference in later steps that need it.
   * "Find overdue invoice + register partial payment" → register_payment (searches automatically)
   * "Create employee + assign role" → create_employee, assign_role
 
+EFFICIENCY RULES:
+- Only POST/PUT/DELETE/PATCH calls count for efficiency scoring. GET requests are FREE.
+- Every 4xx error (400, 404, 422) reduces the efficiency bonus. Avoid trial-and-error.
+- A fresh empty sandbox is created for each submission — entities must be created before use.
+
 Extract ALL relevant parameters from the prompt. Use field names matching the Tripletex API.
 If dates are mentioned, format as yyyy-MM-dd.
 If the prompt references attached files, note that in params as "has_attachments": true."""
