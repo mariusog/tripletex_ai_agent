@@ -79,6 +79,13 @@ def _update_context(
             context["voucherId"] = result["id"]
         if "project" in task_type:
             context["projectId"] = result["id"]
+        # When creating an entity, set the ref in context for later steps
+        if task_type == "create_supplier":
+            context["supplier"] = {"id": result["id"]}
+        if task_type == "create_customer":
+            context["customer"] = {"id": result["id"]}
+        if task_type == "create_employee":
+            context["employee"] = {"id": result["id"]}
     if result.get("orderId"):
         context["orderId"] = result["orderId"]
     if result.get("entryId"):

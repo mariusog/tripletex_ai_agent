@@ -49,6 +49,16 @@ def normalize_params(params: dict[str, Any]) -> dict[str, Any]:
         if len(parts) >= 2:
             result["employee"] = {"firstName": parts[0], "lastName": " ".join(parts[1:])}
 
+    # Normalize supplierName/supplierOrgNumber → supplier dict
+    if "supplierName" in result and "supplier" not in result:
+        sup: dict[str, Any] = {"name": result.pop("supplierName")}
+        org = result.pop("supplierOrgNumber", None) or result.pop(
+            "supplierOrganizationNumber", None
+        )
+        if org:
+            sup["organizationNumber"] = str(org)
+        result["supplier"] = sup
+
     # Normalize supplier: string → {"name": string}
     if "supplier" in result and isinstance(result["supplier"], str):
         result["supplier"] = {"name": result["supplier"]}
