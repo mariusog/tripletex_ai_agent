@@ -264,8 +264,15 @@ class TaskRouter:
         data_summary = []
         for sr in step_results:
             data_summary.append(str(sr)[:2000])
-        augmented_prompt = f"{request.prompt}\n\nDATA FROM TRIPLETEX API:\n" + "\n---\n".join(
-            data_summary
+        augmented_prompt = (
+            f"{request.prompt}\n\n"
+            f"DATA FROM TRIPLETEX API:\n"
+            + "\n---\n".join(data_summary)
+            + "\n\nINSTRUCTIONS: Based on the data above, determine what actions to take. "
+            "For expense analysis tasks: identify the accounts with the biggest INCREASE "
+            "(compare balanceChange values). Create projects with isInternal=true "
+            "and name them EXACTLY after the account name from the data. "
+            "Create one activity per project."
         )
         try:
             return self._llm.classify_and_extract(

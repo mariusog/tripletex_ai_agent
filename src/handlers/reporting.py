@@ -339,6 +339,11 @@ class BalanceSheetReportHandler(BaseHandler):
 
     tier = 3
     description = "Query balance sheet report"
+    disambiguation = (
+        "For tasks comparing two periods (e.g. 'increase from Jan to Feb'), "
+        "use TWO separate balance_sheet_report tasks — one per month. "
+        "Then the system will compare them automatically."
+    )
     param_schema = {
         "dateFrom": ParamSpec(type="date"),
         "dateTo": ParamSpec(type="date"),
@@ -348,21 +353,68 @@ class BalanceSheetReportHandler(BaseHandler):
         return "balance_sheet_report"
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
-        query: dict[str, Any] = {
-            "dateFrom": params["dateFrom"],
-            "dateTo": params["dateTo"],
-        }
+        date_from = params["dateFrom"]
+        date_to = params["dateTo"]
+        fields = "account(id,number,name),balanceIn,balanceChange,balanceOut"
 
+        query: dict[str, Any] = {"dateFrom": date_from, "dateTo": date_to}
         if "accountNumberFrom" in params:
             query["accountNumberFrom"] = params["accountNumberFrom"]
         if "accountNumberTo" in params:
             query["accountNumberTo"] = params["accountNumberTo"]
 
-        result = api_client.get(
-            "/balanceSheet",
-            params=query,
-            fields="account(id,number,name),balanceIn,balanceChange,balanceOut",
-        )
+        result = api_client.get("/balanceSheet", params=query, fields=fields)
         values = result.get("values", []) if result else []
+
+        # If range spans multiple months, also compute per-month comparison
+        # This helps the re-classification step identify increases
+        from_month = date_from[:7]  # "2026-01"
+        to_month = date_to[:7]  # "2026-02"
+        if from_month != to_month:
+            try:
+                # Query each month separately
+                mid = f"{to_month}-01"  # First day of second month
+                from datetime import date as _date
+                from datetime import timedelta
+
+                end_first = (_date.fromisoformat(mid) - timedelta(days=1)).isoformat()
+                m1 = api_client.get(
+                    "/balanceSheet",
+                    params={**query, "dateFrom": date_from, "dateTo": end_first},
+                    fields=fields,
+                )
+                m2 = api_client.get(
+                    "/balanceSheet",
+                    params={**query, "dateFrom": mid, "dateTo": date_to},
+                    fields=fields,
+                )
+                # Build comparison: find accounts with biggest increase
+                m1_by_id = {e["account"]["id"]: e for e in m1.get("values", [])}
+                increases = []
+                for e2 in m2.get("values", []):
+                    aid = e2["account"]["id"]
+                    c2 = abs(e2.get("balanceChange", 0) or 0)
+                    c1 = abs(m1_by_id.get(aid, {}).get("balanceChange", 0) or 0)
+                    if c2 > c1:
+                        increases.append(
+                            {
+                                "account": e2["account"],
+                                "month1_change": c1,
+                                "month2_change": c2,
+                                "increase": c2 - c1,
+                            }
+                        )
+                increases.sort(key=lambda x: x["increase"], reverse=True)
+                if increases:
+                    values = values  # Keep original entries
+                    return {
+                        "entries": values,
+                        "top_increases": increases[:5],
+                        "action": "report_retrieved",
+                        "count": len(values),
+                    }
+            except Exception:
+                logger.warning("Multi-month comparison failed")
+
         logger.info("Retrieved balance sheet with %d entries", len(values))
         return {"entries": values, "action": "report_retrieved", "count": len(values)}

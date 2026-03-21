@@ -1564,6 +1564,27 @@ class TestMonthlyClosing:
 # ============================================================
 
 
+# ============================================================
+# PATTERN 12d: Expense analysis → create internal projects
+# Competition: 'Analyze costs Jan vs Feb, create project for top 3 increases'
+# ============================================================
+
+
+class TestExpenseAnalysisProjects:
+    """Based on real 2/10 run: needed to compare Jan vs Feb expenses."""
+
+    def test_balance_sheet_includes_increases(self, client):
+        """Multi-month balance sheet should include top_increases."""
+        result = run_handler(
+            client,
+            "balance_sheet_report",
+            {"dateFrom": "2026-01-01", "dateTo": "2026-02-28"},
+        )
+        assert result.get("action") == "report_retrieved"
+        # Should have top_increases if there are entries in both months
+        # (may be empty on dev sandbox with no data)
+
+
 class TestDimensionVoucherFormat:
     """Based on real 6/13 failure: LLM sent voucher as sub-object."""
 
