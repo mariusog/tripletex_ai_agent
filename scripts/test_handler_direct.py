@@ -32,8 +32,8 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.api_client import TripletexApiError, TripletexClient  # noqa: E402
-from src.handlers import HANDLER_REGISTRY  # noqa: E402
+from src.api_client import TripletexApiError, TripletexClient
+from src.handlers import HANDLER_REGISTRY
 
 RUNS_DIR = Path(__file__).parent.parent / "runs"
 
@@ -43,7 +43,8 @@ def load_prompts_by_task() -> dict[str, list[dict]]:
     by_task: dict[str, list[dict]] = {}
     for f in sorted(glob(str(RUNS_DIR / "*.json"))):
         try:
-            d = json.load(open(f))
+            with open(f) as fh:
+                d = json.load(fh)
         except (json.JSONDecodeError, OSError):
             continue
         task = d.get("task_type", "")
@@ -113,7 +114,7 @@ def main() -> None:
     if args.list:
         print("Available task types:")
         print(f"  {'Task Type':<30} {'Prompts':>7} {'Handler':>8}")
-        print(f"  {'-'*50}")
+        print(f"  {'-' * 50}")
         for task in sorted(set(list(prompts.keys()) + list(HANDLER_REGISTRY.keys()))):
             n_prompts = len(prompts.get(task, []))
             has_handler = "✅" if task in HANDLER_REGISTRY else "❌"
@@ -137,7 +138,7 @@ def main() -> None:
 
     results = []
     for task in tasks_to_test:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Testing: {task}")
 
         if args.custom_params:
@@ -159,7 +160,7 @@ def main() -> None:
             if handler:
                 required = handler.required_params
                 print(f"  No captured prompt. Required params: {required}")
-                print(f"  SKIP: Provide --custom-params or capture a run first")
+                print("  SKIP: Provide --custom-params or capture a run first")
                 results.append({"task": task, "status": "SKIP"})
                 continue
             else:
@@ -182,14 +183,16 @@ def main() -> None:
                 print(f"  ⚠️  {v['field']}: {v['message']}")
 
     # Summary
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("SUMMARY")
     ok = sum(1 for r in results if r.get("status") == "OK")
     err = sum(1 for r in results if r.get("status") in ("API_ERROR", "ERROR"))
     skip = sum(1 for r in results if r.get("status") == "SKIP")
     print(f"  ✅ {ok} passed  ❌ {err} failed  ⏭️ {skip} skipped")
     for r in results:
-        icon = {"OK": "✅", "API_ERROR": "❌", "ERROR": "💥", "SKIP": "⏭️"}.get(r.get("status", ""), "?")
+        icon = {"OK": "✅", "API_ERROR": "❌", "ERROR": "💥", "SKIP": "⏭️"}.get(
+            r.get("status", ""), "?"
+        )
         calls = r.get("api_calls", "-")
         print(f"    {icon} {r['task']:<30} calls={calls}")
 

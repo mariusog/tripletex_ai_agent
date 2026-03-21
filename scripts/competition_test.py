@@ -40,7 +40,8 @@ def load_prompts_by_task() -> dict[str, list[dict]]:
     by_task: dict[str, list[dict]] = {}
     for f in sorted(glob(str(RUNS_DIR / "*.json"))):
         try:
-            d = json.load(open(f))
+            with open(f) as fh:
+                d = json.load(fh)
         except (json.JSONDecodeError, OSError):
             continue
         task = d.get("task_type", "")
@@ -99,7 +100,8 @@ def verify_customer(api: httpx.Client, params: dict) -> list[str]:
         cust = params.get("customer", {})
         org = cust.get("organizationNumber", "") if isinstance(cust, dict) else ""
     if org and str(found.get("organizationNumber", "")) != str(org):
-        checks.append(f"FAIL: organizationNumber expected={org} got={found.get('organizationNumber')}")
+        actual_org = found.get("organizationNumber")
+        checks.append(f"FAIL: orgNr expected={org} got={actual_org}")
     elif org:
         checks.append(f"PASS: organizationNumber={org}")
 
@@ -132,7 +134,8 @@ def verify_supplier(api: httpx.Client, params: dict) -> list[str]:
 
     org = params.get("organizationNumber", "")
     if org and str(found.get("organizationNumber", "")) != str(org):
-        checks.append(f"FAIL: organizationNumber expected={org} got={found.get('organizationNumber')}")
+        actual_org = found.get("organizationNumber")
+        checks.append(f"FAIL: orgNr expected={org} got={actual_org}")
     elif org:
         checks.append(f"PASS: organizationNumber={org}")
 
@@ -153,8 +156,10 @@ def verify_employee(api: httpx.Client, params: dict) -> list[str]:
 
     found = None
     for v in values:
-        if (v.get("firstName", "").lower() == first.lower()
-                and v.get("lastName", "").lower() == last.lower()):
+        if (
+            v.get("firstName", "").lower() == first.lower()
+            and v.get("lastName", "").lower() == last.lower()
+        ):
             found = v
             break
 
@@ -223,10 +228,7 @@ def verify_department(api: httpx.Client, params: dict) -> list[str]:
     for name in names:
         resp = api.get("/department", params={"name": name, "count": 5, "fields": "id,name"})
         values = resp.json().get("values", [])
-        found = any(
-            v.get("name", "").strip().lower() == name.strip().lower()
-            for v in values
-        )
+        found = any(v.get("name", "").strip().lower() == name.strip().lower() for v in values)
         if found:
             checks.append(f"PASS: Department '{name}' exists")
         else:
@@ -257,8 +259,7 @@ def verify_invoice(api: httpx.Client, params: dict) -> list[str]:
             checks.append("PASS: Invoice fully paid")
         else:
             checks.append(
-                f"WARN: Invoice outstanding={inv.get('amountOutstanding')} "
-                f"(may need payment)"
+                f"WARN: Invoice outstanding={inv.get('amountOutstanding')} (may need payment)"
             )
 
     return checks
@@ -275,15 +276,13 @@ VERIFIERS = {
 }
 
 
-def run_test(
-    server: str, sandbox_url: str, sandbox_token: str, run_data: dict
-) -> dict:
+def run_test(server: str, sandbox_url: str, sandbox_token: str, run_data: dict) -> dict:
     """Run a single test: call solve, then verify."""
     task = run_data.get("task_type", "?")
     prompt = run_data["prompt"]
     params = run_data.get("params", {})
 
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"TASK: {task}")
     print(f"PROMPT: {prompt[:120]}...")
 
@@ -313,7 +312,7 @@ def run_test(
 
     for check in checks:
         status = check.split(":")[0]
-        color = {"PASS": "✅", "FAIL": "❌", "WARN": "⚠️", "SKIP": "⏭️", "INFO": "ℹ️"}.get(
+        color = {"PASS": "✅", "FAIL": "❌", "WARN": "⚠️", "SKIP": "⏭️", "INFO": "i"}.get(
             status, "  "
         )
         print(f"  {color} {check}")
@@ -368,9 +367,9 @@ def main() -> None:
             results.append(result)
 
     # Summary
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print("SUMMARY")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
     total_passed = sum(r["passed"] for r in results)
     total_failed = sum(r["failed"] for r in results)
     for r in results:
