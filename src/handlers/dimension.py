@@ -117,6 +117,23 @@ class CreateDimensionVoucherHandler(BaseHandler):
 
         # Step 2: Create voucher with dimension if postings provided
         postings = params.get("postings", [])
+        # Handle LLM sending voucher info as a sub-object
+        voucher_info = params.get("voucher", {})
+        if not postings and voucher_info:
+            acct = voucher_info.get("account", 7300)
+            amt = voucher_info.get("amount", 0)
+            linked_value = linked_value or voucher_info.get("dimensionValue", "")
+            if linked_value and not linked_val_id:
+                linked_val_id = value_ids.get(linked_value.lower())
+                if not linked_val_id:
+                    linked_val_id = _find_or_create_dimension_value(
+                        api_client, dim_index, linked_value
+                    )
+            if amt:
+                postings = [
+                    {"account": acct, "amount": amt},
+                    {"account": 1920, "amount": -amt},
+                ]
         if not postings:
             return {
                 "dimensionId": dim_id,

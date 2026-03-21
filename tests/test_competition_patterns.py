@@ -1558,6 +1558,40 @@ class TestMonthlyClosing:
         assert result["id"], f"Salary accrual voucher not created: {result}"
 
 
+# ============================================================
+# PATTERN 12c: Dimension voucher with voucher sub-object
+# Competition: LLM sends voucher info as nested object, not postings
+# ============================================================
+
+
+class TestDimensionVoucherFormat:
+    """Based on real 6/13 failure: LLM sent voucher as sub-object."""
+
+    def test_voucher_sub_object_format(self, client):
+        tag = uid()
+        dims = client.get("/ledger/accountingDimensionName", fields="id,dimensionName")
+        dim_name = "Kostsenter"
+        if dims.get("values"):
+            dim_name = dims["values"][0].get("dimensionName", dim_name)
+        result = run_handler(
+            client,
+            "create_dimension_voucher",
+            {
+                "dimensionName": dim_name,
+                "dimensionValues": [f"ValA-{tag}", f"ValB-{tag}"],
+                "voucher": {
+                    "account": 7300,
+                    "amount": 22550,
+                    "dimensionValue": f"ValA-{tag}",
+                },
+            },
+        )
+        assert result.get("id") or result.get("dimensionId")
+        assert result.get("action") != "dimension_created", (
+            "Voucher should have been created, not just dimension"
+        )
+
+
 class TestTimesheetLogging:
     """Simulates: 'Log hours for employee on activity in project'
 
