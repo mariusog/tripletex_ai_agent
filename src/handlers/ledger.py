@@ -209,11 +209,20 @@ class CreateVoucherHandler(BaseHandler):
             )
             entries = resp.get("values", [])
             total = sum(e.get("closingBalance", 0) or 0 for e in entries)
-            profit = -total  # Negative balance = profit
+            # In Tripletex: revenue = negative balance, expenses = positive
+            # Profit = revenue - expenses = -total
+            profit = -total
+            logger.info(
+                "Tax calc: %d entries, total=%s, profit=%s",
+                len(entries),
+                total,
+                profit,
+            )
             if profit <= 0:
+                # No profit — use absolute value of LLM's amount as-is
                 return postings
             real_tax = round(profit * 0.22, 2)
-            logger.info("Tax override: P&L profit=%s, tax 22%%=%s", profit, real_tax)
+            logger.info("Tax override: profit=%s, tax 22%%=%s", profit, real_tax)
         except Exception:
             return postings
 
