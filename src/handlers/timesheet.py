@@ -17,8 +17,13 @@ from src.handlers.resolvers import (
 logger = logging.getLogger(__name__)
 
 
-def _create_activity(api_client: TripletexClient, name: str) -> dict[str, int]:
-    """Always create an activity by name."""
+def _create_activity(
+    api_client: TripletexClient,
+    name: str,
+    project_ref: dict[str, int] | None = None,
+) -> dict[str, int]:
+    """Create an activity and link it to a project if provided."""
+    act_ref = None
     try:
         result = api_client.post(
             "/activity",
@@ -26,14 +31,37 @@ def _create_activity(api_client: TripletexClient, name: str) -> dict[str, int]:
         )
         act_id = result.get("value", {}).get("id")
         logger.info("Created activity '%s' id=%s", name, act_id)
-        return {"id": act_id}
+        act_ref = {"id": act_id}
     except TripletexApiError:
         # Name might already exist — search for it
         resp = api_client.get("/activity", params={"name": name, "count": 5}, fields="id,name")
         for v in resp.get("values", []):
             if (v.get("name") or "").strip().lower() == name.strip().lower():
-                return {"id": v["id"]}
-    return {"id": 0}
+                act_ref = {"id": v["id"]}
+                break
+
+    if not act_ref:
+        return {"id": 0}
+
+    # Link activity to project so it can be used in timesheet entries
+    if project_ref and act_ref.get("id"):
+        try:
+            api_client.post(
+                "/project/projectActivity",
+                data={
+                    "project": project_ref,
+                    "activity": act_ref,
+                },
+            )
+            logger.info(
+                "Linked activity %s to project %s",
+                act_ref["id"],
+                project_ref["id"],
+            )
+        except TripletexApiError:
+            pass  # May already be linked
+
+    return act_ref
 
 
 def _create_project(
@@ -113,7 +141,7 @@ class LogTimesheetHandler(BaseHandler):
         if isinstance(act_name, dict):
             act_name = act_name.get("name", "")
         if act_name:
-            activity_ref = _create_activity(api_client, act_name)
+            activity_ref = _create_activity(api_client, act_name, project_ref)
 
         # Step 6: Create timesheet entry
         hours = params.get("hours") or params.get("hoursLogged") or 0
