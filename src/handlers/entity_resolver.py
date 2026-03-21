@@ -269,13 +269,22 @@ def _resolve_employee(api_client: TripletexClient, value: Any) -> dict[str, int]
 
 
 def _resolve_activity(api_client: TripletexClient, value: Any) -> dict[str, int]:
-    """Resolve activity: create-first, search as fallback."""
+    """Resolve activity: search first, then create if not found."""
     direct = _try_direct_id(value)
     if direct:
         return direct
     name = str(value) if not isinstance(value, dict) else value.get("name", "")
     if not name:
         return {"id": 0}
+    # Search first (avoids 422 on name conflict)
+    try:
+        resp = api_client.get("/activity", params={"name": name, "count": 5}, fields="id,name")
+        for v in resp.get("values", []):
+            if (v.get("name") or "").strip().lower() == name.strip().lower():
+                return {"id": v["id"]}
+    except TripletexApiError:
+        pass
+    # Not found — create
     try:
         res = api_client.post(
             "/activity",
@@ -283,10 +292,7 @@ def _resolve_activity(api_client: TripletexClient, value: Any) -> dict[str, int]
         )
         return {"id": res.get("value", {}).get("id")}
     except TripletexApiError:
-        resp = api_client.get("/activity", params={"name": name, "count": 5}, fields="id,name")
-        for v in resp.get("values", []):
-            if (v.get("name") or "").strip().lower() == name.strip().lower():
-                return {"id": v["id"]}
+        pass
     return {"id": 0}
 
 

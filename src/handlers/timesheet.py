@@ -134,27 +134,40 @@ class LogTimesheetHandler(BaseHandler):
         if act_name:
             activity_ref = _create_activity(api_client, act_name, project_ref)
 
-        # Step 6: Create timesheet entry
-        hours = params.get("hours") or params.get("hoursLogged") or 0
-        entry_body: dict[str, Any] = {
-            "employee": emp_ref,
-            "date": params.get("date") or today,
-            "hours": float(hours),
-        }
-        if project_ref:
-            entry_body["project"] = project_ref
-        if activity_ref:
-            entry_body["activity"] = activity_ref
-        if params.get("comment"):
-            entry_body["comment"] = params["comment"]
+        # Step 6: Create timesheet entries (split if > 24h per day)
+        total_hours = float(params.get("hours") or params.get("hoursLogged") or 0)
+        entry_date = params.get("date") or today
+        entry_id = None
 
-        try:
-            result = api_client.post("/timesheet/entry", data=entry_body)
-            entry_id = result.get("value", {}).get("id")
-            logger.info("Created timesheet entry id=%s", entry_id)
-        except TripletexApiError as e:
-            logger.warning("Timesheet entry failed: %s", e)
-            entry_id = None
+        from datetime import timedelta
+
+        remaining = total_hours
+        current_date = dt_date.fromisoformat(entry_date)
+        while remaining > 0:
+            day_hours = min(remaining, 7.5)  # Max 7.5h per day
+            entry_body: dict[str, Any] = {
+                "employee": emp_ref,
+                "date": current_date.isoformat(),
+                "hours": day_hours,
+            }
+            if project_ref:
+                entry_body["project"] = project_ref
+            if activity_ref:
+                entry_body["activity"] = activity_ref
+            if params.get("comment"):
+                entry_body["comment"] = params["comment"]
+
+            try:
+                result = api_client.post("/timesheet/entry", data=entry_body)
+                if entry_id is None:
+                    entry_id = result.get("value", {}).get("id")
+                logger.info("Created timesheet entry hours=%s date=%s", day_hours, current_date)
+            except TripletexApiError as e:
+                logger.warning("Timesheet entry failed: %s", e)
+                break
+
+            remaining -= day_hours
+            current_date += timedelta(days=1)
 
         # Step 7: Generate invoice if requested
         invoice_id = None
