@@ -47,6 +47,17 @@ TASK_PROMPTS = {
     "ledger_correction": "Opprett korreksjon: debet konto 4000 beløp 5000, kredit konto 2400 beløp 5000.",
     "year_end_closing": "Utfør årsoppgjør for 2025.",
     "balance_sheet_report": "Hent balanserapport fra 2026-01-01 til 2026-03-20.",
+    "create_supplier": "Registrer leverandøren Sim Leverandør AS med org.nr 998877666 og e-post sim@leverandor.no.",
+    "create_dimension_voucher": "Opprett en fri regnskapsdimensjon Prosjekttype med verdiene Intern og Ekstern. Bokfør et bilag på konto 6340 for 15000 kr knyttet til Intern.",
+    "log_timesheet": "Logg 8 timer for Test Simsen på aktiviteten Utvikling i prosjektet Sim-prosjekt. Timepris 950 kr.",
+    "run_payroll": "Kjør lønn for Test Simsen for denne måneden. Grunnlønn er 40000 kr. Legg til bonus 5000 kr.",
+    "delete_customer": "Slett kunden Sim Corp AS.",
+    "delete_department": "Slett avdelingen Simulation.",
+    "delete_order": "Slett ordre nummer 1.",
+    "delete_product": "Slett produktet Simuleringstjeneste.",
+    "delete_project": "Slett prosjektet Sim-prosjekt.",
+    "delete_supplier": "Slett leverandøren Sim Leverandør AS.",
+    "update_department": "Oppdater avdelingen Simulation med ny avdelingsleder Test Simsen.",
 }
 
 SANDBOX_CREDS = {
