@@ -1,0 +1,15 @@
+{
+  "task_type": "cost_analysis",
+  "prompts": {
+    "no": "Analyser hovedboken og finn de tre kontoene med størst økning. Opprett et prosjekt og en aktivitet for hver.",
+    "en": "Analyze the ledger and find the three expense accounts with the largest increase. Create a project and activity for each.",
+    "es": "Analice el libro mayor e identifique las tres cuentas con el mayor aumento. Cree un proyecto y actividad para cada una.",
+    "pt": "Analise o livro razão e identifique as três contas com o maior aumento. Crie um projeto e atividade para cada.",
+    "nn": "Analyser hovudboka og finn dei tre kontoane med størst auke. Opprett eit prosjekt og ein aktivitet for kvar.",
+    "de": "Analysieren Sie das Hauptbuch und finden Sie die drei Konten mit dem größten Anstieg. Erstellen Sie für jedes ein Projekt und eine Aktivität.",
+    "fr": "Analysez le grand livre et identifiez les trois comptes avec la plus forte augmentation. Créez un projet et une activité pour chacun."
+  },
+  "expected_params": {
+    "topN": 3
+  }
+}

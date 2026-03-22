@@ -120,6 +120,12 @@ class CreateInvoiceHandler(BaseHandler):
                     ol["unitPriceExcludingVatCurrency"] = line["amount"]
                 elif "price" in line:
                     ol["unitPriceExcludingVatCurrency"] = line["price"]
+                # Set vatType per line if specified (for mixed-VAT invoices)
+                if "vatType" in line:
+                    from src.handlers.resolvers import resolve_vat_type
+                    vat_ref = resolve_vat_type(api_client, line["vatType"])
+                    if vat_ref:
+                        ol["vatType"] = vat_ref
                 payloads.append(self.strip_none_values(ol))
             if payloads:
                 api_client.post("/order/orderline/list", data=payloads)

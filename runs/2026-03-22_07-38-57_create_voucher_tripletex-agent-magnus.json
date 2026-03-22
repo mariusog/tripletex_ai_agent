@@ -1,0 +1,131 @@
+{
+  "timestamp": "2026-03-22 07:38:57",
+  "prompt": "Führen Sie den Monatsabschluss für März 2026 durch. Buchen Sie die Rechnungsabgrenzung (6150 NOK pro Monat von Konto 1710 auf Aufwand). Erfassen Sie die monatliche Abschreibung für eine Anlage mit Anschaffungskosten 181400 NOK und Nutzungsdauer 3 Jahre (lineare Abschreibung auf Konto 6020). Überprüfen Sie, ob die Saldenbilanz null ergibt. Buchen Sie außerdem eine Gehaltsrückstellung (Soll Gehaltsaufwand Konto 5000, Haben aufgelaufene Gehälter Konto 2900).",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2 git=unknown",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.42
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.38
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 201,
+      "duration_s": 0.51
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.4
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.41
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 422,
+      "duration_s": 0.43
+    }
+  ],
+  "errors": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 422,
+      "duration_s": 0.43
+    }
+  ],
+  "task_type": "create_voucher",
+  "params": {
+    "description": "Monatsabschluss März 2026",
+    "vouchers": [
+      {
+        "description": "Rechnungsabgrenzung März 2026 - Auflösung vorausbezahlter Aufwand",
+        "date": "2026-03-31",
+        "postings": [
+          {
+            "account": 1710,
+            "amount": -6150,
+            "description": "Auflösung Rechnungsabgrenzung (Kredit)"
+          },
+          {
+            "account": 6010,
+            "amount": 6150,
+            "description": "Aufwand aus Rechnungsabgrenzung (Soll)"
+          }
+        ]
+      },
+      {
+        "description": "Monatliche lineare Abschreibung März 2026 - Anlage 181400 NOK / 3 Jahre",
+        "date": "2026-03-31",
+        "postings": [
+          {
+            "account": 6020,
+            "amount": 5038.89,
+            "description": "Abschreibung Soll (181400 / 36 Monate = 5038,89 NOK)"
+          },
+          {
+            "account": 1029,
+            "amount": -5038.89,
+            "description": "Kumulierte Abschreibung Haben"
+          }
+        ]
+      },
+      {
+        "description": "Gehaltsrückstellung März 2026",
+        "date": "2026-03-31",
+        "postings": [
+          {
+            "account": 5000,
+            "amount": 0,
+            "description": "Gehaltsaufwand Soll (Betrag nicht angegeben)"
+          },
+          {
+            "account": 2900,
+            "amount": 0,
+            "description": "Aufgelaufene Gehälter Haben (Betrag nicht angegeben)"
+          }
+        ]
+      }
+    ],
+    "balanceCheck": true,
+    "depreciation": {
+      "acquisitionCost": 181400,
+      "usefulLifeYears": 3,
+      "method": "linear",
+      "monthlyDepreciation": 5038.89,
+      "depreciationAccount": 6020,
+      "accumulatedDepreciationAccount": 1029
+    },
+    "accrual": {
+      "monthlyAmount": 6150,
+      "prepaidAccount": 1710
+    },
+    "salaryProvision": {
+      "debitAccount": 5000,
+      "creditAccount": 2900
+    }
+  },
+  "error_details": [
+    {
+      "status": 422,
+      "endpoint": "POST /ledger/voucher",
+      "message": "Validering feilet. | validation: [{'field': 'Internt felt (account)', 'message': 'Feltet må fylles ut.', 'path': None, 'rootId': None}]"
+    }
+  ],
+  "status": "error",
+  "service": "tripletex-agent-magnus"
+}

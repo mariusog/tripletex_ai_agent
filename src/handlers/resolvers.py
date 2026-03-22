@@ -200,6 +200,34 @@ def find_invoice_id(api_client: TripletexClient, params: dict[str, Any]) -> int 
         return None
 
 
+def resolve_vat_type(api_client: TripletexClient, vat_value: Any) -> dict[str, int] | None:
+    """Resolve vatType to {"id": N}. Handles rate strings like "25", "25%", "15% food"."""
+    if isinstance(vat_value, dict) and "id" in vat_value:
+        return {"id": int(vat_value["id"])}
+    vat_str = str(vat_value).strip().rstrip("%").split("%")[0].strip()
+    # Normalize names to rates
+    name_map = {"standard": "25", "high": "25", "høy": "25", "medium": "15",
+                "food": "15", "mat": "15", "low": "12", "lav": "12",
+                "none": "0", "zero": "0", "exempt": "0", "isento": "0",
+                "fritatt": "0", "avgiftsfri": "0", "exento": "0"}
+    for name, rate in name_map.items():
+        if name in vat_str.lower():
+            vat_str = rate
+            break
+    try:
+        resp = api_client.get_cached(
+            f"vatType_{vat_str}", "/ledger/vatType",
+            params={"count": 100}, fields="id,name,percentage",
+        )
+        for vt in resp.get("values", []):
+            pct = str(int(vt.get("percentage", -1)))
+            if pct == vat_str:
+                return {"id": vt["id"]}
+    except Exception:
+        pass
+    return None
+
+
 # Re-export everything needed by other modules
 __all__ = [
     "COST_CATEGORY_MAP",

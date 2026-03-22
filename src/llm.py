@@ -103,6 +103,9 @@ For wrong account: debit correct account, credit wrong account. For duplicate: c
 For missing VAT: debit VAT account, credit supplier/AP account. For wrong amount: credit to reduce, debit to increase.
 - year_end_closing: {{year, ...}}
 - balance_sheet_report: {{dateFrom, dateTo, ...}}
+- cost_analysis: {{dateFrom, dateTo, topN (number of top accounts, default 3)}} \
+— use when prompt asks to ANALYZE expenses, find accounts with biggest changes, \
+and create projects/activities for them
 - update_department: {{name (to find), newName, departmentNumber, departmentManager, ...}}
 - delete_customer: {{name or id}}
 - delete_product: {{name, number, or id}}
@@ -122,6 +125,12 @@ postings: [{{account (number), amount}}], date, description}}
 hours (number), activity (name string), project (name string), \
 customer ({{name, organizationNumber}}), hourlyRate, date, \
 generateInvoice (bool, if task asks to invoice the hours)}}
+
+ACCOUNTING RULES:
+- Exchange rate differences: account 8060 for AGIO (currency gain), 8160 for DISAGIO (currency loss)
+- Accumulated depreciation: 1209 (machinery/office), 1249 (inventory), 1259 (software)
+- Expense accounts: 6000-7999. Revenue: 3000-3999. Balance sheet: 1000-2999.
+- VAT rates: 25% standard, 15% food/beverage, 12% transport, 0% exempt
 
 Extract ALL relevant parameters from the prompt. Use field names matching the Tripletex API.
 If dates are mentioned, format as yyyy-MM-dd.
