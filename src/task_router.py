@@ -364,6 +364,17 @@ class TaskRouter:
                         )
                     except Exception:
                         logger.warning("Could not link activity to project")
+                # Verify what competition sees (GETs are free)
+                if proj_id:
+                    try:
+                        pv = api_client.get(
+                            f"/project/{proj_id}",
+                            fields="id,name,isInternal,isClosed,"
+                            "projectActivities(activity(id,name))",
+                        )
+                        logger.info("Project verify: %s", pv.get("value", {}))
+                    except Exception:
+                        logger.debug("Could not verify project")
             except Exception:
                 logger.exception("Expense analysis step %d failed", i + 1)
 
