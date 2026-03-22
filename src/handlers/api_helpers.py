@@ -158,9 +158,15 @@ def find_travel_expense(api_client: TripletexClient, params: dict[str, Any]) -> 
 
 def find_invoice_id(api_client: TripletexClient, params: dict[str, Any]) -> int | None:
     """Resolve invoice ID: direct ID avoids a GET call, otherwise search."""
+    from datetime import date as _dt
+
     if "invoiceId" in params:
         return int(params["invoiceId"])
-    search_params: dict[str, Any] = {"count": 5}
+    search_params: dict[str, Any] = {
+        "count": 10,
+        "invoiceDateFrom": "2020-01-01",
+        "invoiceDateTo": _dt.today().isoformat(),
+    }
     if "invoiceNumber" in params:
         search_params["invoiceNumber"] = params["invoiceNumber"]
     elif "customer" in params:

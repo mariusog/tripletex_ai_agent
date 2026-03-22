@@ -128,9 +128,15 @@ class CreateVoucherHandler(BaseHandler):
             )
             if needs_customer:
                 try:
+                    from datetime import date as _dt2
+
                     inv_resp = api_client.get(
                         "/invoice",
-                        params={"count": 20},
+                        params={
+                            "count": 20,
+                            "invoiceDateFrom": "2020-01-01",
+                            "invoiceDateTo": _dt2.today().isoformat(),
+                        },
                         fields="id,customer(id,name),amount,amountOutstanding",
                     )
                     invoices = inv_resp.get("values", [])
