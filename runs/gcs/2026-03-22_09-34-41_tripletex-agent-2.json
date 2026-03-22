@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-22_09-34-41",
+  "prompt": "Du har motteke ein arbeidskontrakt (sjaa vedlagt PDF). Opprett den tilsette i Tripletex med alle detaljar fraa kontrakten: personnummer, fodselsdato, avdeling, stillingskode, lonn, stillingsprosent og startdato.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 31.33,
+  "service": "tripletex-agent-2"
+}

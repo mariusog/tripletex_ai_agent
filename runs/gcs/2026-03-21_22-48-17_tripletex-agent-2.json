@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-21_22-48-17",
+  "prompt": "Voce recebeu uma fatura de fornecedor (ver PDF anexo). Registe a fatura no Tripletex. Crie o fornecedor se nao existir. Use a conta de despesas correta e o IVA de entrada.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 6.95,
+  "service": "tripletex-agent-2"
+}

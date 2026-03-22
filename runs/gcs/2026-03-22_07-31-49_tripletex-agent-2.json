@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-22_07-31-49",
+  "prompt": "Erstellen Sie einen Auftrag für den Kunden Waldstein GmbH (Org.-Nr. 899060113) mit den Produkten Netzwerkdienst (5411) zu 29200 NOK und Schulung (7883) zu 10350 NOK. Wandeln Sie den Auftrag in eine Rechnung um und registrieren Sie die vollständige Zahlung.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 11.18,
+  "service": "tripletex-agent-2"
+}
