@@ -120,6 +120,7 @@ class CreateVoucherHandler(BaseHandler):
         inv_num = params.get("invoiceNumber") or params.get("invoice_number")
         if inv_num:
             body["externalVoucherNumber"] = str(inv_num)
+            body["vendorInvoiceNumber"] = str(inv_num)
 
         supplier_ref = _resolve_supplier(api_client, params.get("supplier"))
 
