@@ -141,6 +141,7 @@ def _build_posting(
         acct_ref, vat_ref = _resolve_account(api_client, account)
         if acct_ref.get("id", 0) == 0:
             logger.warning("Account '%s' resolved to id=0, skipping posting", account)
+            return None  # Signal to caller to skip this posting
         result["account"] = acct_ref
 
     for field in ("amountCurrency", "amount", "description"):
@@ -314,7 +315,7 @@ class CreateVoucherHandler(BaseHandler):
                     if "department" not in p:
                         p["department"] = dept_ref
 
-            body["postings"] = [
+            built = [
                 _build_posting(
                     api_client,
                     p,
@@ -324,6 +325,7 @@ class CreateVoucherHandler(BaseHandler):
                 )
                 for i, p in enumerate(expanded)
             ]
+            body["postings"] = [p for p in built if p is not None]
 
         body = self.strip_none_values(body)
         result = api_client.post(
