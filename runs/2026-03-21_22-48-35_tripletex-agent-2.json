@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-21_22-48-35",
+  "prompt": "Fixez un prix forfaitaire de 170650 NOK sur le projet \"Projet d'automatisation\" pour Rivière SARL (nº org. 852968737). Le chef de projet est Nathan Martin (nathan.martin@example.org). Facturez au client 25 % du prix fixe comme paiement d'étape.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 24.2,
+  "service": "tripletex-agent-2"
+}
