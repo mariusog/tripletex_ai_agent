@@ -188,7 +188,9 @@ class UpdateProjectHandler(BaseHandler):
             invoice_amount = round(float(fixed_price) * float(invoice_pct) / 100, 2)
             customer_ref = project.get("customer")
             if customer_ref:
-                from src.handlers.invoice import CreateInvoiceHandler
+                from src.handlers.invoice import CreateInvoiceHandler, _ensure_bank_account
+
+                _ensure_bank_account(api_client)
 
                 inv_params = {
                     "customer": customer_ref,

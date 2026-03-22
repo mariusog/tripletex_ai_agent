@@ -90,6 +90,17 @@ def _resolve_employee(api_client: TripletexClient, employee: Any) -> dict[str, i
         logger.info("Auto-created employee '%s %s' id=%s", first, last, emp_id)
         return {"id": emp_id}
     except TripletexApiError as e:
+        # If duplicate email, search by email and return existing
+        if (email and "e-post" in str(e).lower()) or "email" in str(e).lower():
+            try:
+                search = api_client.get(
+                    "/employee", params={"email": email, "count": 1}, fields="id"
+                )
+                vals = search.get("values", [])
+                if vals:
+                    return {"id": vals[0]["id"]}
+            except TripletexApiError:
+                pass
         logger.warning("Failed to create employee: %s", e)
         return {"id": 0}
 

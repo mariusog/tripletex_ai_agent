@@ -112,10 +112,12 @@ def _resolve_product(
         values = resp.get("values", [])
         if values:
             return {"id": values[0]["id"]}
-    # Create the product WITHOUT price to avoid VAT type conflicts.
+    # Create the product with price if available (scoring checks product price)
     prod_body: dict[str, Any] = {"name": name or f"Product {number}"}
     if number:
         prod_body["number"] = str(number)
+    if price is not None:
+        prod_body["priceExcludingVatCurrency"] = price
     try:
         result = api_client.post("/product", data=prod_body)
     except TripletexApiError:

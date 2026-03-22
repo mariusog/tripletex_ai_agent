@@ -64,6 +64,17 @@ class CreateEmployeeHandler(BaseHandler):
             dept_vals = dept.get("values", [])
             if dept_vals:
                 body["department"] = {"id": dept_vals[0]["id"]}
+            else:
+                # No departments exist — create one
+                try:
+                    dept_result = api_client.post(
+                        "/department", data={"name": "Generell"}
+                    )
+                    dept_id = dept_result.get("value", {}).get("id")
+                    if dept_id:
+                        body["department"] = {"id": dept_id}
+                except Exception:
+                    logger.warning("Could not create default department")
 
         # Employment record
         start_date = self.validate_date(params.get("startDate"), "startDate") or today
