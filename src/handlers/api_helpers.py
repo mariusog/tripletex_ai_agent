@@ -162,10 +162,12 @@ def find_invoice_id(api_client: TripletexClient, params: dict[str, Any]) -> int 
 
     if "invoiceId" in params:
         return int(params["invoiceId"])
+    from datetime import timedelta
+
     search_params: dict[str, Any] = {
         "count": 10,
         "invoiceDateFrom": "2020-01-01",
-        "invoiceDateTo": _dt.today().isoformat(),
+        "invoiceDateTo": (_dt.today() + timedelta(days=365)).isoformat(),
     }
     if "invoiceNumber" in params:
         search_params["invoiceNumber"] = params["invoiceNumber"]

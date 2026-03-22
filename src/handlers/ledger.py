@@ -154,14 +154,12 @@ class CreateVoucherHandler(BaseHandler):
             )
             if needs_customer:
                 try:
-                    from datetime import date as _dt2
-
                     inv_resp = api_client.get(
                         "/invoice",
                         params={
                             "count": 20,
                             "invoiceDateFrom": "2020-01-01",
-                            "invoiceDateTo": _dt2.today().isoformat(),
+                            "invoiceDateTo": "2030-01-01",
                         },
                         fields="id,customer(id,name),amount,amountOutstanding",
                     )
@@ -315,6 +313,7 @@ class CreateVoucherHandler(BaseHandler):
             # Check if it appears as a supplier invoice
             try:
                 from datetime import date as _dt3
+                from datetime import timedelta as _td
 
                 si_resp = api_client.get(
                     "/supplierInvoice",
@@ -322,7 +321,7 @@ class CreateVoucherHandler(BaseHandler):
                         "count": 5,
                         "voucherId": voucher_id,
                         "invoiceDateFrom": "2020-01-01",
-                        "invoiceDateTo": _dt3.today().isoformat(),
+                        "invoiceDateTo": (_dt3.today() + _td(days=365)).isoformat(),
                     },
                     fields="id,invoiceNumber,supplier(id,name),voucher(id),amount,amountCurrency",
                 )
