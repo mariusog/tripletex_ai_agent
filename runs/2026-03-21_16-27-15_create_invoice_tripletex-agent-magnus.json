@@ -100,6 +100,54 @@
     },
     "send_invoice": false
   },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "body": "{\"name\": \"Elvdal AS\", \"organizationNumber\": \"808826054\"}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "body": "{\"customer\": {\"id\": 108375051}, \"orderDate\": \"2026-03-21\", \"deliveryDate\": \"2026-03-21\"}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/product",
+      "body": "{\"name\": \"Faktura EUR\"}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order/orderline/list",
+      "body": "[{\"order\": {\"id\": 402017797}, \"product\": {\"id\": 84417088}, \"count\": 1, \"unitPriceExcludingVatCurrency\": 9364}]"
+    }
+  ],
+  "created_entities": [
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "id": "108375051",
+      "fields": "{'name': 'Elvdal AS', 'organizationNumber': '808826054', 'email': '', 'description': ''}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "id": "402017797",
+      "fields": "{'number': '2'}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/product",
+      "id": "84417088",
+      "fields": "{'name': 'Faktura EUR', 'number': '', 'description': ''}"
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/order/402017797/:invoice",
+      "id": "2147609509",
+      "fields": "{'amount': 11705.0}"
+    }
+  ],
   "handler": "CreateInvoiceHandler",
   "total_api_calls": 7,
   "total_duration_s": 12.01,

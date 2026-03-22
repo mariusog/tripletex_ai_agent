@@ -56,6 +56,21 @@
       ]
     }
   },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/travelExpense",
+      "body": "{\"employee\": {\"id\": 18608551}, \"title\": \"Kundebesøk Stavanger\", \"travelDetails\": {\"departureDate\": \"2026-03-21\", \"returnDate\": \"2026-03-21\", \"destination\": \"\", \"purpose\": \"Kundebesøk Stavanger\"}}"
+    }
+  ],
+  "created_entities": [
+    {
+      "method": "POST",
+      "endpoint": "/travelExpense",
+      "id": "11147194",
+      "fields": "{'date': '2026-03-21', 'amount': 0, 'number': 1, 'title': 'Kundebesøk Stavanger'}"
+    }
+  ],
   "status": "error",
   "service": "tripletex-agent-magnus"
 }

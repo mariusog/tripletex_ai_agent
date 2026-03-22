@@ -19,6 +19,13 @@
       "Administrasjon"
     ]
   },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/department/list",
+      "body": "[{\"name\": \"Produksjon\"}, {\"name\": \"Kvalitetskontroll\"}, {\"name\": \"Administrasjon\"}]"
+    }
+  ],
   "handler": "CreateDepartmentHandler",
   "total_api_calls": 1,
   "total_duration_s": 6.27,

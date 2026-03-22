@@ -16,6 +16,21 @@
     "name": "Ridgepoint Ltd",
     "organizationNumber": "948050927"
   },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "body": "{\"name\": \"Ridgepoint Ltd\", \"organizationNumber\": \"948050927\"}"
+    }
+  ],
+  "created_entities": [
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "id": "108333107",
+      "fields": "{'name': 'Ridgepoint Ltd', 'organizationNumber': '948050927', 'email': '', 'description': ''}"
+    }
+  ],
   "handler": "CreateCustomerHandler",
   "total_api_calls": 1,
   "total_duration_s": 4.6,

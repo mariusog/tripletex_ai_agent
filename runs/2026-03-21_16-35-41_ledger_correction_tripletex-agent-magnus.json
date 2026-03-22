@@ -27,6 +27,13 @@
     "analysisType": "expense_increase",
     "topAccounts": 3
   },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "body": "{\"date\": \"2026-02-28\", \"description\": \"Análisis del libro mayor para identificar las tres cuentas de gastos con mayor incremento entre enero y febrero de 2026\"}"
+    }
+  ],
   "error_details": [
     {
       "status": 422,

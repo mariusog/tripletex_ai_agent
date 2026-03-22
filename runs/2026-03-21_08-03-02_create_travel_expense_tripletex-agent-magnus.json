@@ -58,6 +58,21 @@
       "currency": "NOK"
     }
   },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/travelExpense",
+      "body": "{\"employee\": {\"id\": 18608771}, \"title\": \"Kundenbesuch Bergen\", \"travelDetails\": {\"departureDate\": \"2026-03-21\", \"returnDate\": \"2026-03-21\", \"destination\": \"Bergen\", \"purpose\": \"Kundenbesuch Bergen\"}}"
+    }
+  ],
+  "created_entities": [
+    {
+      "method": "POST",
+      "endpoint": "/travelExpense",
+      "id": "11147261",
+      "fields": "{'date': '2026-03-21', 'amount': 0, 'number': 1, 'title': 'Kundenbesuch Bergen'}"
+    }
+  ],
   "status": "error",
   "service": "tripletex-agent-magnus"
 }

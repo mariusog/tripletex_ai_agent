@@ -61,6 +61,21 @@
       }
     ]
   },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "body": "{\"date\": \"2026-03-21\", \"description\": \"Processamento de salário - Beatriz Pereira - salário base + bónus\", \"postings\": [{\"row\": 1, \"account\": {\"id\": 461822359}, \"amount\": 58650, \"description\": \"Salário base - Beatriz Pereira\", \"amountGross\": 0, \"amountGrossCurrency\": 0}, {\"row\": 2, \"account\": {\"id\":"
+    }
+  ],
+  "created_entities": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "id": "608879407",
+      "fields": "{'date': '2026-03-21', 'number': 1, 'description': 'Processamento de salário - Beatriz Pereira - salário base + bónus'}"
+    }
+  ],
   "handler": "CreateVoucherHandler",
   "total_api_calls": 4,
   "total_duration_s": 6.46,

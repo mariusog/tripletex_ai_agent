@@ -69,6 +69,48 @@
       "email": "karin.bakken@example.org"
     }
   },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "body": "{\"name\": \"Tindra AS\", \"organizationNumber\": \"833180568\"}"
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/project/401985048",
+      "body": "{\"id\": 401985048, \"version\": 0, \"name\": \"Datasikkerhet\", \"number\": \"1\", \"description\": \"\", \"projectManager\": {\"id\": 18608866}, \"startDate\": \"2026-01-01\", \"customer\": {\"id\": 108332886}, \"isClosed\": false, \"isInternal\": false, \"isFixedPrice\": true, \"fixedprice\": 206950, \"isPriceCeiling\": false, \"price"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "body": "{\"customer\": {\"id\": 108332886}, \"orderDate\": \"2026-03-21\", \"deliveryDate\": \"2026-03-21\"}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order/orderline/list",
+      "body": "[{\"order\": {\"id\": 401996774}, \"description\": \"Delbetaling 33%\", \"count\": 1, \"unitPriceExcludingVatCurrency\": 68293.5}]"
+    }
+  ],
+  "created_entities": [
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "id": "108332886",
+      "fields": "{'name': 'Tindra AS', 'organizationNumber': '833180568', 'email': '', 'description': ''}"
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/project/401985048",
+      "id": "401985048",
+      "fields": "{'name': 'Datasikkerhet', 'number': '1', 'description': ''}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "id": "401996774",
+      "fields": "{'number': '2'}"
+    }
+  ],
   "error_details": [
     {
       "status": 422,

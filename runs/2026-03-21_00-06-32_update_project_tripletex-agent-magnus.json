@@ -51,6 +51,26 @@
       "email": "karin.bakken@example.org"
     }
   },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "body": "{\"name\": \"Tindra AS\", \"organizationNumber\": \"833180568\"}"
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/project/401979668",
+      "body": "{\"id\": 401979668, \"version\": 0, \"url\": \"kkpqfuj-amager.tripletex.dev/v2/project/401979668\", \"name\": \"Datasikkerhet\", \"number\": \"1\", \"displayName\": \"1 Datasikkerhet\", \"description\": \"\", \"projectManager\": {\"id\": 18603350, \"url\": \"kkpqfuj-amager.tripletex.dev/v2/employee/18603350\"}, \"startDate\": \"2026-"
+    }
+  ],
+  "created_entities": [
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "id": "108302592",
+      "fields": "{'name': 'Tindra AS', 'organizationNumber': '833180568', 'email': '', 'description': ''}"
+    }
+  ],
   "error_details": [
     {
       "status": 422,

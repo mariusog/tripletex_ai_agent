@@ -22,6 +22,21 @@
       "city": "Tromsø"
     }
   },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "body": "{\"name\": \"Flussgold GmbH\", \"email\": \"post@flussgold.no\", \"organizationNumber\": \"952754750\", \"postalAddress\": {\"addressLine1\": \"Havnegata 36\", \"postalCode\": \"9008\", \"city\": \"Tromsø\"}, \"physicalAddress\": {\"addressLine1\": \"Havnegata 36\", \"postalCode\": \"9008\", \"city\": \"Tromsø\"}}"
+    }
+  ],
+  "created_entities": [
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "id": "108333322",
+      "fields": "{'name': 'Flussgold GmbH', 'organizationNumber': '952754750', 'email': 'post@flussgold.no', 'description': ''}"
+    }
+  ],
   "handler": "CreateCustomerHandler",
   "total_api_calls": 1,
   "total_duration_s": 3.94,

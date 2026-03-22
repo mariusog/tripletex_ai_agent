@@ -74,6 +74,65 @@
     },
     "invoicePercentage": 75
   },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "body": "{\"name\": \"Stormberg AS\", \"organizationNumber\": \"834028719\"}"
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/project/401985025",
+      "body": "{\"id\": 401985025, \"version\": 0, \"name\": \"Digital transformasjon\", \"number\": \"1\", \"description\": \"\", \"projectManager\": {\"id\": 18608848}, \"startDate\": \"2026-01-01\", \"customer\": {\"id\": 108332885}, \"isClosed\": false, \"isInternal\": false, \"isFixedPrice\": true, \"fixedprice\": 203000, \"isPriceCeiling\": fals"
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/ledger/account/368685891",
+      "body": "{\"id\": 368685891, \"version\": 0, \"number\": 1920, \"name\": \"Bankinnskudd\", \"bankAccountNumber\": \"12345678903\"}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "body": "{\"customer\": {\"id\": 108332885}, \"orderDate\": \"2026-03-21\", \"deliveryDate\": \"2026-03-21\"}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order/orderline/list",
+      "body": "[{\"order\": {\"id\": 401996772}, \"description\": \"Delbetaling 75%\", \"count\": 1, \"unitPriceExcludingVatCurrency\": 152250.0}]"
+    }
+  ],
+  "created_entities": [
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "id": "108332885",
+      "fields": "{'name': 'Stormberg AS', 'organizationNumber': '834028719', 'email': '', 'description': ''}"
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/project/401985025",
+      "id": "401985025",
+      "fields": "{'name': 'Digital transformasjon', 'number': '1', 'description': ''}"
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/ledger/account/368685891",
+      "id": "368685891",
+      "fields": "{'number': 1920, 'name': 'Bankinnskudd', 'description': ''}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "id": "401996772",
+      "fields": "{'number': '2'}"
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/order/401996772/:invoice",
+      "id": "2147578533",
+      "fields": "{'amount': 152250.0}"
+    }
+  ],
   "handler": "UpdateProjectHandler",
   "total_api_calls": 9,
   "total_duration_s": 14.7,

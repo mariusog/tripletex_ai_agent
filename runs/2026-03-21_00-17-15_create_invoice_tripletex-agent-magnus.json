@@ -34,6 +34,14 @@
     ],
     "send_invoice": true
   },
+  "created_entities": [
+    {
+      "method": "PUT",
+      "endpoint": "/order/401980333/:invoice",
+      "id": "2147558140",
+      "fields": "{'amount': 53250.0}"
+    }
+  ],
   "handler": "CreateInvoiceHandler",
   "total_api_calls": 7,
   "total_duration_s": 62.37,
