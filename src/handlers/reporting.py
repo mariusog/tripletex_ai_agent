@@ -549,15 +549,22 @@ class BalanceSheetReportHandler(BaseHandler):
                         )
                 increases.sort(key=lambda x: x["increase"], reverse=True)
                 if increases:
-                    values = values  # Keep original entries
                     return {
                         "entries": values,
                         "top_increases": increases[:5],
                         "action": "report_retrieved",
                         "count": len(values),
+                        "dateFrom": date_from,
+                        "dateTo": date_to,
                     }
             except Exception:
                 logger.warning("Multi-month comparison failed")
 
         logger.info("Retrieved balance sheet with %d entries", len(values))
-        return {"entries": values, "action": "report_retrieved", "count": len(values)}
+        return {
+            "entries": values,
+            "action": "report_retrieved",
+            "count": len(values),
+            "dateFrom": date_from,
+            "dateTo": date_to,
+        }
