@@ -155,6 +155,21 @@ def resolve_account(
             logger.info("Created missing account %d (%s)", number, name)
             return {"id": created["id"]}, vat_ref
     except TripletexApiError as e:
+        # "Already exists" — do a fresh GET (cache was stale)
+        if "fra før" in str(e) or "already" in str(e).lower():
+            try:
+                fresh = api_client.get(
+                    "/ledger/account",
+                    params={"number": str(number), "count": 1},
+                    fields="id,number,vatType(id)",
+                )
+                fvals = fresh.get("values", [])
+                if fvals:
+                    vat = fvals[0].get("vatType")
+                    vat_ref = {"id": vat["id"]} if vat and vat.get("id") else None
+                    return {"id": fvals[0]["id"]}, vat_ref
+            except TripletexApiError:
+                pass
         logger.warning("Could not create account %d: %s", number, e)
     logger.warning("Account %d not found and could not be created", number)
     return {"id": 0}, None
