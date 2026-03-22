@@ -35,7 +35,7 @@ gcloud run deploy "$SERVICE_NAME" \
     --timeout 300 \
     --memory 512Mi \
     --cpu 1 \
-    --min-instances 0 \
+    --min-instances 1 \
     --max-instances 10 \
     --concurrency 1 \
     --set-env-vars "PORT=8080,ANTHROPIC_VERTEX_PROJECT_ID=ai-nm26osl-1792,CLOUD_ML_REGION=us-east5"

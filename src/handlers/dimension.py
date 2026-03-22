@@ -178,7 +178,11 @@ class CreateDimensionVoucherHandler(BaseHandler):
 
         body: dict[str, Any] = {
             "date": date_val,
-            "description": params.get("description") or voucher_info.get("description") or f"Voucher med {dim_name}",
+            "description": (
+                params.get("description")
+                or voucher_info.get("description")
+                or f"Voucher med {dim_name}"
+            ),
             "postings": voucher_postings,
         }
 

@@ -204,6 +204,6 @@ gcloud builds submit --project ai-nm26osl-1792 --region europe-west1 \
 gcloud run deploy tripletex-agent-2 --project ai-nm26osl-1792 --region europe-west1 \
   --image europe-west1-docker.pkg.dev/ai-nm26osl-1792/cloud-run-source-deploy/tripletex-agent-2:latest \
   --platform managed --allow-unauthenticated --port 8080 --timeout 300 \
-  --memory 512Mi --cpu 1 --min-instances 0 --max-instances 10 --concurrency 1 \
+  --memory 512Mi --cpu 1 --min-instances 1 --max-instances 10 --concurrency 1 \
   --set-env-vars "ANTHROPIC_VERTEX_PROJECT_ID=ai-nm26osl-1792,CLOUD_ML_REGION=us-east5"
 ```
