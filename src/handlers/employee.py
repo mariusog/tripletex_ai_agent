@@ -144,18 +144,27 @@ class CreateEmployeeHandler(BaseHandler):
         # Occupation code (stillingskode) — needs ID reference
         job_code = params.get("jobCode") or params.get("occupationCode")
         if job_code:
+            code_str = str(job_code)
             try:
-                code_str = str(job_code)
                 occ_resp = api_client.get(
                     "/employee/employment/occupationCode",
                     params={"code": code_str, "count": 20},
-                    fields="id,code",
+                    fields="id,code,name",
                 )
-                # Filter: code must START with our query (API does substring match)
+                # Try exact prefix match first, then any match
+                best = None
                 for occ in occ_resp.get("values", []):
-                    if occ.get("code", "").startswith(code_str):
-                        emp_detail["occupationCode"] = {"id": occ["id"]}
+                    occ_code = occ.get("code", "")
+                    if occ_code == code_str:
+                        best = occ
                         break
+                    if occ_code.startswith(code_str) and not best:
+                        best = occ
+                if not best and occ_resp.get("values"):
+                    best = occ_resp["values"][0]
+                if best:
+                    emp_detail["occupationCode"] = {"id": best["id"]}
+                    logger.info("Occupation code %s -> id=%s", code_str, best["id"])
             except TripletexApiError:
                 pass
 
