@@ -380,16 +380,17 @@ class TaskRouter:
         balance_sheets = [sr for sr in step_results if sr.get("action") == "report_retrieved"]
         if len(balance_sheets) < 2:
             return step_results
-        # Compare expense/cost accounts (4000-9999) between periods
+        # Compare expense/cost accounts (4000-7999) between periods
+        # Exclude 8000+ (financial items) and 3000- (revenue)
         period1 = {
             e["account"]["number"]: e
             for e in balance_sheets[0].get("entries", [])
-            if e.get("account", {}).get("number", 0) >= 4000
+            if 4000 <= (e.get("account", {}).get("number", 0)) <= 7999
         }
         period2 = {
             e["account"]["number"]: e
             for e in balance_sheets[1].get("entries", [])
-            if e.get("account", {}).get("number", 0) >= 4000
+            if 4000 <= (e.get("account", {}).get("number", 0)) <= 7999
         }
         increases = []
         for num, e2 in period2.items():
