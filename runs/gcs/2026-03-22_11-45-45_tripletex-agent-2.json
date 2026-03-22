@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-03-22_11-45-45",
+  "prompt": "Enviamos una factura por 9487 EUR a Estrella SL (org. nº 834293692) cuando el tipo de cambio era 11.54 NOK/EUR. El cliente ha pagado ahora, pero el tipo es 10.95 NOK/EUR. Registre el pago y contabilice la diferencia de tipo de cambio (disagio) en la cuenta correcta.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 24.37,
+  "service": "tripletex-agent-2",
+  "task_types": [
+    "register_payment",
+    "create_voucher"
+  ],
+  "task_type": "multi",
+  "steps": 2,
+  "api_calls": 11,
+  "writes": 2,
+  "errors": 0,
+  "results": [
+    {
+      "id": 2147701810,
+      "action": "payment_registered"
+    },
+    {
+      "id": 609429541,
+      "action": "created"
+    }
+  ]
+}
