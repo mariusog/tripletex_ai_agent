@@ -224,13 +224,9 @@ class LogTimesheetHandler(BaseHandler):
             }
             api_client.post("/order/orderline/list", data=[line])
 
-            inv_result = api_client.post(
-                "/invoice",
-                data={
-                    "invoiceDate": today,
-                    "invoiceDueDate": today,
-                    "orders": [{"id": order_id}],
-                },
+            inv_result = api_client.put(
+                f"/order/{order_id}/:invoice",
+                params={"invoiceDate": today},
             )
             inv_id = inv_result.get("value", {}).get("id")
             logger.info("Created project invoice id=%s", inv_id)

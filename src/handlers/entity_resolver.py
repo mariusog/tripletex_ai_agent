@@ -283,12 +283,38 @@ def _resolve_employee(api_client: TripletexClient, value: Any) -> dict[str, int]
     }
     if email:
         create_params["email"] = email
+    if isinstance(value, dict):
+        for field in ("dateOfBirth", "phoneNumberMobile", "userType"):
+            if field in value:
+                create_params[field] = value[field]
     try:
         result = HANDLER_REGISTRY["create_employee"].execute(api_client, create_params)
         if result.get("id"):
             return {"id": result["id"]}
     except TripletexApiError as e:
         logger.warning("Failed to create employee: %s", e)
+        # 422 "email already exists" — retry search by email
+        if email and "allerede" in str(e).lower():
+            try:
+                resp2 = api_client.get(
+                    "/employee", params={"email": email, "count": 1}, fields="id"
+                )
+                if resp2.get("values"):
+                    _ensure_employee_ready(api_client, resp2["values"][0]["id"])
+                    return {"id": resp2["values"][0]["id"]}
+            except TripletexApiError:
+                pass
+        # Fallback: search all employees for name match
+        try:
+            all_resp = api_client.get("/employee", params={"count": 50}, fields="id,firstName,lastName")
+            for v in all_resp.get("values", []):
+                vf = (v.get("firstName") or "").strip().lower()
+                vl = (v.get("lastName") or "").strip().lower()
+                if vf == first.strip().lower() and vl == last.strip().lower():
+                    _ensure_employee_ready(api_client, v["id"])
+                    return {"id": v["id"]}
+        except TripletexApiError:
+            pass
     return {"id": 0}
 
 
