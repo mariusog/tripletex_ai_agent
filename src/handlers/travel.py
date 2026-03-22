@@ -63,7 +63,13 @@ class CreateTravelExpenseHandler(BaseHandler):
         if not ret_date:
             from datetime import timedelta
 
-            duration = td.get("duration") or td.get("numberOfDays") or params.get("numberOfDays")
+            duration = (
+                td.get("duration")
+                or td.get("numberOfDays")
+                or td.get("days")
+                or params.get("numberOfDays")
+                or params.get("days")
+            )
             if isinstance(duration, (int, float)) and duration > 1:
                 dep = dt_date.fromisoformat(dep_date)
                 ret_date = (dep + timedelta(days=int(duration) - 1)).isoformat()
