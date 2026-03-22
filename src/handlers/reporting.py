@@ -25,8 +25,11 @@ class LedgerCorrectionHandler(BaseHandler):
     param_schema = {
         "corrections": ParamSpec(
             type="list",
-            description="Array of corrections with type, account, amount. "
-            "Types: wrong_account, duplicate_entry, missing_vat, incorrect_amount",
+            description="Array of corrections: {type, amount, account, description}. "
+            "Types: wrong_account ({wrongAccount, correctAccount, amount}), "
+            "duplicate_entry ({account, amount}), "
+            "missing_vat ({account, amount/netAmount, vatAccount: 2710}), "
+            "incorrect_amount ({account, recordedAmount, correctAmount})",
         ),
         "date": ParamSpec(required=False, type="date"),
     }
@@ -177,7 +180,35 @@ class YearEndClosingHandler(BaseHandler):
 
     tier = 3
     description = "Execute year-end closing"
-    param_schema = {"year": ParamSpec(type="number", description="Fiscal year")}
+    param_schema = {
+        "year": ParamSpec(type="number", description="Fiscal year"),
+        "depreciation": ParamSpec(
+            required=False,
+            type="list",
+            description="Array of assets: {assetName, cost, years, assetAccount (e.g. 1200), "
+            "expenseAccount (e.g. 6010), accumulatedAccount (e.g. 1209)}",
+        ),
+        "prepaidReversal": ParamSpec(
+            required=False,
+            type="object",
+            description="Prepaid expense reversal: {account (e.g. 1700), amount}",
+        ),
+        "taxRate": ParamSpec(
+            required=False,
+            type="number",
+            description="Tax rate (default 0.22)",
+        ),
+        "taxExpenseAccount": ParamSpec(
+            required=False,
+            type="number",
+            description="Tax expense account (default 8700)",
+        ),
+        "taxLiabilityAccount": ParamSpec(
+            required=False,
+            type="number",
+            description="Tax liability account (default 2920)",
+        ),
+    }
 
     def get_task_type(self) -> str:
         return "year_end_closing"
