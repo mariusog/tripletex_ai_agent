@@ -141,7 +141,23 @@ def resolve_account(
         vat = values[0].get("vatType")
         vat_ref = {"id": vat["id"]} if vat and vat.get("id") else None
         return {"id": values[0]["id"]}, vat_ref
-    # Account not found — create it
+    # Account not found — try fresh GET (cache may be stale from earlier step)
+    try:
+        fresh = api_client.get(
+            "/ledger/account",
+            params={"number": str(number), "count": 1},
+            fields="id,number,vatType(id)",
+        )
+        fvals = fresh.get("values", [])
+        if fvals:
+            vat = fvals[0].get("vatType")
+            vat_ref = (
+                {"id": vat["id"]} if vat and vat.get("id") else None
+            )
+            return {"id": fvals[0]["id"]}, vat_ref
+    except TripletexApiError:
+        pass
+    # Still not found — create it
     try:
         name = _ACCOUNT_NUMBER_NAMES.get(number, f"Konto {number}")
         create_resp = api_client.post(
@@ -151,25 +167,28 @@ def resolve_account(
         created = create_resp.get("value", {})
         if created.get("id"):
             vat = created.get("vatType")
-            vat_ref = {"id": vat["id"]} if vat and vat.get("id") else None
+            vat_ref = (
+                {"id": vat["id"]} if vat and vat.get("id") else None
+            )
             logger.info("Created missing account %d (%s)", number, name)
             return {"id": created["id"]}, vat_ref
     except TripletexApiError as e:
-        # "Already exists" — do a fresh GET (cache was stale)
-        if "fra før" in str(e) or "already" in str(e).lower():
-            try:
-                fresh = api_client.get(
-                    "/ledger/account",
-                    params={"number": str(number), "count": 1},
-                    fields="id,number,vatType(id)",
+        # Creation failed — one more fresh GET attempt
+        try:
+            fresh2 = api_client.get(
+                "/ledger/account",
+                params={"number": str(number), "count": 1},
+                fields="id,number,vatType(id)",
+            )
+            fvals2 = fresh2.get("values", [])
+            if fvals2:
+                vat = fvals2[0].get("vatType")
+                vat_ref = (
+                    {"id": vat["id"]} if vat and vat.get("id") else None
                 )
-                fvals = fresh.get("values", [])
-                if fvals:
-                    vat = fvals[0].get("vatType")
-                    vat_ref = {"id": vat["id"]} if vat and vat.get("id") else None
-                    return {"id": fvals[0]["id"]}, vat_ref
-            except TripletexApiError:
-                pass
+                return {"id": fvals2[0]["id"]}, vat_ref
+        except TripletexApiError:
+            pass
         logger.warning("Could not create account %d: %s", number, e)
     logger.warning("Account %d not found and could not be created", number)
     return {"id": 0}, None

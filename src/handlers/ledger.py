@@ -210,6 +210,15 @@ class CreateVoucherHandler(BaseHandler):
         raw_postings = params.get("postings", [])
         raw_postings = self._fix_tax_amounts(api_client, raw_postings, date_val)
 
+        # Skip if ALL postings have zero amounts (LLM couldn't calculate)
+        all_zero = all(
+            not (p.get("amount") or p.get("amountGross") or p.get("debit") or p.get("credit"))
+            for p in raw_postings
+        )
+        if all_zero and raw_postings:
+            logger.warning("All postings have zero amounts, skipping voucher")
+            return {"action": "skipped_zero_amounts"}
+
         # Merge manual VAT split if present
         vat_rate = params.get("vatRate") or params.get("vat")
         raw_postings = merge_vat_postings(raw_postings, vat_rate)
