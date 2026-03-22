@@ -19,6 +19,41 @@ from src.services.invoice_service import create_full_invoice
 
 logger = logging.getLogger(__name__)
 
+# Patterns: "Innbetaling fra X / Faktura NNN", "Betaling Supplier X"
+_INCOMING_PREFIXES = ("innbetaling fra", "payment from", "paiement de", "pago de", "pagamento de")
+_OUTGOING_PREFIXES = ("betaling supplier", "betaling til", "payment to", "paiement à", "pago a")
+
+
+def _parse_tx_description(desc: str, inv_num: str = "") -> tuple[str, str, str]:
+    """Extract customer, supplier, invoice number from transaction description.
+
+    Returns (customer_name, supplier_name, invoice_number).
+    """
+    customer = ""
+    supplier = ""
+    dl = desc.lower().strip()
+
+    for prefix in _INCOMING_PREFIXES:
+        if dl.startswith(prefix):
+            rest = desc[len(prefix) :].strip()
+            # Split on " / Faktura" or " / Invoice"
+            parts = rest.split("/")
+            customer = parts[0].strip()
+            if len(parts) > 1:
+                inv_part = parts[1].strip()
+                # Extract invoice number
+                for word in inv_part.split():
+                    if word.isdigit():
+                        inv_num = inv_num or word
+            return customer, "", inv_num
+
+    for prefix in _OUTGOING_PREFIXES:
+        if dl.startswith(prefix):
+            supplier = desc[len(prefix) :].strip()
+            return "", supplier, inv_num
+
+    return customer, supplier, inv_num
+
 
 @register_handler
 class BankReconciliationHandler(BaseHandler):
@@ -40,29 +75,58 @@ class BankReconciliationHandler(BaseHandler):
             sup_payments = []
             fees = []
             for tx in params["transactions"]:
-                if tx.get("customer") and tx.get("amountIn"):
+                desc = (tx.get("description") or "").lower()
+                customer = tx.get("customer", "")
+                supplier = tx.get("supplier", "")
+                inv_num = tx.get("invoiceNumber", "")
+
+                # Extract customer/supplier from description if not explicit
+                if not customer and not supplier:
+                    customer, supplier, inv_num = _parse_tx_description(
+                        tx.get("description", ""), inv_num
+                    )
+
+                if customer and tx.get("amountIn"):
                     cust_payments.append(
                         {
-                            "customer": tx["customer"],
+                            "customer": customer,
                             "amount": tx["amountIn"],
                             "date": tx.get("date", ""),
-                            "invoiceNumber": tx.get("invoiceNumber"),
+                            "invoiceNumber": inv_num,
                         }
                     )
-                elif tx.get("supplier") and tx.get("amountOut"):
+                elif supplier and tx.get("amountOut"):
                     sup_payments.append(
                         {
-                            "supplier": tx["supplier"],
+                            "supplier": supplier,
                             "amount": tx["amountOut"],
                             "date": tx.get("date", ""),
                         }
                     )
-                elif tx.get("amountIn") or tx.get("amountOut"):
+                elif "gebyr" in desc or "fee" in desc:
                     fees.append(
                         {
                             "amount": tx.get("amountOut") or tx.get("amountIn", 0),
                             "date": tx.get("date", ""),
                             "description": tx.get("description", "Bankgebyr"),
+                        }
+                    )
+                elif tx.get("amountIn"):
+                    # Unmatched incoming — treat as customer payment
+                    cust_payments.append(
+                        {
+                            "customer": tx.get("description", "Unknown"),
+                            "amount": tx["amountIn"],
+                            "date": tx.get("date", ""),
+                            "invoiceNumber": inv_num,
+                        }
+                    )
+                elif tx.get("amountOut"):
+                    fees.append(
+                        {
+                            "amount": tx["amountOut"],
+                            "date": tx.get("date", ""),
+                            "description": tx.get("description", "Betaling"),
                         }
                     )
             if cust_payments:
