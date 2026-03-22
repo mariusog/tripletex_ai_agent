@@ -67,11 +67,13 @@ async def _solve_impl(request: SolveRequest) -> SolveResponse:
         )
     logger.info("Received solve request, prompt length=%d", len(request.prompt))
 
+    run_meta: dict = {}
     try:
         from src.task_router import create_router
 
         router = create_router()
         await router.solve(request)
+        run_meta = getattr(router, "_run_meta", {})
 
         elapsed = time.monotonic() - start_time
         logger.info("Task completed in %.2fs", elapsed)
@@ -81,13 +83,15 @@ async def _solve_impl(request: SolveRequest) -> SolveResponse:
 
     # Save competition run data to GCS
     if is_competition:
-        _save_run_to_gcs(request.prompt, base_url, elapsed)
+        _save_run_to_gcs(request.prompt, base_url, elapsed, run_meta)
 
     # Always return completed -- scoring checks account state independently
     return SolveResponse(status="completed")
 
 
-def _save_run_to_gcs(prompt: str, base_url: str, elapsed: float) -> None:
+def _save_run_to_gcs(
+    prompt: str, base_url: str, elapsed: float, run_meta: dict | None = None
+) -> None:
     """Save competition run data to GCS bucket for team sharing."""
     try:
         from datetime import datetime
@@ -96,13 +100,15 @@ def _save_run_to_gcs(prompt: str, base_url: str, elapsed: float) -> None:
 
         ts = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S")
         service = os.environ.get("K_SERVICE", "tripletex-agent-2")
-        run_data = {
+        run_data: dict = {
             "timestamp": ts,
             "prompt": prompt[:500],
             "base_url": base_url,
             "duration_s": round(elapsed, 2),
             "service": service,
         }
+        if run_meta:
+            run_data.update(run_meta)
         bucket_name = "ai-nm26osl-1792-nmiai"
         blob_path = f"tripletex-runs/{ts}_{service}.json"
         client = storage.Client()
