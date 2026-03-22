@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-22_14-35-35",
+  "prompt": "Ein av kundane dine har ein forfallen faktura. Finn den forfalne fakturaen og bokfor eit purregebyr pa 65 kr. Debet kundefordringar (1500), kredit purregebyr (3400). Opprett også ein faktura for purregebyret til kunden og send den. Registrer i tillegg ei delbetaling på 5000 kr på den forfalne fakturaen.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 91.15,
+  "service": "tripletex-agent-2",
+  "task_types": [
+    "create_voucher",
+    "create_invoice",
+    "send_invoice",
+    "register_payment"
+  ],
+  "task_type": "multi",
+  "steps": 4,
+  "api_calls": 14,
+  "writes": 6,
+  "errors": 0,
+  "results": [
+    {
+      "id": 609470510,
+      "action": "created"
+    },
+    {
+      "id": 2147711917,
+      "action": "created"
+    },
+    {
+      "id": 2147711917,
+      "action": "sent"
+    },
+    {
+      "id": 2147711876,
+      "action": "payment_registered"
+    }
+  ]
+}
