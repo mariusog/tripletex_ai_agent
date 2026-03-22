@@ -19,6 +19,13 @@
       "Lager"
     ]
   },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/department/list",
+      "body": "[{\"name\": \"Utvikling\"}, {\"name\": \"Administrasjon\"}, {\"name\": \"Lager\"}]"
+    }
+  ],
   "handler": "CreateDepartmentHandler",
   "total_api_calls": 1,
   "total_duration_s": 3.28,

@@ -17,6 +17,14 @@
     "organizationNumber": "867835989",
     "email": "faktura@brckentorgmbh.no"
   },
+  "created_entities": [
+    {
+      "method": "POST",
+      "endpoint": "/supplier",
+      "id": "108293525",
+      "fields": "{'name': 'Brückentor GmbH', 'organizationNumber': '867835989', 'email': 'faktura@brckentorgmbh.no', 'description': ''}"
+    }
+  ],
   "handler": "CreateSupplierHandler",
   "total_api_calls": 1,
   "total_duration_s": 5.51,

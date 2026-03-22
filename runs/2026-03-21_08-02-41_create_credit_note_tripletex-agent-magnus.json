@@ -63,6 +63,60 @@
     ],
     "fullReversal": true
   },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "body": "{\"name\": \"Luna SL\", \"organizationNumber\": \"853261750\"}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "body": "{\"customer\": {\"id\": 108333099}, \"orderDate\": \"2026-03-21\", \"deliveryDate\": \"2026-03-21\"}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/product",
+      "body": "{\"name\": \"Horas de consultoría\"}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order/orderline/list",
+      "body": "[{\"order\": {\"id\": 401997013}, \"product\": {\"id\": 84414166}, \"count\": 1, \"unitPriceExcludingVatCurrency\": 45300}]"
+    }
+  ],
+  "created_entities": [
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "id": "108333099",
+      "fields": "{'name': 'Luna SL', 'organizationNumber': '853261750', 'email': '', 'description': ''}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "id": "401997013",
+      "fields": "{'number': '2'}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/product",
+      "id": "84414166",
+      "fields": "{'name': 'Horas de consultoría', 'number': '', 'description': ''}"
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/order/401997013/:invoice",
+      "id": "2147578883",
+      "fields": "{'amount': 56625.0}"
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/invoice/2147578883/:createCreditNote",
+      "id": "2147578884",
+      "fields": "{'amount': -56625.0}"
+    }
+  ],
   "handler": "CreateCreditNoteHandler",
   "total_api_calls": 7,
   "total_duration_s": 13.66,

@@ -35,6 +35,43 @@
     }
   ],
   "errors": [],
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/travelExpense/cost",
+      "body": "{\"travelExpense\": {\"id\": 11147327}, \"date\": \"2026-03-21\", \"amountCurrencyIncVat\": 5450, \"currency\": {\"id\": 1}, \"paymentType\": {\"id\": 27683945}, \"costCategory\": {\"id\": 27683961}}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/travelExpense/cost",
+      "body": "{\"travelExpense\": {\"id\": 11147327}, \"date\": \"2026-03-21\", \"amountCurrencyIncVat\": 550, \"currency\": {\"id\": 1}, \"paymentType\": {\"id\": 27683945}, \"costCategory\": {\"id\": 27683976}}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/travelExpense/perDiemCompensation",
+      "body": "{\"travelExpense\": {\"id\": 11147327}, \"count\": 4, \"rate\": 800, \"location\": \"Kristiansand\", \"overnightAccommodation\": \"HOTEL\"}"
+    }
+  ],
+  "created_entities": [
+    {
+      "method": "POST",
+      "endpoint": "/travelExpense/cost",
+      "id": "?",
+      "fields": "{}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/travelExpense/cost",
+      "id": "?",
+      "fields": "{}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/travelExpense/perDiemCompensation",
+      "id": "?",
+      "fields": "{}"
+    }
+  ],
   "task_type": "create_project",
   "params": {
     "name": "Integration Windkraft",

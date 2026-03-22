@@ -20,6 +20,13 @@
   ],
   "task_type": "ledger_correction",
   "params_raw": "{'date': '2026-02-28', 'description': 'Correction des 4 erreurs découvertes dans le grand livre de janvier et février 2026', 'corrections': [{'type': 'wrong_account', 'wrongAccount': 6540, 'correctAccount': 6860, 'amount': 4800, 'description': 'Écriture passée sur le mauvais compte 6540 au lieu de 6860 — correction: crédit 6540, débit 6860 pour 4800 NOK'}, {'type': 'duplicate_entry', 'wrongAccount': 7100, 'amount': 2000, 'description': \"Pièce en double sur compte 7100 — correction: contrepasser l'écriture en double de 2000 NOK\"}, {'type': 'missing_vat_line', 'wrongAccount': 4500, 'correctAccount': 2710, 'amount': 14500, 'description': \"Ligne de TVA manquante sur compte 2710 pour l'écriture HT de 14500 NOK sur compte 4500 — ajouter l'écriture TVA sur compte 2710\"}, {'type': 'incorrect_amount', 'wrongAccount': 7100, 'amount': 21650, 'correctAmount': 17900, 'description': 'Montant incorrect sur compte 7100: 21650 NOK comptabilisé au lieu de 17900 NOK — correction: crédit 7100 de 3750 NOK (différence)'}], 'postings': [{'description': 'Correction 1: Mauvais compte — reclassement de 6540 vers 6860', 'lines': [{'account': 6540, 'debitAmount': 0, 'creditAmount': 4800}, {'account': 6860, 'debitAmount': 4800, 'creditAmount': 0}]}, {'description': 'Correction 2: Contrepassation de la pièce en double sur 7100', 'lines': [{'account': 7100, 'debitAmount': 0, 'creditAmount': 2000}]}, {'description': 'Correction 3: Ajout de la ligne TVA manquante sur 2710', 'lines': [{'account': 2710, 'debitAmount': 0, 'creditAmount': 3625}, {'account': 4500, 'debitAmount': 0, 'creditAmount': 0, 'note': 'Ligne HT existante de 14500 NOK — TVA 25% = 3625 NOK à enregistrer sur 2710'}]}, {'description': 'Correction 4: Ajustement du montant incorrect sur 7100 (21650 → 17900, différence -3750)', 'lines': [{'account': 7100, 'debitAmount': 0, 'creditAmount': 3750}]}]}",
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "body": "{\"date\": \"2026-02-28\", \"description\": \"Correction des 4 erreurs découvertes dans le grand livre de janvier et février 2026\", \"postings\": [{\"row\": 1, \"description\": \"Correction 1: Mauvais compte — reclassement de 6540 vers 6860\", \"amountGross\": 0, \"amountGrossCurrency\": 0}, {\"row\": 2, \"description\": "
+    }
+  ],
   "error_details": [
     {
       "status": 422,

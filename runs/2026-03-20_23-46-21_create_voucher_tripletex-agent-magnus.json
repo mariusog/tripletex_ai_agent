@@ -74,6 +74,13 @@
       }
     ]
   },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "body": "{\"date\": \"2026-03-20\", \"description\": \"Fatura fornecedor INV-2026-3088 - Luz do Sol Lda - Serviços de escritório\", \"postings\": [{\"row\": 1, \"account\": {\"id\": 461032139}, \"description\": \"Serviços de escritório - Luz do Sol Lda\", \"amountGross\": 28160, \"amountGrossCurrency\": 28160, \"supplier\": {\"id\": 10"
+    }
+  ],
   "error_details": [
     {
       "status": 500,

@@ -59,6 +59,48 @@
     ],
     "send_invoice": true
   },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "body": "{\"name\": \"Flussgold GmbH\", \"organizationNumber\": \"939332332\"}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "body": "{\"customer\": {\"id\": 108332706}, \"orderDate\": \"2026-03-21\", \"deliveryDate\": \"2026-03-21\"}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/product",
+      "body": "{\"name\": \"Systementwicklung\"}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order/orderline/list",
+      "body": "[{\"order\": {\"id\": 401996633}, \"product\": {\"id\": 84414084}, \"count\": 1, \"unitPriceExcludingVatCurrency\": 23500}]"
+    }
+  ],
+  "created_entities": [
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "id": "108332706",
+      "fields": "{'name': 'Flussgold GmbH', 'organizationNumber': '939332332', 'email': '', 'description': ''}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "id": "401996633",
+      "fields": "{'number': '1'}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/product",
+      "id": "84414084",
+      "fields": "{'name': 'Systementwicklung', 'number': '', 'description': ''}"
+    }
+  ],
   "error_details": [
     {
       "status": 422,

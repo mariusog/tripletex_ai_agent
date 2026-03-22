@@ -62,6 +62,48 @@
       "linkedValue": "Sør-Norge"
     }
   },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionName",
+      "body": "{\"dimensionName\": \"Region\", \"active\": true}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionValue",
+      "body": "{\"displayName\": \"Østlandet\", \"number\": \"Østlandet\", \"active\": true, \"showInVoucherRegistration\": true, \"dimensionIndex\": 1}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionValue",
+      "body": "{\"displayName\": \"Sør-Norge\", \"number\": \"Sør-Norge\", \"active\": true, \"showInVoucherRegistration\": true, \"dimensionIndex\": 1}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "body": "{\"date\": \"2026-03-21\", \"description\": \"Bilag bokført på konto 6340, knyttet til dimensjon Region - Sør-Norge\", \"postings\": [{\"row\": 1, \"account\": {\"id\": 368631132}, \"amount\": 32850, \"amountGross\": 32850, \"amountGrossCurrency\": 32850, \"vatType\": {\"id\": 1}, \"freeAccountingDimension1\": {\"id\": 17592}}]}"
+    }
+  ],
+  "created_entities": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionName",
+      "id": "1906",
+      "fields": "{}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionValue",
+      "id": "17591",
+      "fields": "{'number': 'Østlandet'}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionValue",
+      "id": "17592",
+      "fields": "{'number': 'Sør-Norge'}"
+    }
+  ],
   "error_details": [
     {
       "status": 422,

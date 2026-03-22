@@ -5,18 +5,6 @@
   "api_calls": [
     {
       "method": "GET",
-      "endpoint": "/ledger/accountingDimensionName",
-      "status": 200,
-      "duration_s": 0.29
-    },
-    {
-      "method": "POST",
-      "endpoint": "/ledger/accountingDimensionName",
-      "status": 201,
-      "duration_s": 0.31
-    },
-    {
-      "method": "GET",
       "endpoint": "/ledger/accountingDimensionValue/search",
       "status": 200,
       "duration_s": 0.31
@@ -32,12 +20,6 @@
       "endpoint": "/ledger/accountingDimensionValue/search",
       "status": 200,
       "duration_s": 0.51
-    },
-    {
-      "method": "POST",
-      "endpoint": "/ledger/accountingDimensionValue",
-      "status": 201,
-      "duration_s": 0.29
     },
     {
       "method": "GET",

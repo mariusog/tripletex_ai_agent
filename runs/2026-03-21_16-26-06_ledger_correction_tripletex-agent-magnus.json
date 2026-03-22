@@ -38,6 +38,13 @@
       ]
     }
   },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "body": "{\"date\": \"2026-02-28\", \"description\": \"Analyser hovudboka for å finne dei tre kostnadskontoane med størst auke i beløp frå januar til februar 2026\"}"
+    }
+  ],
   "error_details": [
     {
       "status": 422,

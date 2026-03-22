@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-03-22_11-31-49",
+  "prompt": "Vi har en ny ansatt som heter Astrid Strand, født 4. May 1986. Opprett vedkommende som ansatt med e-post astrid.strand@example.org og startdato 21. December 2026.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 14.66,
+  "service": "tripletex-agent-2",
+  "task_types": [
+    "create_employee"
+  ],
+  "task_type": "create_employee",
+  "steps": 1,
+  "api_calls": 6,
+  "writes": 1,
+  "errors": 0,
+  "results": [
+    {
+      "id": 18793908,
+      "action": "created"
+    }
+  ]
+}

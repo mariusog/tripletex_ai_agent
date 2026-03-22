@@ -40,6 +40,21 @@
       }
     ]
   },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "body": "{\"date\": \"2026-03-21\", \"description\": \"Reversão de acréscimos - Março 2026\", \"postings\": [{\"row\": 1, \"account\": {\"id\": 465906900}, \"amount\": -12250, \"description\": \"Reversão de acréscimos mensais (crédito conta 1710)\", \"amountGross\": -12250, \"amountGrossCurrency\": -12250}, {\"row\": 2, \"account\": {\"id"
+    }
+  ],
+  "created_entities": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "id": "609035207",
+      "fields": "{'date': '2026-03-21', 'number': 9, 'description': 'Reversão de acréscimos - Março 2026'}"
+    }
+  ],
   "handler": "CreateVoucherHandler",
   "total_api_calls": 3,
   "total_duration_s": 10.1,

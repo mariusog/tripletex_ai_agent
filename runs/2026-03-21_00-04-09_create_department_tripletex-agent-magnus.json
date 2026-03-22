@@ -19,6 +19,13 @@
       "HR"
     ]
   },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/department/list",
+      "body": "[{\"name\": \"Drift\"}, {\"name\": \"Kundeservice\"}, {\"name\": \"HR\"}]"
+    }
+  ],
   "handler": "CreateDepartmentHandler",
   "total_api_calls": 1,
   "total_duration_s": 4.49,

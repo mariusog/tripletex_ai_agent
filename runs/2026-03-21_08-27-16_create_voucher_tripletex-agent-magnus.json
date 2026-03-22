@@ -79,6 +79,13 @@
       }
     ]
   },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "body": "{\"date\": \"2026-03-21\", \"description\": \"Factura proveedor INV-2026-9045 - Luna SL - Servicios de oficina\", \"postings\": [{\"row\": 1, \"account\": {\"id\": 368675083}, \"description\": \"Servicios de oficina\", \"amountGross\": 22480, \"amountGrossCurrency\": 22480, \"supplier\": {\"id\": 108312805}}, {\"row\": 2, \"accou"
+    }
+  ],
   "error_details": [
     {
       "status": 422,

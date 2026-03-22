@@ -22,6 +22,21 @@
       "city": "Trondheim"
     }
   },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "body": "{\"name\": \"Bergvik AS\", \"email\": \"post@bergvik.no\", \"organizationNumber\": \"914572479\", \"postalAddress\": {\"addressLine1\": \"Solveien 74\", \"postalCode\": \"7010\", \"city\": \"Trondheim\"}, \"physicalAddress\": {\"addressLine1\": \"Solveien 74\", \"postalCode\": \"7010\", \"city\": \"Trondheim\"}}"
+    }
+  ],
+  "created_entities": [
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "id": "108332994",
+      "fields": "{'name': 'Bergvik AS', 'organizationNumber': '914572479', 'email': 'post@bergvik.no', 'description': ''}"
+    }
+  ],
   "handler": "CreateCustomerHandler",
   "total_api_calls": 1,
   "total_duration_s": 6.38,

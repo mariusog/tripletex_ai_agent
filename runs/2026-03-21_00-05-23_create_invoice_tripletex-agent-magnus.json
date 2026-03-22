@@ -64,6 +64,65 @@
     ],
     "send_invoice": true
   },
+  "request_bodies": [
+    {
+      "method": "PUT",
+      "endpoint": "/ledger/account/364637454",
+      "body": "{\"id\": 364637454, \"version\": 0, \"number\": 1920, \"name\": \"Bankinnskudd\", \"bankAccountNumber\": \"12345678903\"}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "body": "{\"name\": \"Snøhetta AS\", \"organizationNumber\": \"871844062\"}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "body": "{\"customer\": {\"id\": 108302412}, \"orderDate\": \"2026-03-21\", \"deliveryDate\": \"2026-03-21\"}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/product",
+      "body": "{\"name\": \"Webdesign\"}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order/orderline/list",
+      "body": "[{\"order\": {\"id\": 401979647}, \"product\": {\"id\": 84399605}, \"count\": 1, \"unitPriceExcludingVatCurrency\": 20100}]"
+    }
+  ],
+  "created_entities": [
+    {
+      "method": "PUT",
+      "endpoint": "/ledger/account/364637454",
+      "id": "364637454",
+      "fields": "{'number': 1920, 'name': 'Bankinnskudd', 'description': ''}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "id": "108302412",
+      "fields": "{'name': 'Snøhetta AS', 'organizationNumber': '871844062', 'email': '', 'description': ''}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "id": "401979647",
+      "fields": "{'number': '1'}"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/product",
+      "id": "84399605",
+      "fields": "{'name': 'Webdesign', 'number': '', 'description': ''}"
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/order/401979647/:invoice",
+      "id": "2147557294",
+      "fields": "{'amount': 25125.0}"
+    }
+  ],
   "handler": "CreateInvoiceHandler",
   "total_api_calls": 7,
   "total_duration_s": 39.44,
