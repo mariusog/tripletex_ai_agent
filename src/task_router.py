@@ -409,7 +409,7 @@ class TaskRouter:
         start: float,
     ) -> None:
         """Create internal projects + activities for top expense increases."""
-        top = analysis["top_increases"][:5]
+        top = analysis["top_increases"][:3]
         project_handler = self._registry.get("create_project")
         activity_handler = self._registry.get("create_activity")
         if not project_handler or not activity_handler:
@@ -530,7 +530,7 @@ class TaskRouter:
             None,
         )
         if analysis and analysis.get("top_increases"):
-            top = analysis["top_increases"][:5]
+            top = analysis["top_increases"][:3]
             lines = []
             for item in top:
                 lines.append(f"- {item['account_name']} (increase: {item['increase']:.0f} NOK)")
