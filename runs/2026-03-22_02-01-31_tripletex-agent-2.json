@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-22_02-01-31",
+  "prompt": "Wir haben eine Rechnung über 10128 EUR an Silberberg GmbH (Org.-Nr. 877406776) gesendet, als der Wechselkurs 11.61 NOK/EUR betrug. Der Kunde hat nun bezahlt, aber der Kurs liegt bei 11.32 NOK/EUR. Erfassen Sie die Zahlung und buchen Sie die Wechselkursdifferenz (disagio) auf das korrekte Konto.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 15.19,
+  "service": "tripletex-agent-2"
+}

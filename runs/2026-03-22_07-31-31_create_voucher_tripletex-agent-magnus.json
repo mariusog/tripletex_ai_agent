@@ -1,0 +1,65 @@
+{
+  "timestamp": "2026-03-22 07:31:31",
+  "prompt": "L'un de vos clients a une facture en retard. Trouvez la facture en retard et enregistrez des frais de rappel de 65 NOK. Debit creances clients (1500), credit revenus de rappel (3400). Créez également une facture pour les frais de rappel au client et envoyez-la. De plus, enregistrez un paiement partiel de 5000 NOK sur la facture en retard.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2 git=unknown",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.4
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.35
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 422,
+      "duration_s": 0.35
+    }
+  ],
+  "errors": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 422,
+      "duration_s": 0.35
+    }
+  ],
+  "task_type": "create_voucher",
+  "params": {
+    "description": "Frais de rappel - facture en retard",
+    "postings": [
+      {
+        "account": 1500,
+        "amount": 65,
+        "description": "Créances clients - frais de rappel"
+      },
+      {
+        "account": 3400,
+        "amount": -65,
+        "description": "Revenus de rappel"
+      }
+    ]
+  },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "body": "{\"date\": \"2026-03-22\", \"description\": \"Frais de rappel - facture en retard\", \"postings\": [{\"row\": 1, \"account\": {\"id\": 492652836}, \"amount\": 65, \"description\": \"Créances clients - frais de rappel\", \"amountGross\": 65, \"amountGrossCurrency\": 65}, {\"row\": 2, \"account\": {\"id\": 492653032}, \"amount\": -65,"
+    }
+  ],
+  "error_details": [
+    {
+      "status": 422,
+      "endpoint": "POST /ledger/voucher",
+      "message": "Validering feilet. | validation: [{'field': 'postings.customer.id', 'message': 'Kunde mangler.', 'path': None, 'rootId': None}]"
+    }
+  ],
+  "status": "error",
+  "service": "tripletex-agent-magnus"
+}

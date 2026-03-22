@@ -82,7 +82,7 @@ class CreateEmployeeHandler(BaseHandler):
                 "employmentDetails": [
                     {
                         "date": start_date,
-                        "employmentType": params.get("employmentType", "ORDINARY"),
+                        "employmentType": "ORDINARY",  # Always use API enum value
                         "percentageOfFullTimeEquivalent": params.get(
                             "percentageOfFullTimeEquivalent", 100
                         ),

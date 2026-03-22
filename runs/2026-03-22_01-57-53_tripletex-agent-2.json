@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-22_01-57-53",
+  "prompt": "The customer Blueshore Ltd (org no. 937709293) has an outstanding invoice for 5900 NOK excluding VAT for \"Consulting Hours\". Register full payment on this invoice.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 10.73,
+  "service": "tripletex-agent-2"
+}

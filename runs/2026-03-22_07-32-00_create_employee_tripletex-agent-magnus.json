@@ -1,0 +1,56 @@
+{
+  "timestamp": "2026-03-22 07:32:00",
+  "prompt": "Du har mottatt en arbeidskontrakt (se vedlagt PDF). Opprett den ansatte i Tripletex med alle detaljer fra kontrakten: personnummer, fodselsdato, avdeling, stillingskode, lonn, stillingsprosent og startdato.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2 git=unknown",
+  "api_calls": [
+    {
+      "method": "POST",
+      "endpoint": "/employee",
+      "status": 422,
+      "duration_s": 0.43
+    }
+  ],
+  "errors": [
+    {
+      "method": "POST",
+      "endpoint": "/employee",
+      "status": 422,
+      "duration_s": 0.43
+    }
+  ],
+  "task_type": "create_employee",
+  "params": {
+    "firstName": "Ingrid",
+    "lastName": "Strand",
+    "email": "ingrid.strand@example.org",
+    "dateOfBirth": "2000-06-04",
+    "nationalIdentityNumber": "04060042735",
+    "bankAccountNumber": "68053067437",
+    "department": "Logistikk",
+    "occupationCode": "4110",
+    "employmentType": "Fast stilling",
+    "salaryType": "Fastlonn (manedlig)",
+    "percentageOfFullTimeEquivalent": 80.0,
+    "annualSalary": 990000,
+    "startDate": "2026-05-08",
+    "vacationDays": 25,
+    "probationPeriodMonths": 6,
+    "has_attachments": true
+  },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/employee",
+      "body": "{\"firstName\": \"Ingrid\", \"lastName\": \"Strand\", \"userType\": \"STANDARD\", \"dateOfBirth\": \"2000-06-04\", \"email\": \"ingrid.strand@example.org\", \"department\": {\"id\": 0}, \"employments\": [{\"startDate\": \"2026-05-08\", \"employmentDetails\": [{\"date\": \"2026-05-08\", \"employmentType\": \"Fast stilling\", \"percentageOfF"
+    }
+  ],
+  "error_details": [
+    {
+      "status": 422,
+      "endpoint": "POST /employee",
+      "message": "Request mapping failed | validation: [{'field': 'employments.employmentDetails.employmentType', 'message': 'Verdien er ikke av korrekt type for dette feltet.', 'path': 'employments[0].employmentDetails[0].employmentType', 'rootId': None}]"
+    }
+  ],
+  "status": "error",
+  "service": "tripletex-agent-magnus"
+}
