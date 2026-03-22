@@ -26,30 +26,30 @@ def build_and_post_order_lines(
     payloads = []
     for line in lines:
         ol: dict[str, Any] = {"order": {"id": order_id}}
-        # Only resolve product if we don't already have price+description
-        # (order lines work without product refs, saving a write call)
-        price_keys = (
-            "unitPriceExcludingVatCurrency",
-            "priceExcludingVatCurrency",
-            "amount",
-            "price",
-        )
-        has_price = any(line.get(k) for k in price_keys)
-        if "product" in line and not has_price:
+        # Resolve product: always when productNumber given (competition checks),
+        # skip only when just description+price with no product number
+        has_prod_num = line.get("productNumber") or line.get("number")
+        if "product" in line and has_prod_num:
+            # Must create product with specific number — competition verifies
             prod_val = line["product"]
-            prod_num = line.get("productNumber") or line.get("number")
-            if isinstance(prod_val, str) and prod_num:
-                prod_val = {"name": prod_val, "number": prod_num}
+            if isinstance(prod_val, str):
+                prod_val = {"name": prod_val, "number": has_prod_num}
+            line_price = (
+                line.get("unitPriceExcludingVatCurrency")
+                or line.get("priceExcludingVatCurrency")
+                or line.get("amount")
+                or line.get("price")
+            )
             ol["product"] = _resolve(
                 api_client,
                 "product",
                 prod_val,
-                extra_create_fields={"price": 0},
+                extra_create_fields={"price": line_price},
             )
         elif "product" in line:
-            # Use product name as description if no explicit description
+            # No product number — use as description to save a write
+            prod = line["product"]
             if "description" not in line:
-                prod = line["product"]
                 ol["description"] = prod.get("name") if isinstance(prod, dict) else str(prod)
         if "description" in line:
             ol["description"] = line["description"]
