@@ -104,7 +104,11 @@ class BankReconciliationHandler(BaseHandler):
 
             # Try to find existing invoice first
             invoice_id = None
-            search: dict[str, Any] = {"count": 10}
+            search: dict[str, Any] = {
+                "count": 10,
+                "invoiceDateFrom": "2020-01-01",
+                "invoiceDateTo": "2030-01-01",
+            }
             if inv_num:
                 search["invoiceNumber"] = inv_num
             # Search by customer name
