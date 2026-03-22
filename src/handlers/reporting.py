@@ -120,11 +120,9 @@ class LedgerCorrectionHandler(BaseHandler):
                 net = c.get("netAmount") or c.get("amount") or 0
                 vat = round(net * 0.25, 2)
                 vat_acct = c.get("vatAccount", 2710)
-                exp_acct = (
-                    c.get("expenseAccount") or c.get("revenueAccount") or c.get("account") or 6500
-                )
+                # Missing VAT = claim input VAT, reduce supplier debt
                 postings.append({"account": vat_acct, "debit": vat, "description": desc})
-                postings.append({"account": exp_acct, "credit": vat, "description": desc})
+                postings.append({"account": 2400, "credit": vat, "description": desc})
 
             elif ctype == "incorrect_amount":
                 diff = c.get("difference")
