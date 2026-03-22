@@ -356,8 +356,11 @@ class TaskRouter:
                 if proj_id and act_id:
                     try:
                         api_client.post(
-                            f"/project/{proj_id}/projectActivity",
-                            data={"activity": {"id": act_id}},
+                            "/project/projectActivity",
+                            data={
+                                "project": {"id": proj_id},
+                                "activity": {"id": act_id},
+                            },
                         )
                     except Exception:
                         logger.warning("Could not link activity to project")
