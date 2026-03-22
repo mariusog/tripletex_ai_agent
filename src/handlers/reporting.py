@@ -95,17 +95,24 @@ class LedgerCorrectionHandler(BaseHandler):
                 postings.append({"account": c["correctAccount"], "debit": amt, "description": desc})
                 postings.append({"account": c["wrongAccount"], "credit": amt, "description": desc})
 
-            elif ctype in ("duplicate_voucher", "duplicate_reversal", "duplicate"):
+            elif ctype in (
+                "duplicate_voucher",
+                "duplicate_reversal",
+                "duplicate",
+                "duplicate_entry",
+            ):
                 amt = c.get("amount", 0)
                 acct = c.get("account", 1920)
                 postings.append({"account": 1920, "debit": amt, "description": desc})
                 postings.append({"account": acct, "credit": amt, "description": desc})
 
-            elif ctype == "missing_vat":
+            elif ctype in ("missing_vat", "missing_vat_line"):
                 net = c.get("netAmount") or c.get("amount") or 0
                 vat = round(net * 0.25, 2)
                 vat_acct = c.get("vatAccount", 2710)
-                exp_acct = c.get("expenseAccount") or c.get("account") or 6500
+                exp_acct = (
+                    c.get("expenseAccount") or c.get("revenueAccount") or c.get("account") or 6500
+                )
                 postings.append({"account": vat_acct, "debit": vat, "description": desc})
                 postings.append({"account": exp_acct, "credit": vat, "description": desc})
 
