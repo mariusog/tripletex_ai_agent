@@ -110,9 +110,10 @@ class CreateVoucherHandler(BaseHandler):
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         from datetime import date as dt_date
 
-        # Pre-flight: check for existing supplier invoices on sandbox
-        if params.get("supplier") or params.get("has_attachments"):
-            si_result = self._try_supplier_invoice_flow(api_client, params)
+        # Route supplier invoices through dedicated endpoint
+        is_supplier_invoice = params.get("supplier") or params.get("has_attachments")
+        if is_supplier_invoice:
+            si_result = self._create_supplier_invoice(api_client, params)
             if si_result:
                 return si_result
 
@@ -131,23 +132,6 @@ class CreateVoucherHandler(BaseHandler):
             body["vendorInvoiceNumber"] = str(inv_num)
 
         supplier_ref = _resolve_supplier(api_client, params.get("supplier"))
-
-        # For supplier invoices, set voucherType to "Leverandørfaktura"
-        if supplier_ref or params.get("supplier") or params.get("has_attachments"):
-            try:
-                vt_resp = api_client.get_cached(
-                    "supplier_voucher_type",
-                    "/ledger/voucherType",
-                    params={"count": 20},
-                    fields="id,name",
-                )
-                for vt in vt_resp.get("values", []):
-                    vt_name = (vt.get("name") or "").lower()
-                    if "leverandør" in vt_name or "supplier" in vt_name:
-                        body["voucherType"] = {"id": vt["id"]}
-                        break
-            except Exception:
-                logger.debug("Could not look up supplier voucher type")
 
         customer_ref = None
         if params.get("customer"):
@@ -315,65 +299,164 @@ class CreateVoucherHandler(BaseHandler):
         voucher_id = value.get("id")
         logger.info("Created voucher id=%s", voucher_id)
 
-        # Read back to verify what was actually created
-        if voucher_id and (supplier_ref or params.get("has_attachments")):
-            try:
-                verify = api_client.get(
-                    f"/ledger/voucher/{voucher_id}",
-                    fields="id,number,date,description,voucherType(id,name),"
-                    "externalVoucherNumber,vendorInvoiceNumber,"
-                    "postings(account(number),amountGross,supplier(id,name),"
-                    "department(id,name),invoiceNumber,vatType(id))",
-                )
-                logger.info("Voucher verify: %s", verify.get("value", {}))
-            except Exception:
-                logger.debug("Could not verify voucher")
-            # Check if it appears as a supplier invoice
-            try:
-                from datetime import date as _dt3
-                from datetime import timedelta as _td
-
-                si_resp = api_client.get(
-                    "/supplierInvoice",
-                    params={
-                        "count": 5,
-                        "voucherId": voucher_id,
-                        "invoiceDateFrom": "2020-01-01",
-                        "invoiceDateTo": (_dt3.today() + _td(days=365)).isoformat(),
-                    },
-                    fields="id,invoiceNumber,supplier(id,name),voucher(id),amount,amountCurrency",
-                )
-                si_vals = si_resp.get("values", [])
-                logger.info(
-                    "SupplierInvoice check: %d found, data=%s",
-                    len(si_vals),
-                    si_vals,
-                )
-            except Exception as e:
-                logger.info("SupplierInvoice endpoint: %s", e)
-
         return {"id": voucher_id, "action": "created"}
 
-    @staticmethod
-    def _try_supplier_invoice_flow(
-        api_client: TripletexClient, params: dict[str, Any]
+    def _create_supplier_invoice(
+        self, api_client: TripletexClient, params: dict[str, Any]
     ) -> dict[str, Any] | None:
-        """Check for pre-existing supplier invoices and try to work with them."""
+        """Create a supplier invoice via POST /supplierInvoice.
+
+        This creates a proper supplier invoice record with linked voucher,
+        rather than just a generic voucher.
+        """
+        from datetime import date as dt_date
+
+        supplier_ref = _resolve_supplier(api_client, params.get("supplier"))
+        if not supplier_ref:
+            logger.warning("No supplier resolved for supplier invoice, falling back to voucher")
+            return None
+
+        date_val = self.validate_date(params.get("date"), "date")
+        if not date_val:
+            date_val = dt_date.today().isoformat()
+
+        due_date = self.validate_date(params.get("dueDate"), "dueDate")
+        if not due_date:
+            # Default due date: 30 days from invoice date
+            from datetime import timedelta
+
+            try:
+                d = dt_date.fromisoformat(date_val)
+                due_date = (d + timedelta(days=30)).isoformat()
+            except ValueError:
+                due_date = date_val
+
+        inv_num = params.get("invoiceNumber") or params.get("invoice_number") or ""
+
+        # Build postings for the voucher
+        raw_postings = params.get("postings", [])
+        vat_rate = params.get("vatRate") or params.get("vat")
+        raw_postings = merge_vat_postings(raw_postings, vat_rate)
+
+        # Normalize debitAccount/creditAccount into separate rows
+        postings: list[dict[str, Any]] = []
+        for p in raw_postings:
+            if "debitAccount" in p and "creditAccount" in p:
+                amt = p.get("amount", p.get("amountGross", 0))
+                if not amt:
+                    continue
+                postings.append(
+                    {
+                        "account": p["debitAccount"],
+                        "debit": amt,
+                        "description": p.get("description", ""),
+                        "vatRate": p.get("vatRate") or vat_rate,
+                    }
+                )
+                postings.append(
+                    {
+                        "account": p["creditAccount"],
+                        "credit": amt,
+                        "description": p.get("description", ""),
+                    }
+                )
+            else:
+                if vat_rate and "vatRate" not in p and "vatType" not in p:
+                    p["vatRate"] = vat_rate
+                postings.append(p)
+
+        # Build posting payloads
+        built: list[dict[str, Any]] = []
+        for i, p in enumerate(postings):
+            posting = build_posting(api_client, p, row=i + 1, supplier=supplier_ref)
+            acct = p.get("account") or p.get("debitAccount") or p.get("creditAccount")
+            try:
+                acct_num = int(acct) if acct else 0
+            except (TypeError, ValueError):
+                acct_num = 0
+            # Set invoice number on AP posting (2400)
+            if inv_num and 2400 <= acct_num <= 2499:
+                posting["invoiceNumber"] = str(inv_num)
+            built.append(posting)
+
+        if not built:
+            logger.warning("No postings for supplier invoice, falling back to voucher")
+            return None
+
+        # Look up supplier voucher type
+        voucher_type_ref = None
         try:
-            # Check for unapproved supplier invoices
-            si_resp = api_client.get(
-                "/supplierInvoice/forApproval",
+            vt_resp = api_client.get_cached(
+                "supplier_voucher_type",
+                "/ledger/voucherType",
                 params={"count": 20},
-                fields="id,invoiceNumber,supplier(id,name),voucher(id),amount",
+                fields="id,name",
             )
-            pending = si_resp.get("values", [])
-            logger.info("Pre-flight: %d pending supplier invoices found", len(pending))
-            if pending:
-                for si in pending:
-                    logger.info("Pending SI: %s", si)
+            for vt in vt_resp.get("values", []):
+                vt_name = (vt.get("name") or "").lower()
+                if "leverandør" in vt_name or "supplier" in vt_name:
+                    voucher_type_ref = {"id": vt["id"]}
+                    break
+        except Exception:
+            logger.debug("Could not look up supplier voucher type")
+
+        # Compute total amount from postings (use expense posting amount)
+        total_amount = 0
+        for p in built:
+            amt = p.get("amountGross", 0)
+            if amt > 0:
+                total_amount = amt
+                break
+        if not total_amount:
+            # Fallback: use absolute value of any posting
+            for p in built:
+                amt = abs(p.get("amountGross", 0))
+                if amt > 0:
+                    total_amount = amt
+                    break
+
+        # Build voucher sub-object
+        voucher_body: dict[str, Any] = {
+            "date": date_val,
+            "description": params.get("description", f"Leverandørfaktura {inv_num}".strip()),
+            "postings": built,
+        }
+        if voucher_type_ref:
+            voucher_body["voucherType"] = voucher_type_ref
+
+        # Build supplier invoice payload
+        si_body: dict[str, Any] = {
+            "invoiceNumber": str(inv_num) if inv_num else "1",
+            "invoiceDate": date_val,
+            "dueDate": due_date,
+            "supplier": supplier_ref,
+            "voucher": voucher_body,
+        }
+        if total_amount:
+            si_body["amount"] = total_amount
+            si_body["amountCurrency"] = total_amount
+
+        si_body = self.strip_none_values(si_body)
+        logger.info("SupplierInvoice body: %s", si_body)
+
+        try:
+            result = api_client.post(
+                "/supplierInvoice",
+                data=si_body,
+                params={"sendToLedger": "true"},
+            )
+            value = result.get("value", {})
+            si_id = value.get("id")
+            voucher_id = value.get("voucher", {}).get("id")
+            logger.info(
+                "Created supplier invoice id=%s voucher_id=%s", si_id, voucher_id
+            )
+            return {"id": si_id or voucher_id, "action": "created"}
         except TripletexApiError as e:
-            logger.info("No supplier invoice pre-flight: %s", e)
-        return None  # Fall through to normal voucher creation for now
+            logger.warning(
+                "POST /supplierInvoice failed: %s, falling back to voucher", e
+            )
+            return None
 
     @staticmethod
     def _fix_tax_amounts(
