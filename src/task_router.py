@@ -15,6 +15,7 @@ from src.handlers import HANDLER_REGISTRY
 from src.llm import LLMClient
 from src.models import SolveRequest, SolveResponse, TaskClassification
 from src.services.param_normalizer import normalize_params
+from src.services.self_verify import verify_entity
 
 logger = logging.getLogger(__name__)
 
@@ -181,6 +182,19 @@ class TaskRouter:
                     if api_client.write_call_count > 0:
                         all_read_only = False
 
+                    # Self-verify: GET back entity, compare fields, fix if needed
+                    try:
+                        entity_id = result.get("id")
+                        action = result.get("action", "")
+                        if entity_id and action in (
+                            "created",
+                            "payment_registered",
+                            "sent",
+                        ):
+                            verify_entity(api_client, task_type, entity_id, params)
+                    except Exception:
+                        logger.debug("Self-verify failed for %s", task_type)
+
                     elapsed = time.monotonic() - start
                     logger.info(
                         "Handler result step=%d task_type=%s handler=%s "
@@ -233,6 +247,13 @@ class TaskRouter:
                                 continue
                             try:
                                 result = handler.execute(api_client, params)
+                                # Self-verify re-classified steps too
+                                try:
+                                    eid = result.get("id")
+                                    if eid and result.get("action") == "created":
+                                        verify_entity(api_client, task_type, eid, params)
+                                except Exception:
+                                    logger.debug("Self-verify failed for R%d", i + 1)
                                 elapsed = time.monotonic() - start
                                 logger.info(
                                     "Handler result step=R%d task_type=%s "

@@ -228,13 +228,20 @@ class YearEndClosingHandler(BaseHandler):
             exp_acct = dep.get("expenseAccount", 6010)
             acc_acct = dep.get("accumulatedAccount", 1209)
             postings = [
-                {"account": exp_acct, "debit": annual,
-                 "description": f"Avskriving {dep.get('assetName', '')}"},
-                {"account": acc_acct, "credit": annual,
-                 "description": f"Akk. avskriving {dep.get('assetName', '')}"},
+                {
+                    "account": exp_acct,
+                    "debit": annual,
+                    "description": f"Avskriving {dep.get('assetName', '')}",
+                },
+                {
+                    "account": acc_acct,
+                    "credit": annual,
+                    "description": f"Akk. avskriving {dep.get('assetName', '')}",
+                },
             ]
-            vid = self._post_voucher(api_client, date,
-                f"Avskriving {dep.get('assetName', '')} {year}", postings)
+            vid = self._post_voucher(
+                api_client, date, f"Avskriving {dep.get('assetName', '')} {year}", postings
+            )
             if vid:
                 created_ids.append(vid)
 
@@ -248,8 +255,9 @@ class YearEndClosingHandler(BaseHandler):
                     {"account": 6300, "debit": amount, "description": "Forskuddsbetalt kostnad"},
                     {"account": acct, "credit": amount, "description": "Reversering forskudd"},
                 ]
-                vid = self._post_voucher(api_client, date,
-                    f"Reversering forskuddsbetalt kostnad {year}", postings)
+                vid = self._post_voucher(
+                    api_client, date, f"Reversering forskuddsbetalt kostnad {year}", postings
+                )
                 if vid:
                     created_ids.append(vid)
 
@@ -264,7 +272,11 @@ class YearEndClosingHandler(BaseHandler):
         if tax_amount:
             postings = [
                 {"account": tax_exp, "debit": tax_amount, "description": f"Skattekostnad {year}"},
-                {"account": tax_liab, "credit": tax_amount, "description": f"Betalbar skatt {year}"},
+                {
+                    "account": tax_liab,
+                    "credit": tax_amount,
+                    "description": f"Betalbar skatt {year}",
+                },
             ]
             vid = self._post_voucher(api_client, date, f"Skattekostnad {year}", postings)
             if vid:
@@ -273,8 +285,9 @@ class YearEndClosingHandler(BaseHandler):
         # Step 4: If LLM sent raw postings, use those
         if not created_ids and params.get("postings"):
             postings = params["postings"]
-            vid = self._post_voucher(api_client, date,
-                params.get("description", f"Årsoppgjør {year}"), postings)
+            vid = self._post_voucher(
+                api_client, date, params.get("description", f"Årsoppgjør {year}"), postings
+            )
             if vid:
                 created_ids.append(vid)
 
@@ -288,7 +301,9 @@ class YearEndClosingHandler(BaseHandler):
                     p["row"] = i + 1
                 body = {"date": date, "description": f"Årsoppgjør {year}", "postings": all_p}
                 try:
-                    result = api_client.post("/ledger/voucher", data=body, params={"sendToLedger": "true"})
+                    result = api_client.post(
+                        "/ledger/voucher", data=body, params={"sendToLedger": "true"}
+                    )
                     created_ids.append(result.get("value", {}).get("id"))
                 except TripletexApiError as e:
                     logger.warning("Auto closing failed: %s", e)
@@ -305,8 +320,11 @@ class YearEndClosingHandler(BaseHandler):
         return {"id": value.get("id"), "year": year, "action": "year_end_closed"}
 
     def _post_voucher(
-        self, api_client: TripletexClient, date: str,
-        description: str, postings: list[dict[str, Any]],
+        self,
+        api_client: TripletexClient,
+        date: str,
+        description: str,
+        postings: list[dict[str, Any]],
     ) -> int | None:
         """Post a single voucher with balanced postings."""
         built = [_build_posting(api_client, p, row=i + 1) for i, p in enumerate(postings)]
@@ -324,14 +342,16 @@ class YearEndClosingHandler(BaseHandler):
     def _compute_tax(api_client: TripletexClient, year: int, rate: float) -> float:
         """Compute tax from P&L balance."""
         try:
-            resp = api_client.get("/balanceSheet", params={
-                "dateFrom": f"{year}-01-01", "dateTo": f"{year}-12-31",
-                "accountNumberFrom": 3000, "accountNumberTo": 8699,
-            })
-            total = sum(
-                entry.get("closingBalance", 0) or 0
-                for entry in resp.get("values", [])
+            resp = api_client.get(
+                "/balanceSheet",
+                params={
+                    "dateFrom": f"{year}-01-01",
+                    "dateTo": f"{year}-12-31",
+                    "accountNumberFrom": 3000,
+                    "accountNumberTo": 8699,
+                },
             )
+            total = sum(entry.get("closingBalance", 0) or 0 for entry in resp.get("values", []))
             if total < 0:  # Profit is negative in Norwegian accounting
                 return round(abs(total) * rate, 2)
         except TripletexApiError:

@@ -284,7 +284,9 @@ class CreateEmployeeHandler(BaseHandler):
                 )
                 vals = resp.get("values", [])
                 if vals:
-                    logger.info("Occupation code variant match: %s -> id=%s", variant, vals[0]["id"])
+                    logger.info(
+                        "Occupation code variant match: %s -> id=%s", variant, vals[0]["id"]
+                    )
                     return vals[0]["id"]
             except TripletexApiError:
                 pass
