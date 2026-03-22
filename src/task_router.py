@@ -142,6 +142,20 @@ class TaskRouter:
                 if i > 0:
                     params = _inject_context(params, context)
 
+                # Force reversal flag from prompt keywords (LLM often misses it)
+                if task_type == "register_payment" and not params.get("reversal"):
+                    prompt_lower = request.prompt.lower()
+                    rev_kw = (
+                        "reverser", "returnert", "returned", "reverse",
+                        "tilbakefør", "rückbuchung", "devolución", "devolução",
+                        "annulation", "reversering",
+                    )
+                    if any(kw in prompt_lower for kw in rev_kw):
+                        params["reversal"] = True
+                        if params.get("amount") and params["amount"] > 0:
+                            params["amount"] = -params["amount"]
+                        logger.info("Forced reversal=true from prompt keywords")
+
                 logger.info(
                     "Step %d/%d: task_type=%s params=%s",
                     i + 1,
