@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-03-22_10-28-40",
+  "prompt": "El cliente Viento SL (org. nº 978503071) ha reclamado sobre la factura por \"Licencia de software\" (25450 NOK sin IVA). Emita una nota de crédito completa que revierta toda la factura.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 13.89,
+  "service": "tripletex-agent-2",
+  "task_types": [
+    "create_credit_note"
+  ],
+  "task_type": "create_credit_note",
+  "steps": 1,
+  "api_calls": 4,
+  "writes": 1,
+  "errors": 0,
+  "results": [
+    {
+      "id": 2147694400,
+      "action": "credit_note_created"
+    }
+  ]
+}
