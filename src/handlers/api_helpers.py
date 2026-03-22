@@ -192,6 +192,25 @@ def find_invoice_id(api_client: TripletexClient, params: dict[str, Any]) -> int 
                         pass
                 if "customerId" not in search_params:
                     return None
+        elif isinstance(cust, str):
+            # Try as int first, then search by name
+            try:
+                search_params["customerId"] = int(cust)
+            except (TypeError, ValueError):
+                try:
+                    cust_resp = api_client.get(
+                        "/customer",
+                        params={"name": cust, "count": 5},
+                        fields="id,name",
+                    )
+                    for cv in cust_resp.get("values", []):
+                        if cv.get("name", "").strip().lower() == cust.strip().lower():
+                            search_params["customerId"] = cv["id"]
+                            break
+                except TripletexApiError:
+                    pass
+                if "customerId" not in search_params:
+                    return None
         else:
             try:
                 search_params["customerId"] = int(cust)

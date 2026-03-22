@@ -165,13 +165,27 @@ class CreateEmployeeHandler(BaseHandler):
             # Default based on employment percentage (7.5h for 100%)
             hours_per_day = round(7.5 * pct / 100, 1) if pct else 7.5
         emp_detail["shiftDurationHours"] = float(hours_per_day)
+        emp_detail["remunerationType"] = "MONTHLY_WAGE"
 
-        body["employments"] = [
-            {
-                "startDate": start_date,
-                "employmentDetails": [emp_detail],
-            }
-        ]
+        employment: dict[str, Any] = {
+            "startDate": start_date,
+            "employmentDetails": [emp_detail],
+        }
+        # Link to company division (required for payroll)
+        try:
+            div_resp = api_client.get_cached(
+                "company_division",
+                "/company/divisions",
+                params={"count": 1},
+                fields="id",
+            )
+            div_vals = div_resp.get("values", [])
+            if div_vals:
+                employment["division"] = {"id": div_vals[0]["id"]}
+        except TripletexApiError:
+            pass
+
+        body["employments"] = [employment]
 
         body = self.strip_none_values(body)
 

@@ -63,7 +63,9 @@ class TestCreateVoucher:
     def test_required_params(self):
         handler = get_handler("create_voucher")
         assert handler is not None
-        assert handler.validate_params({}) == []
+        missing = handler.validate_params({})
+        assert "description" in missing
+        assert "postings" in missing
 
 
 class TestCreateSupplier:

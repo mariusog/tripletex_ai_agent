@@ -69,6 +69,17 @@ class CreateVoucherHandler(BaseHandler):
 
     tier = 3
     description = "Create a voucher with debit/credit postings"
+    param_schema = {
+        "description": ParamSpec(description="Voucher description"),
+        "date": ParamSpec(required=False, type="date"),
+        "postings": ParamSpec(type="list", description="Debit/credit postings"),
+        "supplier": ParamSpec(required=False, description="Supplier name or ref"),
+        "invoiceNumber": ParamSpec(
+            required=False,
+            description="Supplier invoice/receipt number (fakturanr/kvitteringsnr)",
+        ),
+        "dueDate": ParamSpec(required=False, type="date"),
+    }
     disambiguation = (
         "For supplier invoices and receipts, use this. "
         "Use 2 postings: debit expense account with GROSS amount (inkl MVA), "

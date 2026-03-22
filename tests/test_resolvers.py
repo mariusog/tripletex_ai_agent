@@ -309,9 +309,13 @@ class TestFindInvoiceId:
         client.get.return_value = sample_api_response(values=[{"id": 400}])
         assert find_invoice_id(client, {"customer": {"id": 5}}) == 400
 
-    def test_customer_dict_with_name_returns_none(self):
+    def test_customer_dict_with_name_resolves(self):
         client = MagicMock()
-        assert find_invoice_id(client, {"customer": {"name": "ACME"}}) is None
+        client.get.side_effect = [
+            sample_api_response(values=[{"id": 50, "name": "ACME"}]),
+            sample_api_response(values=[{"id": 500}]),
+        ]
+        assert find_invoice_id(client, {"customer": {"name": "ACME"}}) == 500
 
     def test_no_search_params_returns_none(self):
         client = MagicMock()
