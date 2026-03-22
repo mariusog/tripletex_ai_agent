@@ -292,10 +292,27 @@ class CreateVoucherHandler(BaseHandler):
             body["postings"] = built
 
         body = self.strip_none_values(body)
+        logger.info("Voucher body: %s", body)
         result = api_client.post("/ledger/voucher", data=body, params={"sendToLedger": "true"})
         value = result.get("value", {})
-        logger.info("Created voucher id=%s", value.get("id"))
-        return {"id": value.get("id"), "action": "created"}
+        voucher_id = value.get("id")
+        logger.info("Created voucher id=%s", voucher_id)
+
+        # Read back to verify what was actually created
+        if voucher_id and (supplier_ref or params.get("has_attachments")):
+            try:
+                verify = api_client.get(
+                    f"/ledger/voucher/{voucher_id}",
+                    fields="id,number,date,description,voucherType(id,name),"
+                    "externalVoucherNumber,vendorInvoiceNumber,"
+                    "postings(account(number),amountGross,supplier(id,name),"
+                    "department(id,name),invoiceNumber,vatType(id))",
+                )
+                logger.info("Voucher verify: %s", verify.get("value", {}))
+            except Exception:
+                logger.debug("Could not verify voucher")
+
+        return {"id": voucher_id, "action": "created"}
 
     @staticmethod
     def _fix_tax_amounts(
