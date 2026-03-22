@@ -1850,3 +1850,46 @@ class TestPayrollVoucherFallback:
             "payroll_created",
             "payroll_voucher_fallback",
         )
+
+
+# ============================================================
+# PATTERN: Dimension voucher with postings in voucher sub-object
+# Based on real 3/6 failure: voucher never created because
+# handler didn't extract postings from voucher.postings list
+# ============================================================
+
+
+class TestDimensionVoucherWithPostingsList:
+    """Based on real 3/6 failure: dimension created but voucher skipped.
+
+    The LLM sends postings inside voucher.postings as a list, not as
+    single voucher.account/voucher.amount keys.
+    """
+
+    def test_dimension_voucher_with_nested_postings(self, client):
+        tag = uid()
+        result = run_handler(
+            client,
+            "create_dimension_voucher",
+            {
+                "dimensionName": f"Region-{tag}",
+                "dimensionValues": ["Vestlandet", "Midt-Norge"],
+                "voucher": {
+                    "description": f"Voucher med dimensjon Region-{tag}",
+                    "postings": [
+                        {
+                            "account": 6860,
+                            "amount": 47500,
+                            "dimensionValue": "Midt-Norge",
+                        },
+                        {"account": 2400, "amount": -47500},
+                    ],
+                },
+            },
+        )
+        # Must create voucher, not just dimension
+        assert result.get("action") == "voucher_with_dimension_created", (
+            f"Expected voucher creation, got: {result}"
+        )
+        assert result.get("id"), f"Voucher ID missing: {result}"
+        assert result.get("dimensionId"), f"Dimension ID missing: {result}"
