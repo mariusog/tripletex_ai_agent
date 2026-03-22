@@ -265,17 +265,25 @@ class TaskRouter:
     ) -> None:
         """Post-run verification via free GETs to see what competition sees."""
         try:
-            # Verify created invoice
-            inv_id = context.get("invoiceId")
-            if inv_id:
-                inv = api_client.get(
-                    f"/invoice/{inv_id}",
+            # Verify ALL invoices on sandbox (GETs are free)
+            try:
+                all_inv = api_client.get(
+                    "/invoice",
+                    params={
+                        "count": 20,
+                        "invoiceDateFrom": "2020-01-01",
+                        "invoiceDateTo": "2030-01-01",
+                    },
                     fields="id,invoiceNumber,amount,amountOutstanding,"
-                    "customer(id,name),invoiceDate",
+                    "customer(id,name),invoiceDate,isCreditNote",
                 )
-                logger.info("VERIFY invoice: %s", inv.get("value", {}))
+                for inv in all_inv.get("values", []):
+                    logger.info("VERIFY invoice: %s", inv)
+            except Exception:
+                logger.debug("Could not verify invoices")
             # Also verify overdue invoice if present
             overdue_id = context.get("_overdue_invoice_id")
+            inv_id = context.get("invoiceId")
             if overdue_id and overdue_id != inv_id:
                 ov = api_client.get(
                     f"/invoice/{overdue_id}",
