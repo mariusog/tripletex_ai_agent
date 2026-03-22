@@ -185,45 +185,127 @@ class YearEndClosingHandler(BaseHandler):
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         year = int(params["year"])
         date = params.get("date", f"{year}-12-31")
+        created_ids = []
 
-        body: dict[str, Any] = {
-            "date": date,
-            "description": params.get("description", f"Årsoppgjør {year}"),
-        }
-
-        if "voucherType" in params:
-            body["typeId"] = int(params["voucherType"])
-
-        postings = params.get("postings", [])
-        if postings:
-            body["postings"] = [
-                _build_posting(api_client, p, row=i + 1) for i, p in enumerate(postings)
+        # Step 1: Depreciation vouchers (one per asset for correctness)
+        for dep in params.get("depreciation", []):
+            cost = dep.get("cost", 0)
+            years = dep.get("years", 1)
+            if not cost or not years:
+                continue
+            annual = round(cost / years, 2)
+            exp_acct = dep.get("expenseAccount", 6010)
+            acc_acct = dep.get("accumulatedAccount", 1209)
+            postings = [
+                {"account": exp_acct, "debit": annual,
+                 "description": f"Avskriving {dep.get('assetName', '')}"},
+                {"account": acc_acct, "credit": annual,
+                 "description": f"Akk. avskriving {dep.get('assetName', '')}"},
             ]
-        else:
-            # Generate closing entries + tax calculation
-            closing = self._generate_closing_postings(api_client, year, date)
-            tax = self._calculate_tax_posting(api_client, year, date)
-            all_postings = closing + tax
-            # Re-number rows sequentially (no gaps)
-            for i, p in enumerate(all_postings):
-                p["row"] = i + 1
-            body["postings"] = all_postings
+            vid = self._post_voucher(api_client, date,
+                f"Avskriving {dep.get('assetName', '')} {year}", postings)
+            if vid:
+                created_ids.append(vid)
 
-        if not body.get("postings"):
+        # Step 2: Prepaid expense reversal
+        prepaid = params.get("prepaidReversal")
+        if prepaid:
+            amount = prepaid.get("amount", 0)
+            acct = prepaid.get("account", 1700)
+            if amount:
+                postings = [
+                    {"account": 6300, "debit": amount, "description": "Forskuddsbetalt kostnad"},
+                    {"account": acct, "credit": amount, "description": "Reversering forskudd"},
+                ]
+                vid = self._post_voucher(api_client, date,
+                    f"Reversering forskuddsbetalt kostnad {year}", postings)
+                if vid:
+                    created_ids.append(vid)
+
+        # Step 3: Tax provision (22% of taxable profit)
+        tax_rate = params.get("taxRate", 0.22)
+        tax_exp = params.get("taxExpenseAccount", 8700)
+        tax_liab = params.get("taxLiabilityAccount", 2920)
+        tax_amount = params.get("taxAmount", 0)
+        # If no amount, try to compute from balance sheet
+        if not tax_amount and tax_rate:
+            tax_amount = self._compute_tax(api_client, year, tax_rate)
+        if tax_amount:
+            postings = [
+                {"account": tax_exp, "debit": tax_amount, "description": f"Skattekostnad {year}"},
+                {"account": tax_liab, "credit": tax_amount, "description": f"Betalbar skatt {year}"},
+            ]
+            vid = self._post_voucher(api_client, date, f"Skattekostnad {year}", postings)
+            if vid:
+                created_ids.append(vid)
+
+        # Step 4: If LLM sent raw postings, use those
+        if not created_ids and params.get("postings"):
+            postings = params["postings"]
+            vid = self._post_voucher(api_client, date,
+                params.get("description", f"Årsoppgjør {year}"), postings)
+            if vid:
+                created_ids.append(vid)
+
+        # Step 5: Auto-generate closing entries if nothing else worked
+        if not created_ids:
+            closing = self._generate_closing_postings(api_client, year, date)
+            tax_p = self._calculate_tax_posting(api_client, year, date)
+            all_p = closing + tax_p
+            if all_p:
+                for i, p in enumerate(all_p):
+                    p["row"] = i + 1
+                body = {"date": date, "description": f"Årsoppgjør {year}", "postings": all_p}
+                try:
+                    result = api_client.post("/ledger/voucher", data=body, params={"sendToLedger": "true"})
+                    created_ids.append(result.get("value", {}).get("id"))
+                except TripletexApiError as e:
+                    logger.warning("Auto closing failed: %s", e)
+
+        if not created_ids:
             return {"year": year, "action": "no_postings_needed"}
 
-        result = api_client.post(
-            "/ledger/voucher",
-            data=body,
-            params={"sendToLedger": "true"},
-        )
-        value = result.get("value", {})
+        value = {"id": created_ids[0]}
         logger.info(
             "Created year-end closing voucher id=%s for year %d",
             value.get("id"),
             year,
         )
         return {"id": value.get("id"), "year": year, "action": "year_end_closed"}
+
+    def _post_voucher(
+        self, api_client: TripletexClient, date: str,
+        description: str, postings: list[dict[str, Any]],
+    ) -> int | None:
+        """Post a single voucher with balanced postings."""
+        built = [_build_posting(api_client, p, row=i + 1) for i, p in enumerate(postings)]
+        body = {"date": date, "description": description, "postings": built}
+        try:
+            result = api_client.post("/ledger/voucher", data=body, params={"sendToLedger": "true"})
+            vid = result.get("value", {}).get("id")
+            logger.info("Created voucher '%s' id=%s", description[:40], vid)
+            return vid
+        except TripletexApiError as e:
+            logger.warning("Voucher '%s' failed: %s", description[:40], e)
+            return None
+
+    @staticmethod
+    def _compute_tax(api_client: TripletexClient, year: int, rate: float) -> float:
+        """Compute tax from P&L balance."""
+        try:
+            resp = api_client.get("/balanceSheet", params={
+                "dateFrom": f"{year}-01-01", "dateTo": f"{year}-12-31",
+                "accountNumberFrom": 3000, "accountNumberTo": 8699,
+            })
+            total = sum(
+                entry.get("closingBalance", 0) or 0
+                for entry in resp.get("values", [])
+            )
+            if total < 0:  # Profit is negative in Norwegian accounting
+                return round(abs(total) * rate, 2)
+        except TripletexApiError:
+            pass
+        return 0
 
     def _generate_closing_postings(
         self, api_client: TripletexClient, year: int, date: str

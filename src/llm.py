@@ -57,24 +57,25 @@ classify as "create_dimension_voucher"
 registrar horas), classify as "log_timesheet". If the task also asks to generate an \
 invoice from the hours, still classify as "log_timesheet" with generateInvoice: true
 
-MULTI-STEP TASKS:
+SINGLE-TASK RULES (IMPORTANT — fewer tasks = faster + higher score):
+- YEAR-END CLOSING (årsoppgjør/encerramento/Jahresabschluss/cierre): ALWAYS classify as \
+ONE single "year_end_closing" task with ALL details in params. NEVER split into multiple \
+create_voucher tasks. Include depreciation, prepaid reversals, and tax in the params. \
+Example: {{"task_type": "year_end_closing", "params": {{"year": 2025, \
+"depreciation": [{{"assetName": "X", "cost": 100000, "years": 5, "assetAccount": 1200, \
+"expenseAccount": 6010, "accumulatedAccount": 1209}}], \
+"prepaidReversal": {{"account": 1700, "amount": 50000}}, \
+"taxRate": 0.22, "taxExpenseAccount": 8700, "taxLiabilityAccount": 2920}}}}
+
+MULTI-STEP TASKS (only when truly different operations):
 - If the prompt asks for MULTIPLE DIFFERENT operations (e.g. "create a voucher AND send an \
 invoice AND register a payment"), decompose into separate tasks in the "tasks" array.
-- Order the tasks logically: create entities before referencing them, \
-book vouchers before invoices, etc.
-- Share context between steps: if step 1 creates a customer, use the same customer \
-name/reference in later steps that need it.
+- But NEVER decompose year-end closing, ledger corrections, or bank reconciliation into \
+multiple create_voucher tasks — these are SINGLE tasks with multiple postings inside.
 - Common multi-step patterns:
   * "Book a fee + create an invoice for it + send it" → create_voucher, create_invoice, send_invoice
   * "Create invoice + register payment" → create_invoice (with register_payment in params)
-  * "Find overdue invoice + register partial payment" → register_payment (searches automatically)
-  * "Create employee + assign role" → create_employee, assign_role
-  * PROJECT LIFECYCLE (budget + hours + supplier cost + invoice) → \
-create_project, log_timesheet (per employee), create_voucher (supplier cost), create_invoice
-- IMPORTANT: For project lifecycle tasks that mention registering hours, supplier costs, AND \
-invoicing, you MUST decompose into the FULL workflow: create_project first, then log_timesheet \
-for each employee, then create_voucher for supplier costs, then create_invoice. Do NOT just \
-create entities — execute the complete workflow.
+  * PROJECT LIFECYCLE → create_project, log_timesheet, create_voucher (supplier), create_invoice
 
 ACCOUNTING RULES:
 - For DEPRECIATION postings: debit the depreciation EXPENSE account (6010/6020/6030), \
