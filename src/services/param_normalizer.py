@@ -63,6 +63,22 @@ def normalize_params(params: dict[str, Any]) -> dict[str, Any]:
     if "supplier" in result and isinstance(result["supplier"], str):
         result["supplier"] = {"name": result["supplier"]}
 
+    # Normalize projectManager: string → dict with email if available
+    if "projectManager" in result and isinstance(result["projectManager"], str):
+        pm_str = result["projectManager"].strip()
+        parts = pm_str.split()
+        pm_dict: dict[str, Any] = {}
+        if len(parts) >= 2:
+            pm_dict = {"firstName": parts[0], "lastName": " ".join(parts[1:])}
+        elif parts:
+            pm_dict = {"firstName": parts[0]}
+        # Check for email in related params
+        pm_email = result.pop("projectManagerEmail", None) or result.pop("pmEmail", None)
+        if pm_email:
+            pm_dict["email"] = pm_email
+        if pm_dict:
+            result["projectManager"] = pm_dict
+
     # Normalize postings
     if "postings" in result and isinstance(result["postings"], list):
         result["postings"] = [_normalize_posting(p) for p in result["postings"]]

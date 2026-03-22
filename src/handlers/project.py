@@ -24,7 +24,10 @@ class CreateProjectHandler(BaseHandler):
         "startDate": ParamSpec(required=False, type="date"),
         "endDate": ParamSpec(required=False, type="date"),
         "customer": ParamSpec(required=False, description="Customer name or ref"),
-        "projectManager": ParamSpec(required=False, description="PM name or ref"),
+        "projectManager": ParamSpec(
+            required=False,
+            description="PM as {firstName, lastName, email} — always include email if mentioned",
+        ),
     }
 
     def get_task_type(self) -> str:
@@ -50,6 +53,11 @@ class CreateProjectHandler(BaseHandler):
                     pm = {"firstName": parts[0], "lastName": " ".join(parts[1:])}
                 else:
                     pm = {"firstName": pm}
+            # Extract PM email from params if not already in pm dict
+            if isinstance(pm, dict) and "email" not in pm:
+                pm_email = params.get("projectManagerEmail") or params.get("pmEmail")
+                if pm_email:
+                    pm["email"] = pm_email
             if isinstance(pm, dict) and "id" not in pm:
                 try:
                     _resolve(api_client, "employee", pm)
