@@ -37,14 +37,13 @@ class CreateProjectHandler(BaseHandler):
         import secrets
         from datetime import date as dt_date
 
-        # Use account owner as PM (guaranteed to have PM access)
+        # Resolve PM: use the requested PM, fall back to account owner
         emp_search = api_client.get_cached(
             "account_owner", "/employee", params={"count": 1}, fields="id"
         )
         emp_values = emp_search.get("values", [])
         pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
 
-        # Also create the requested PM employee (competition checks they exist)
         pm = params.get("projectManager")
         if pm:
             if isinstance(pm, str):
@@ -53,14 +52,15 @@ class CreateProjectHandler(BaseHandler):
                     pm = {"firstName": parts[0], "lastName": " ".join(parts[1:])}
                 else:
                     pm = {"firstName": pm}
-            # Extract PM email from params if not already in pm dict
             if isinstance(pm, dict) and "email" not in pm:
                 pm_email = params.get("projectManagerEmail") or params.get("pmEmail")
                 if pm_email:
                     pm["email"] = pm_email
             if isinstance(pm, dict) and "id" not in pm:
                 try:
-                    _resolve(api_client, "employee", pm)
+                    resolved_pm = _resolve(api_client, "employee", pm)
+                    if resolved_pm and resolved_pm.get("id"):
+                        pm_ref = resolved_pm
                 except Exception:
                     logger.warning("PM employee creation failed")
 
