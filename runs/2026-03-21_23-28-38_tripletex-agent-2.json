@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-21_23-28-38",
+  "prompt": "Processe o salário de Lucas Santos (lucas.santos@example.org) para este mês. O salário base é de 59600 NOK. Adicione um bónus único de 12900 NOK além do salário base.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 6.08,
+  "service": "tripletex-agent-2"
+}

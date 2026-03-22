@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-21_22-58-57",
+  "prompt": "Führen Sie den vereinfachten Jahresabschluss für 2025 durch: 1) Berechnen und buchen Sie die jährliche Abschreibung für drei Anlagen: Inventar (148150 NOK, 9 Jahre linear, Konto 1240), Programvare (316600 NOK, 3 Jahre, Konto 1250), Kontormaskiner (126850 NOK, 4 Jahre, Konto 1200). Verwenden Sie Konto 6010 für Abschreibungsaufwand und 1209 für kumulierte Abschreibungen. 2) Lösen Sie vorausbezahlte Aufwendungen auf (insgesamt 63850 NOK auf Konto 1700). 3) Berechnen und buchen Sie die Steuerrückste",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 18.93,
+  "service": "tripletex-agent-2"
+}
