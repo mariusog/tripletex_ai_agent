@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-22_08-12-59",
+  "prompt": "Opprett ein ordre for kunden Strandvik AS (org.nr 911845016) med produkta Skylagring (7865) til 38500 kr og Datarådgjeving (3949) til 18500 kr. Konverter ordren til faktura og registrer full betaling.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 10.53,
+  "service": "tripletex-agent-2"
+}
