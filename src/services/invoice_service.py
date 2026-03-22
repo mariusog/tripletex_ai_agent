@@ -150,6 +150,24 @@ def create_full_invoice(
 
     # Step 3: Add order lines
     lines = params.get("orderLines", params.get("lines", []))
+    # For project invoices without explicit lines, create a default line
+    if not lines and (project_ref or params.get("projectId")):
+        proj_name = ""
+        if isinstance(params.get("project"), str):
+            proj_name = params["project"]
+        elif isinstance(params.get("project"), dict):
+            proj_name = params["project"].get("name", "Project")
+        else:
+            proj_name = "Project invoice"
+        # Use budget or a descriptive line
+        budget = params.get("budget") or params.get("fixedPrice") or 0
+        lines = [
+            {
+                "description": proj_name,
+                "unitPriceExcludingVatCurrency": budget if budget else 1,
+                "count": 1,
+            }
+        ]
     if lines and result.order_id:
         build_and_post_order_lines(api_client, result.order_id, lines)
 

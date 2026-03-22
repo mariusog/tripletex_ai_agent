@@ -400,8 +400,9 @@ class TaskRouter:
                 "You MUST decompose it into these task types IN ORDER:\n"
                 "1. create_project (with customer and budget)\n"
                 "2. log_timesheet (one per employee, with hours)\n"
-                "3. create_voucher (for supplier costs)\n"
-                "4. create_invoice (for billing the customer)\n"
+                "3. create_voucher (for supplier costs, debit 4300, credit 2400)\n"
+                "4. create_invoice (include orderLines with the project name "
+                "and the budget amount as price)\n"
                 "Do NOT just create entities. Execute the FULL workflow."
             )
             try:
