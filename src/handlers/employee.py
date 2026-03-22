@@ -67,9 +67,7 @@ class CreateEmployeeHandler(BaseHandler):
             else:
                 # No departments exist — create one
                 try:
-                    dept_result = api_client.post(
-                        "/department", data={"name": "Generell"}
-                    )
+                    dept_result = api_client.post("/department", data={"name": "Generell"})
                     dept_id = dept_result.get("value", {}).get("id")
                     if dept_id:
                         body["department"] = {"id": dept_id}

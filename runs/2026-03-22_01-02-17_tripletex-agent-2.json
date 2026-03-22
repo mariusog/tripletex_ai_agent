@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-22_01-02-17",
+  "prompt": "Nous avons besoin de la depense Overnatting de ce recu enregistree au departement Regnskap. Utilisez le bon compte de charges et assurez le traitement correct de la TVA.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 16.35,
+  "service": "tripletex-agent-2"
+}
