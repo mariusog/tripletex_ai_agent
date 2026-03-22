@@ -206,11 +206,24 @@ class RegisterPaymentHandler(BaseHandler):
         pay_amount = params.get("amount", 0)
         # For non-partial payments, use the actual invoice amount
         try:
-            inv_data = api_client.get(f"/invoice/{invoice_id}", fields="amount")
-            actual_amount = inv_data.get("value", {}).get("amount")
+            inv_data = api_client.get(
+                f"/invoice/{invoice_id}",
+                fields="amount,amountOutstanding",
+            )
+            inv_val = inv_data.get("value", {})
+            actual_amount = inv_val.get("amount")
+            outstanding = inv_val.get("amountOutstanding")
+            logger.info(
+                "Invoice %s: amount=%s outstanding=%s",
+                invoice_id,
+                actual_amount,
+                outstanding,
+            )
             if actual_amount:
                 if params.get("reversal"):
-                    pay_amount = -abs(actual_amount)  # Reverse full amount
+                    # Reverse the paid portion (amount - outstanding)
+                    paid = actual_amount - (outstanding or 0)
+                    pay_amount = -abs(paid) if paid else -abs(actual_amount)
                 elif not pay_amount or abs(pay_amount) >= abs(actual_amount) * 0.8:
                     pay_amount = actual_amount  # Full payment — use exact amount
         except TripletexApiError:

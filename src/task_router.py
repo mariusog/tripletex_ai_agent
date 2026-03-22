@@ -73,7 +73,7 @@ def _update_context(
 
     # Propagate IDs based on task type
     if result.get("id"):
-        if "invoice" in task_type or task_type == "send_invoice":
+        if "invoice" in task_type or task_type in ("send_invoice", "register_payment"):
             context["invoiceId"] = result["id"]
         if "voucher" in task_type:
             context["voucherId"] = result["id"]
