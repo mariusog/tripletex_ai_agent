@@ -132,8 +132,12 @@ def create_full_invoice(
         cust_param = {"name": cust_param, "organizationNumber": params["organizationNumber"]}
     customer_ref = _resolve(api_client, "customer", cust_param)
 
-    # Step 1b: Maybe create project
-    project_ref = _maybe_create_project(api_client, params.get("project"), customer_ref, today)
+    # Step 1b: Use existing projectId from context, or create project
+    project_ref = None
+    if params.get("projectId"):
+        project_ref = {"id": int(params["projectId"])}
+    elif params.get("project"):
+        project_ref = _maybe_create_project(api_client, params["project"], customer_ref, today)
 
     # Step 2: Create order
     order_body: dict[str, Any] = {

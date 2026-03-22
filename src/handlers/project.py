@@ -57,12 +57,44 @@ class CreateProjectHandler(BaseHandler):
                 if pm_email:
                     pm["email"] = pm_email
             if isinstance(pm, dict) and "id" not in pm:
+                # Light-weight PM resolution: search first, create minimal if needed
                 try:
-                    resolved_pm = _resolve(api_client, "employee", pm)
-                    if resolved_pm and resolved_pm.get("id"):
-                        pm_ref = resolved_pm
+                    pm_email = pm.get("email")
+                    pm_first = pm.get("firstName", "")
+                    pm_last = pm.get("lastName", "")
+                    found = False
+                    if pm_email:
+                        resp = api_client.get(
+                            "/employee", params={"email": pm_email, "count": 1}, fields="id"
+                        )
+                        if resp.get("values"):
+                            pm_ref = {"id": resp["values"][0]["id"]}
+                            found = True
+                    if not found and pm_first:
+                        resp = api_client.get(
+                            "/employee",
+                            params={"firstName": pm_first, "lastName": pm_last, "count": 1},
+                            fields="id",
+                        )
+                        if resp.get("values"):
+                            pm_ref = {"id": resp["values"][0]["id"]}
+                            found = True
+                    if not found:
+                        # Create minimal employee (no _ensure_employee_ready overhead)
+                        emp_body: dict[str, Any] = {
+                            "firstName": pm_first or "PM",
+                            "lastName": pm_last or "Manager",
+                            "dateOfBirth": "1990-01-01",
+                            "userType": "STANDARD" if pm_email else "NO_ACCESS",
+                        }
+                        if pm_email:
+                            emp_body["email"] = pm_email
+                        res = api_client.post("/employee", data=emp_body)
+                        emp_id = res.get("value", {}).get("id")
+                        if emp_id:
+                            pm_ref = {"id": emp_id}
                 except Exception:
-                    logger.warning("PM employee creation failed")
+                    logger.warning("PM employee resolution failed")
 
         proj_num = str(params.get("number", secrets.randbelow(90000) + 10000))
 

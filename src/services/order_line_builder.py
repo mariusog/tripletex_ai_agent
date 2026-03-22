@@ -26,24 +26,31 @@ def build_and_post_order_lines(
     payloads = []
     for line in lines:
         ol: dict[str, Any] = {"order": {"id": order_id}}
-        if "product" in line:
-            # Normalize product ref: merge productNumber into product dict
+        # Only resolve product if we don't already have price+description
+        # (order lines work without product refs, saving a write call)
+        price_keys = (
+            "unitPriceExcludingVatCurrency",
+            "priceExcludingVatCurrency",
+            "amount",
+            "price",
+        )
+        has_price = any(line.get(k) for k in price_keys)
+        if "product" in line and not has_price:
             prod_val = line["product"]
             prod_num = line.get("productNumber") or line.get("number")
             if isinstance(prod_val, str) and prod_num:
                 prod_val = {"name": prod_val, "number": prod_num}
-            line_price = (
-                line.get("unitPriceExcludingVatCurrency")
-                or line.get("priceExcludingVatCurrency")
-                or line.get("amount")
-                or line.get("price")
-            )
             ol["product"] = _resolve(
                 api_client,
                 "product",
                 prod_val,
-                extra_create_fields={"price": line_price},
+                extra_create_fields={"price": 0},
             )
+        elif "product" in line:
+            # Use product name as description if no explicit description
+            if "description" not in line:
+                prod = line["product"]
+                ol["description"] = prod.get("name") if isinstance(prod, dict) else str(prod)
         if "description" in line:
             ol["description"] = line["description"]
         ol["count"] = line.get("count", line.get("quantity", 1))
