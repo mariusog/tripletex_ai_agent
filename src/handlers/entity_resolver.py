@@ -48,10 +48,40 @@ def _ensure_employee_ready(api_client: TripletexClient, emp_id: int) -> None:
                 needs_update = True
         if needs_update:
             api_client.put(f"/employee/{emp_id}", data=emp)
+        # Get company division (required for payroll)
+        div_ref = None
+        try:
+            div_resp = api_client.get_cached(
+                "company_division",
+                "/company/divisions",
+                params={"count": 1},
+                fields="id",
+            )
+            div_vals = div_resp.get("values", [])
+            if div_vals:
+                div_ref = {"id": div_vals[0]["id"]}
+        except TripletexApiError:
+            pass
+
         emp_resp = api_client.get(
-            "/employee/employment", params={"employeeId": emp_id, "count": 1}, fields="id"
+            "/employee/employment",
+            params={"employeeId": emp_id, "count": 1},
+            fields="id,division(id)",
         )
-        if not emp_resp.get("values"):
+        existing = emp_resp.get("values", [])
+        if existing:
+            # Update existing employment if missing division
+            employment = existing[0]
+            if div_ref and (not employment.get("division") or not employment["division"].get("id")):
+                try:
+                    api_client.put(
+                        f"/employee/employment/{employment['id']}",
+                        data={"id": employment["id"], "division": div_ref},
+                    )
+                    logger.info("Updated employment %s with division", employment["id"])
+                except TripletexApiError:
+                    pass
+        else:
             start = dt_date.today().replace(day=1).isoformat()
             emp_data: dict[str, Any] = {
                 "employee": {"id": emp_id},
@@ -64,19 +94,8 @@ def _ensure_employee_ready(api_client: TripletexClient, emp_id: int) -> None:
                     }
                 ],
             }
-            # Link to company division if one exists (required for payroll)
-            try:
-                div_resp = api_client.get_cached(
-                    "company_division",
-                    "/company/divisions",
-                    params={"count": 1},
-                    fields="id",
-                )
-                div_vals = div_resp.get("values", [])
-                if div_vals:
-                    emp_data["division"] = {"id": div_vals[0]["id"]}
-            except TripletexApiError:
-                pass
+            if div_ref:
+                emp_data["division"] = div_ref
             api_client.post("/employee/employment", data=emp_data)
     except TripletexApiError as e:
         logger.warning("Failed to ensure employee %s ready: %s", emp_id, e)
