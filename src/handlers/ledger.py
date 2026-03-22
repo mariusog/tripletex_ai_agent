@@ -79,9 +79,12 @@ class CreateVoucherHandler(BaseHandler):
         "Choose expense account based on what was purchased: "
         "6300=rent/lokale, 6340=utilities, 6500=tools, 6540=inventory/furniture, "
         "6700=accounting/audit, 6800=office supplies, 6860=IT/software, "
-        "7000=travel, 7100=car, 7140=transport/train, 7300=marketing/sales. "
+        "7000=travel, 7100=car/bilgodtgjørelse, 7140=transport/train/tog, "
+        "7150=accommodation/overnatting, 7300=marketing/sales. "
         "ALWAYS use NUMERIC account codes. "
-        "Pass invoiceNumber as a separate param (not in postings)."
+        "CRITICAL: From PDF receipts, ALWAYS extract the receipt/invoice number "
+        "(look for 'Fakturanr', 'Invoice No', 'Kvittering nr', 'Receipt #', etc.) "
+        "and pass it as 'invoiceNumber'. Also put department on each posting."
     )
 
     def get_task_type(self) -> str:
@@ -213,6 +216,13 @@ class CreateVoucherHandler(BaseHandler):
                 if vat_rate and "vatRate" not in p and "vatType" not in p:
                     p["vatRate"] = vat_rate
                 postings.append(p)
+
+        # Propagate top-level department to postings that don't have one
+        top_dept = params.get("department")
+        if top_dept and postings:
+            for p in postings:
+                if "department" not in p:
+                    p["department"] = top_dept
 
         if postings:
             built = []
