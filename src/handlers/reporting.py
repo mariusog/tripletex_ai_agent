@@ -227,7 +227,7 @@ class YearEndClosingHandler(BaseHandler):
                     "dateFrom": f"{year}-01-01",
                     "dateTo": f"{year}-12-31",
                     "accountNumberFrom": 3000,
-                    "accountNumberTo": 8999,
+                    "accountNumberTo": 8699,
                 },
             )
         except TripletexApiError:
@@ -276,7 +276,7 @@ class YearEndClosingHandler(BaseHandler):
         if abs(total) >= 0.01:
             equity_resp = api_client.get(
                 "/ledger/account",
-                params={"number": "2050", "count": 1},
+                params={"number": "8800", "count": 1},
                 fields="id",
             )
             equity_vals = equity_resp.get("values", [])

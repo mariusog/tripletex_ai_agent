@@ -354,16 +354,16 @@ class TaskRouter:
         balance_sheets = [sr for sr in step_results if sr.get("action") == "report_retrieved"]
         if len(balance_sheets) < 2:
             return step_results
-        # Compare expense accounts (5000-9999) between periods
+        # Compare expense/cost accounts (4000-9999) between periods
         period1 = {
             e["account"]["number"]: e
             for e in balance_sheets[0].get("entries", [])
-            if e.get("account", {}).get("number", 0) >= 5000
+            if e.get("account", {}).get("number", 0) >= 4000
         }
         period2 = {
             e["account"]["number"]: e
             for e in balance_sheets[1].get("entries", [])
-            if e.get("account", {}).get("number", 0) >= 5000
+            if e.get("account", {}).get("number", 0) >= 4000
         }
         increases = []
         for num, e2 in period2.items():
@@ -401,7 +401,7 @@ class TaskRouter:
         start: float,
     ) -> None:
         """Create internal projects + activities for top expense increases."""
-        top = analysis["top_increases"][:3]
+        top = analysis["top_increases"][:5]
         project_handler = self._registry.get("create_project")
         activity_handler = self._registry.get("create_activity")
         if not project_handler or not activity_handler:
@@ -522,7 +522,7 @@ class TaskRouter:
             None,
         )
         if analysis and analysis.get("top_increases"):
-            top = analysis["top_increases"][:3]
+            top = analysis["top_increases"][:5]
             lines = []
             for item in top:
                 lines.append(f"- {item['account_name']} (increase: {item['increase']:.0f} NOK)")
