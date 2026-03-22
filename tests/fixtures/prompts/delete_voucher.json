@@ -1,0 +1,15 @@
+{
+  "task_type": "delete_voucher",
+  "prompts": {
+    "no": "Slett bilag nummer 1",
+    "en": "Delete voucher number 1",
+    "es": "Elimine el comprobante numero 1",
+    "pt": "Exclua o comprovante numero 1",
+    "nn": "Slett bilag nummer 1",
+    "de": "Loschen Sie den Beleg Nummer 1",
+    "fr": "Supprimez la piece comptable numero 1"
+  },
+  "expected_params": {
+    "number": 1
+  }
+}

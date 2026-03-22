@@ -1,0 +1,16 @@
+{
+  "task_type": "link_project_customer",
+  "prompts": {
+    "no": "Koble kunden Berge Bygg AS til prosjekt Kontoroppussing",
+    "en": "Link customer Berge Bygg AS to project Office Renovation",
+    "es": "Vincule el cliente Berge Bygg AS al proyecto Renovacion de Oficina",
+    "pt": "Vincule o cliente Berge Bygg AS ao projeto Renovacao do Escritorio",
+    "nn": "Kople kunden Berge Bygg AS til prosjekt Kontoroppussing",
+    "de": "Verknupfen Sie den Kunden Berge Bygg AS mit dem Projekt Buroerneuerung",
+    "fr": "Liez le client Berge Bygg AS au projet Renovation du Bureau"
+  },
+  "expected_params": {
+    "customer": "Berge Bygg AS",
+    "project": "Kontoroppussing"
+  }
+}

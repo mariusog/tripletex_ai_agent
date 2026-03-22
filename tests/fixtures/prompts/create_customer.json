@@ -1,0 +1,16 @@
+{
+  "task_type": "create_customer",
+  "prompts": {
+    "no": "Opprett en ny kunde med navn Berge Bygg AS og organisasjonsnummer 987654321",
+    "en": "Create a new customer named Berge Bygg AS with organization number 987654321",
+    "es": "Cree un nuevo cliente llamado Berge Bygg AS con numero de organizacion 987654321",
+    "pt": "Crie um novo cliente chamado Berge Bygg AS com numero de organizacao 987654321",
+    "nn": "Opprett ein ny kunde med namn Berge Bygg AS og organisasjonsnummer 987654321",
+    "de": "Erstellen Sie einen neuen Kunden namens Berge Bygg AS mit Organisationsnummer 987654321",
+    "fr": "Creez un nouveau client nomme Berge Bygg AS avec le numero d'organisation 987654321"
+  },
+  "expected_params": {
+    "name": "Berge Bygg AS",
+    "organizationNumber": "987654321"
+  }
+}

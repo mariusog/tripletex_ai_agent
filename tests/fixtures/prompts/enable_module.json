@@ -1,0 +1,15 @@
+{
+  "task_type": "enable_module",
+  "prompts": {
+    "no": "Aktiver modulen for reiseregning i Tripletex",
+    "en": "Enable the travel expense module in Tripletex",
+    "es": "Active el modulo de gastos de viaje en Tripletex",
+    "pt": "Ative o modulo de despesas de viagem no Tripletex",
+    "nn": "Aktiver modulen for reiserekning i Tripletex",
+    "de": "Aktivieren Sie das Reisekostenmodul in Tripletex",
+    "fr": "Activez le module des frais de deplacement dans Tripletex"
+  },
+  "expected_params": {
+    "moduleName": "reiseregning"
+  }
+}

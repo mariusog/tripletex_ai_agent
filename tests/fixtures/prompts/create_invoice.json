@@ -1,0 +1,17 @@
+{
+  "task_type": "create_invoice",
+  "prompts": {
+    "no": "Opprett en faktura til kunde Berge Bygg AS med fakturadato 2024-04-10 og forfallsdato 2024-05-10, belop 25000 kr",
+    "en": "Create an invoice for customer Berge Bygg AS with invoice date 2024-04-10 and due date 2024-05-10, amount 25000 NOK",
+    "es": "Cree una factura para el cliente Berge Bygg AS con fecha de factura 2024-04-10 y fecha de vencimiento 2024-05-10, monto 25000 NOK",
+    "pt": "Crie uma fatura para o cliente Berge Bygg AS com data da fatura 2024-04-10 e data de vencimento 2024-05-10, valor 25000 NOK",
+    "nn": "Opprett ein faktura til kunde Berge Bygg AS med fakturadato 2024-04-10 og forfallsdato 2024-05-10, belop 25000 kr",
+    "de": "Erstellen Sie eine Rechnung fur den Kunden Berge Bygg AS mit Rechnungsdatum 2024-04-10 und Falligkeitsdatum 2024-05-10, Betrag 25000 NOK",
+    "fr": "Creez une facture pour le client Berge Bygg AS avec date de facture 2024-04-10 et date d'echeance 2024-05-10, montant 25000 NOK"
+  },
+  "expected_params": {
+    "customer": "Berge Bygg AS",
+    "invoiceDate": "2024-04-10",
+    "invoiceDueDate": "2024-05-10"
+  }
+}

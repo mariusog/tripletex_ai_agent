@@ -1,0 +1,15 @@
+{
+  "task_type": "delete_product",
+  "prompts": {
+    "no": "Slett produktet Konsulenttjeneste",
+    "en": "Delete the product Consulting Service",
+    "es": "Elimine el producto Servicio de Consultoria",
+    "pt": "Exclua o produto Servico de Consultoria",
+    "nn": "Slett produktet Konsulenttjeneste",
+    "de": "Loschen Sie das Produkt Beratungsleistung",
+    "fr": "Supprimez le produit Service de Conseil"
+  },
+  "expected_params": {
+    "name": "Konsulenttjeneste"
+  }
+}

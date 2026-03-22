@@ -1,0 +1,51 @@
+{
+  "timestamp": "2026-03-21 16:35:52",
+  "prompt": "Realize o encerramento mensal de março de 2026. Registe a reversão de acréscimos (12250 NOK por mês da conta 1710 para despesa). Registe a depreciação mensal de um ativo fixo com custo de aquisição 144950 NOK e vida útil 9 anos (depreciação linear para conta 6020). Verifique se o balancete está a zero. Registe também uma provisão salarial (débito conta de despesas salariais 5000, crédito conta de salários acumulados 2900).",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2 git=unknown",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.34
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.28
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 201,
+      "duration_s": 0.42
+    }
+  ],
+  "errors": [],
+  "task_type": "create_voucher",
+  "params": {
+    "date": "2026-03-31",
+    "description": "Reversão de acréscimos - Março 2026",
+    "postings": [
+      {
+        "account": 1710,
+        "amount": -12250,
+        "description": "Reversão de acréscimos mensais (crédito conta 1710)"
+      },
+      {
+        "account": 6000,
+        "amount": 12250,
+        "description": "Reconhecimento de despesa acrescida"
+      }
+    ]
+  },
+  "handler": "CreateVoucherHandler",
+  "total_api_calls": 3,
+  "total_duration_s": 10.1,
+  "result": {
+    "id": 609035207,
+    "action": "created"
+  },
+  "service": "tripletex-agent-magnus"
+}

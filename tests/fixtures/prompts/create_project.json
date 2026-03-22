@@ -1,0 +1,17 @@
+{
+  "task_type": "create_project",
+  "prompts": {
+    "no": "Opprett et nytt prosjekt med navn Kontoroppussing, prosjektnummer 2024-01, startdato 2024-03-01",
+    "en": "Create a new project named Office Renovation, project number 2024-01, start date 2024-03-01",
+    "es": "Cree un nuevo proyecto llamado Renovacion de Oficina, numero de proyecto 2024-01, fecha de inicio 2024-03-01",
+    "pt": "Crie um novo projeto chamado Renovacao do Escritorio, numero do projeto 2024-01, data de inicio 2024-03-01",
+    "nn": "Opprett eit nytt prosjekt med namn Kontoroppussing, prosjektnummer 2024-01, startdato 2024-03-01",
+    "de": "Erstellen Sie ein neues Projekt namens Buroerneuerung, Projektnummer 2024-01, Startdatum 2024-03-01",
+    "fr": "Creez un nouveau projet nomme Renovation du Bureau, numero de projet 2024-01, date de debut 2024-03-01"
+  },
+  "expected_params": {
+    "name": "Kontoroppussing",
+    "number": "2024-01",
+    "startDate": "2024-03-01"
+  }
+}

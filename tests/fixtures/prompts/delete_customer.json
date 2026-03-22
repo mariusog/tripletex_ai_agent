@@ -1,0 +1,15 @@
+{
+  "task_type": "delete_customer",
+  "prompts": {
+    "no": "Slett kunden Berge Bygg AS",
+    "en": "Delete the customer Berge Bygg AS",
+    "es": "Elimine el cliente Berge Bygg AS",
+    "pt": "Exclua o cliente Berge Bygg AS",
+    "nn": "Slett kunden Berge Bygg AS",
+    "de": "Loschen Sie den Kunden Berge Bygg AS",
+    "fr": "Supprimez le client Berge Bygg AS"
+  },
+  "expected_params": {
+    "name": "Berge Bygg AS"
+  }
+}

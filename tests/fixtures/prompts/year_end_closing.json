@@ -1,0 +1,15 @@
+{
+  "task_type": "year_end_closing",
+  "prompts": {
+    "no": "Utfor arsavslutning for regnskapsaret 2023",
+    "en": "Perform year-end closing for fiscal year 2023",
+    "es": "Realice el cierre de fin de ano para el ejercicio fiscal 2023",
+    "pt": "Realize o fechamento do ano para o exercicio fiscal de 2023",
+    "nn": "Utfor arsavslutning for rekneskapsaret 2023",
+    "de": "Fuhren Sie den Jahresabschluss fur das Geschaftsjahr 2023 durch",
+    "fr": "Effectuez la cloture annuelle pour l'exercice fiscal 2023"
+  },
+  "expected_params": {
+    "year": 2023
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "task_type": "create_employee",
+  "prompts": {
+    "no": "Opprett en ny ansatt med fornavn Ola og etternavn Nordmann, e-post ola@example.com",
+    "en": "Create a new employee with first name Ola and last name Nordmann, email ola@example.com",
+    "es": "Cree un nuevo empleado con nombre Ola y apellido Nordmann, correo ola@example.com",
+    "pt": "Crie um novo funcionario com nome Ola e sobrenome Nordmann, email ola@example.com",
+    "nn": "Opprett ein ny tilsett med fornamn Ola og etternamn Nordmann, e-post ola@example.com",
+    "de": "Erstellen Sie einen neuen Mitarbeiter mit Vorname Ola und Nachname Nordmann, E-Mail ola@example.com",
+    "fr": "Creez un nouvel employe avec prenom Ola et nom Nordmann, email ola@example.com"
+  },
+  "expected_params": {
+    "firstName": "Ola",
+    "lastName": "Nordmann",
+    "email": "ola@example.com"
+  }
+}

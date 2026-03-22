@@ -1,0 +1,16 @@
+{
+  "task_type": "update_department",
+  "prompts": {
+    "no": "Oppdater avdelingen Salg med nytt avdelingsnummer 5",
+    "en": "Update the Sales department with new department number 5",
+    "es": "Actualice el departamento de Ventas con el nuevo numero 5",
+    "pt": "Atualize o departamento de Vendas com o novo numero 5",
+    "nn": "Oppdater avdelinga Sal med nytt avdelingsnummer 5",
+    "de": "Aktualisieren Sie die Abteilung Vertrieb mit der neuen Nummer 5",
+    "fr": "Mettez a jour le departement Ventes avec le nouveau numero 5"
+  },
+  "expected_params": {
+    "name": "Salg",
+    "departmentNumber": "5"
+  }
+}

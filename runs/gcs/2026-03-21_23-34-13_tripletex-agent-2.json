@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-21_23-34-13",
+  "prompt": "The customer Silveroak Ltd (org no. 836455274) has complained about the invoice for \"Data Advisory\" (38750 NOK excl. VAT). Issue a full credit note that reverses the entire invoice.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 9.34,
+  "service": "tripletex-agent-2"
+}

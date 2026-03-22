@@ -1,0 +1,15 @@
+{
+  "task_type": "approve_travel_expense",
+  "prompts": {
+    "no": "Godkjenn reiseregning nummer 5001",
+    "en": "Approve travel expense number 5001",
+    "es": "Apruebe el gasto de viaje numero 5001",
+    "pt": "Aprove a despesa de viagem numero 5001",
+    "nn": "Godkjenn reiserekning nummer 5001",
+    "de": "Genehmigen Sie Reisekostenabrechnung Nummer 5001",
+    "fr": "Approuvez la note de frais numero 5001"
+  },
+  "expected_params": {
+    "travelExpenseId": 5001
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "timestamp": "2026-03-21 00:37:59",
+  "prompt": "Opprett ein faktura til kunden Skogheim AS (org.nr 919983299) med tre produktlinjer: Skylagring (3300) til 23950 kr med 25 % MVA, Konsulenttimar (7802) til 1900 kr med 15 % MVA (næringsmiddel), og Opplæring (2503) til 3450 kr med 0 % MVA (avgiftsfri).",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "POST",
+      "endpoint": "/department",
+      "status": 201,
+      "duration_s": 2.07
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 2.33
+    },
+    {
+      "method": "POST",
+      "endpoint": "/department",
+      "status": 201,
+      "duration_s": 2.3
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 2.3
+    },
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "status": 201,
+      "duration_s": 2.58
+    },
+    {
+      "method": "POST",
+      "endpoint": "/department",
+      "status": 201,
+      "duration_s": 2.55
+    }
+  ],
+  "errors": [],
+  "task_type": "create_invoice",
+  "params": {
+    "customer": {
+      "name": "Skogheim AS",
+      "organizationNumber": "919983299"
+    },
+    "orderLines": [
+      {
+        "product": {
+          "name": "Skylagring",
+          "number": "3300"
+        },
+        "count": 1,
+        "unitPriceExcludingVatCurrency": 23950,
+        "vatType": "25%"
+      },
+      {
+        "product": {
+          "name": "Konsulenttimar",
+          "number": "7802"
+        },
+        "count": 1,
+        "unitPriceExcludingVatCurrency": 1900,
+        "vatType": "15%"
+      },
+      {
+        "product": {
+          "name": "Opplæring",
+          "number": "2503"
+        },
+        "count": 1,
+        "unitPriceExcludingVatCurrency": 3450,
+        "vatType": "0%"
+      }
+    ]
+  },
+  "handler": "CreateDepartmentHandler",
+  "total_api_calls": 3,
+  "total_duration_s": 9.52,
+  "result": {
+    "ids": [
+      924574,
+      924575,
+      924576
+    ],
+    "action": "created",
+    "count": 3
+  },
+  "service": "tripletex-agent-2"
+}

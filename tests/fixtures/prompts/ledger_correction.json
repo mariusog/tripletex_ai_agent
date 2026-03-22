@@ -1,0 +1,17 @@
+{
+  "task_type": "ledger_correction",
+  "prompts": {
+    "no": "Utfor en hovedbokskorrigering pa konto 3000 med belop 5000 kr, dato 2024-03-31, beskrivelse Korrigering mva",
+    "en": "Perform a ledger correction on account 3000 for amount 5000 NOK, date 2024-03-31, description VAT correction",
+    "es": "Realice una correccion en el libro mayor en la cuenta 3000 por 5000 NOK, fecha 2024-03-31, descripcion Correccion de IVA",
+    "pt": "Realize uma correcao no livro razao na conta 3000 pelo valor de 5000 NOK, data 2024-03-31, descricao Correcao de IVA",
+    "nn": "Utfor ei hovudbokskorrigering pa konto 3000 med belop 5000 kr, dato 2024-03-31, skildring Korrigering mva",
+    "de": "Fuhren Sie eine Hauptbuchkorrektur auf Konto 3000 uber 5000 NOK durch, Datum 2024-03-31, Beschreibung MwSt-Korrektur",
+    "fr": "Effectuez une correction comptable sur le compte 3000 pour 5000 NOK, date 2024-03-31, description Correction TVA"
+  },
+  "expected_params": {
+    "account": "3000",
+    "amount": 5000,
+    "date": "2024-03-31"
+  }
+}

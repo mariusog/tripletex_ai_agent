@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-22_07-04-28",
+  "prompt": "We need the Kontorstoler expense from this receipt posted to department Kundeservice. Use the correct expense account and ensure proper VAT treatment.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 13.39,
+  "service": "tripletex-agent-2"
+}

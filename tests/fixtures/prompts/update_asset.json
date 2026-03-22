@@ -1,0 +1,15 @@
+{
+  "task_type": "update_asset",
+  "prompts": {
+    "no": "Oppdater anleggsmiddel Varebil Toyota med ny avskrivningssats 20 prosent",
+    "en": "Update asset Delivery Van Toyota with new depreciation rate 20 percent",
+    "es": "Actualice el activo Furgoneta Toyota con nueva tasa de depreciacion 20 por ciento",
+    "pt": "Atualize o ativo Van de Entrega Toyota com nova taxa de depreciacao 20 por cento",
+    "nn": "Oppdater anleggsmiddel Varebil Toyota med ny avskrivingssats 20 prosent",
+    "de": "Aktualisieren Sie das Anlagegut Lieferwagen Toyota mit neuem Abschreibungssatz 20 Prozent",
+    "fr": "Mettez a jour l'actif Camionnette Toyota avec un nouveau taux d'amortissement 20 pour cent"
+  },
+  "expected_params": {
+    "name": "Varebil Toyota"
+  }
+}

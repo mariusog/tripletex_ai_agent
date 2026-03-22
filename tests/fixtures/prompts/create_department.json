@@ -1,0 +1,16 @@
+{
+  "task_type": "create_department",
+  "prompts": {
+    "no": "Opprett en ny avdeling med navn Salgsavdelingen og avdelingsnummer 300",
+    "en": "Create a new department named Sales Department with department number 300",
+    "es": "Cree un nuevo departamento llamado Departamento de Ventas con numero de departamento 300",
+    "pt": "Crie um novo departamento chamado Departamento de Vendas com numero de departamento 300",
+    "nn": "Opprett ei ny avdeling med namn Salgsavdelinga og avdelingsnummer 300",
+    "de": "Erstellen Sie eine neue Abteilung namens Vertriebsabteilung mit Abteilungsnummer 300",
+    "fr": "Creez un nouveau departement nomme Service des ventes avec le numero de departement 300"
+  },
+  "expected_params": {
+    "name": "Salgsavdelingen",
+    "departmentNumber": 300
+  }
+}

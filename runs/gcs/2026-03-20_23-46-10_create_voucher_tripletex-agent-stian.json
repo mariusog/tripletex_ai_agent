@@ -1,0 +1,78 @@
+{
+  "timestamp": "2026-03-20 23:46:10",
+  "prompt": "Nous avons reçu la facture INV-2026-8953 du fournisseur Colline SARL (nº org. 938165742) de 32650 NOK TTC. Le montant concerne des services de bureau (compte 7300). Enregistrez la facture fournisseur avec la TVA déductible correcte (25 %).",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/supplier",
+      "status": 200,
+      "duration_s": 0.23
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.23
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.21
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.23
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.2
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 201,
+      "duration_s": 0.55
+    }
+  ],
+  "errors": [],
+  "task_type": "create_voucher",
+  "params": {
+    "description": "Facture fournisseur INV-2026-8953 - Colline SARL (org. 938165742) - Services de bureau",
+    "supplier": {
+      "name": "Colline SARL",
+      "organizationNumber": "938165742"
+    },
+    "invoiceNumber": "INV-2026-8953",
+    "postings": [
+      {
+        "account": 7300,
+        "debit": 26120,
+        "description": "Services de bureau"
+      },
+      {
+        "account": 2710,
+        "debit": 6530,
+        "description": "TVA déductible 25%"
+      },
+      {
+        "account": 2400,
+        "credit": 32650,
+        "description": "Fournisseur Colline SARL"
+      }
+    ]
+  },
+  "handler": "CreateVoucherHandler",
+  "total_api_calls": 6,
+  "total_duration_s": 7.4,
+  "result": {
+    "id": 608877930,
+    "action": "created"
+  },
+  "service": "tripletex-agent-stian"
+}

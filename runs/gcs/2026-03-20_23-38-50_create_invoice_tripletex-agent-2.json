@@ -1,0 +1,106 @@
+{
+  "timestamp": "2026-03-20 23:38:50",
+  "prompt": "Create an order for the customer Ridgepoint Ltd (org no. 997470311) with the products Maintenance (6293) at 21700 NOK and Software License (5849) at 2250 NOK. Convert the order to an invoice and register full payment.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.33
+    },
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "status": 201,
+      "duration_s": 0.26
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "status": 201,
+      "duration_s": 0.55
+    },
+    {
+      "method": "GET",
+      "endpoint": "/product",
+      "status": 200,
+      "duration_s": 0.23
+    },
+    {
+      "method": "GET",
+      "endpoint": "/product",
+      "status": 200,
+      "duration_s": 0.22
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order/orderline/list",
+      "status": 201,
+      "duration_s": 0.29
+    },
+    {
+      "method": "POST",
+      "endpoint": "/invoice",
+      "status": 201,
+      "duration_s": 0.55
+    },
+    {
+      "method": "GET",
+      "endpoint": "/invoice/2147555643",
+      "status": 200,
+      "duration_s": 0.24
+    },
+    {
+      "method": "GET",
+      "endpoint": "/invoice/paymentType",
+      "status": 200,
+      "duration_s": 0.23
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/invoice/2147555643/:payment",
+      "status": 200,
+      "duration_s": 0.37
+    }
+  ],
+  "errors": [],
+  "task_type": "create_invoice",
+  "params": {
+    "customer": {
+      "name": "Ridgepoint Ltd",
+      "organizationNumber": "997470311"
+    },
+    "orderLines": [
+      {
+        "product": {
+          "name": "Maintenance",
+          "number": "6293"
+        },
+        "count": 1,
+        "unitPriceExcludingVatCurrency": 21700
+      },
+      {
+        "product": {
+          "name": "Software License",
+          "number": "5849"
+        },
+        "count": 1,
+        "unitPriceExcludingVatCurrency": 2250
+      }
+    ],
+    "register_payment": {
+      "amount": 23950,
+      "paymentDate": null
+    }
+  },
+  "handler": "CreateInvoiceHandler",
+  "total_api_calls": 10,
+  "total_duration_s": 7.47,
+  "result": {
+    "id": 2147555643,
+    "orderId": 401978380,
+    "action": "created"
+  },
+  "service": "tripletex-agent-2"
+}

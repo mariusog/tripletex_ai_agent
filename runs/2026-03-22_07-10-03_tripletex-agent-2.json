@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-22_07-10-03",
+  "prompt": "Opprett en ordre for kunden Havbris AS (org.nr 913424921) med produktene Skylagring (1197) til 27100 kr og Programvarelisens (7613) til 4750 kr. Konverter ordren til faktura og registrer full betaling.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 8.22,
+  "service": "tripletex-agent-2"
+}

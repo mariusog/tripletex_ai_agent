@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-22_08-43-26",
+  "prompt": "Le paiement de Colline SARL (nº org. 916057903) pour la facture \"Maintenance\" (8300 NOK HT) a été retourné par la banque. Annulez le paiement afin que la facture affiche à nouveau le montant impayé.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 7.54,
+  "service": "tripletex-agent-2"
+}

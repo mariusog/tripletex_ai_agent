@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-22_07-09-35",
+  "prompt": "Nous avons envoyé une facture de 14764 EUR à Prairie SARL (nº org. 833606891) lorsque le taux de change était de 10.84 NOK/EUR. Le client a maintenant payé, mais le taux est de 11.61 NOK/EUR. Enregistrez le paiement et comptabilisez l'écart de change (agio) sur le bon compte.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 14.43,
+  "service": "tripletex-agent-2"
+}

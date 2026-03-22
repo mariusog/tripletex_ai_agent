@@ -1,0 +1,17 @@
+{
+  "task_type": "create_dimension_voucher",
+  "prompts": {
+    "no": "Opprett en egendefinert regnskapsdimensjon \"Region\" med verdiene \"Nord-Norge\" og \"Vestlandet\". Bokfør deretter et bilag på konto 6540 for 19550 NOK, knyttet til dimensjonsverdien \"Vestlandet\".",
+    "en": "Create a custom accounting dimension \"Region\" with the values \"Nord-Norge\" and \"Vestlandet\". Then post a voucher on account 6540 for 19550 NOK, linked to the dimension value \"Vestlandet\".",
+    "es": "Cree una dimensión contable personalizada \"Region\" con los valores \"Nord-Norge\" y \"Vestlandet\". Luego registre un comprobante en la cuenta 6540 por 19550 NOK, vinculado al valor \"Vestlandet\".",
+    "pt": "Crie uma dimensão contábil personalizada \"Region\" com os valores \"Nord-Norge\" e \"Vestlandet\". Em seguida, lance um voucher na conta 6540 por 19550 NOK, vinculado ao valor \"Vestlandet\".",
+    "nn": "Opprett ein eigendefinert reknedimensjon \"Region\" med verdiane \"Nord-Norge\" og \"Vestlandet\". Bokfør deretter eit bilag på konto 6540 for 19550 NOK, knytt til dimensjonsverdien \"Vestlandet\".",
+    "de": "Erstellen Sie eine benutzerdefinierte Buchhaltungsdimension \"Region\" mit den Werten \"Nord-Norge\" und \"Vestlandet\". Buchen Sie dann einen Beleg auf Konto 6540 über 19550 NOK, verknüpft mit dem Dimensionswert \"Vestlandet\".",
+    "fr": "Créez une dimension comptable personnalisée \"Region\" avec les valeurs \"Nord-Norge\" et \"Vestlandet\". Puis enregistrez une pièce comptable sur le compte 6540 pour 19550 NOK, liée à la valeur \"Vestlandet\"."
+  },
+  "expected_params": {
+    "dimensionName": "Region",
+    "dimensionValues": ["Nord-Norge", "Vestlandet"],
+    "linkedValue": "Vestlandet"
+  }
+}

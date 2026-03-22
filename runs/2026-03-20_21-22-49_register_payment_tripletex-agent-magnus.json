@@ -1,0 +1,89 @@
+{
+  "timestamp": "2026-03-20 21:22:49",
+  "prompt": "Der Kunde Nordlicht GmbH (Org.-Nr. 865042027) hat eine offene Rechnung über 26400 NOK ohne MwSt. für \"Netzwerkdienst\". Registrieren Sie die vollständige Zahlung dieser Rechnung.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 5.22
+    },
+    {
+      "method": "GET",
+      "endpoint": "/customer",
+      "status": 200,
+      "duration_s": 4.44
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "status": 201,
+      "duration_s": 4.85
+    },
+    {
+      "method": "GET",
+      "endpoint": "/product",
+      "status": 200,
+      "duration_s": 5.92
+    },
+    {
+      "method": "POST",
+      "endpoint": "/product",
+      "status": 201,
+      "duration_s": 6.3
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order/orderline/list",
+      "status": 201,
+      "duration_s": 6.69
+    },
+    {
+      "method": "POST",
+      "endpoint": "/invoice",
+      "status": 201,
+      "duration_s": 6.9
+    },
+    {
+      "method": "GET",
+      "endpoint": "/invoice/paymentType",
+      "status": 200,
+      "duration_s": 5.84
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/invoice/2147547801/:payment",
+      "status": 200,
+      "duration_s": 5.26
+    }
+  ],
+  "errors": [],
+  "task_type": "register_payment",
+  "params": {
+    "customer": {
+      "name": "Nordlicht GmbH",
+      "organizationNumber": "865042027"
+    },
+    "amount": 26400,
+    "paymentDate": "<UNKNOWN>",
+    "description": "Vollständige Zahlung der Rechnung für Netzwerkdienst",
+    "reversal": false,
+    "orderLines": [
+      {
+        "product": {
+          "name": "Netzwerkdienst"
+        },
+        "unitPriceExcludingVatCurrency": 26400
+      }
+    ]
+  },
+  "handler": "RegisterPaymentHandler",
+  "total_api_calls": 9,
+  "total_duration_s": 55.79,
+  "result": {
+    "id": 2147547801,
+    "action": "payment_registered"
+  },
+  "service": "tripletex-agent-magnus"
+}

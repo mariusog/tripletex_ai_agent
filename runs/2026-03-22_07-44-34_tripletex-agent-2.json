@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-22_07-44-34",
+  "prompt": "Crea y envía una factura al cliente Viento SL (org. nº 844876831) por 35350 NOK sin IVA. La factura es por Licencia de software.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 10.54,
+  "service": "tripletex-agent-2"
+}

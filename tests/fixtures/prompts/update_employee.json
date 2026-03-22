@@ -1,0 +1,16 @@
+{
+  "task_type": "update_employee",
+  "prompts": {
+    "no": "Oppdater ansatt Kari Nordmann sin e-postadresse til kari.ny@firma.no",
+    "en": "Update employee Kari Nordmann's email address to kari.ny@firma.no",
+    "es": "Actualice la direccion de correo del empleado Kari Nordmann a kari.ny@firma.no",
+    "pt": "Atualize o email do funcionario Kari Nordmann para kari.ny@firma.no",
+    "nn": "Oppdater tilsett Kari Nordmann si e-postadresse til kari.ny@firma.no",
+    "de": "Aktualisieren Sie die E-Mail-Adresse der Mitarbeiterin Kari Nordmann auf kari.ny@firma.no",
+    "fr": "Mettez a jour l'adresse email de l'employe Kari Nordmann en kari.ny@firma.no"
+  },
+  "expected_params": {
+    "name": "Kari Nordmann",
+    "email": "kari.ny@firma.no"
+  }
+}

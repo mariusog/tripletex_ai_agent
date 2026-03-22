@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-03-20 22:35:25",
+  "prompt": "Sett fastpris 178450 kr på prosjektet \"Skymigrering\" for Stormberg AS (org.nr 957353681). Prosjektleder er Magnus Haugen (magnus.haugen@example.org). Fakturer kunden for 50 % av fastprisen som en delbetaling.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [],
+  "errors": [],
+  "task_type": "update_project",
+  "params": {
+    "name": "Skymigrering",
+    "fixedPrice": 178450,
+    "customer": {
+      "name": "Stormberg AS",
+      "organizationNumber": "957353681"
+    },
+    "projectManager": {
+      "firstName": "Magnus",
+      "lastName": "Haugen",
+      "email": "magnus.haugen@example.org"
+    }
+  },
+  "status": "error",
+  "service": "tripletex-agent-magnus"
+}

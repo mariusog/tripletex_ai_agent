@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-22_09-07-19",
+  "prompt": "Führen Sie den Monatsabschluss für März 2026 durch. Buchen Sie die Rechnungsabgrenzung (4200 NOK pro Monat von Konto 1700 auf Aufwand). Erfassen Sie die monatliche Abschreibung für eine Anlage mit Anschaffungskosten 64000 NOK und Nutzungsdauer 3 Jahre (lineare Abschreibung auf Konto 6030). Überprüfen Sie, ob die Saldenbilanz null ergibt. Buchen Sie außerdem eine Gehaltsrückstellung (Soll Gehaltsaufwand Konto 5000, Haben aufgelaufene Gehälter Konto 2900).",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 15.73,
+  "service": "tripletex-agent-2"
+}

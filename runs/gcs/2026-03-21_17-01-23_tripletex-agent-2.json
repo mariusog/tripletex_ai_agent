@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-21_17-01-23",
+  "prompt": "Utfør forenklet årsoppgjør for 2025: 1) Beregn og bokfør årlige avskrivninger for tre eiendeler: IT-utstyr (382900 kr, 5 år lineært, konto 1210), Programvare (436000 kr, 10 år, konto 1250), Inventar (384600 kr, 5 år, konto 1240). Bruk konto 6010 for avskrivningskostnad og 1209 for akkumulerte avskrivninger. 2) Reverser forskuddsbetalte kostnader (totalt 52850 kr på konto 1700). 3) Beregn og bokfør skattekostnad (22 % av skattbart resultat) på konto 8700/2920. Bokfør hver avskrivning som et eget ",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 20.3,
+  "service": "tripletex-agent-2"
+}

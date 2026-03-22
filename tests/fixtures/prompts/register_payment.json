@@ -1,0 +1,17 @@
+{
+  "task_type": "register_payment",
+  "prompts": {
+    "no": "Registrer betaling pa 25000 kr for faktura 10042, betalingsdato 2024-05-01",
+    "en": "Register a payment of 25000 NOK for invoice 10042, payment date 2024-05-01",
+    "es": "Registre un pago de 25000 NOK para la factura 10042, fecha de pago 2024-05-01",
+    "pt": "Registre um pagamento de 25000 NOK para a fatura 10042, data do pagamento 2024-05-01",
+    "nn": "Registrer betaling pa 25000 kr for faktura 10042, betalingsdato 2024-05-01",
+    "de": "Erfassen Sie eine Zahlung von 25000 NOK fur Rechnung 10042, Zahlungsdatum 2024-05-01",
+    "fr": "Enregistrez un paiement de 25000 NOK pour la facture 10042, date de paiement 2024-05-01"
+  },
+  "expected_params": {
+    "invoiceId": 10042,
+    "amount": 25000,
+    "paymentDate": "2024-05-01"
+  }
+}

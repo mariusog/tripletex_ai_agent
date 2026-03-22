@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-21_22-48-11",
+  "prompt": "Erstellen und senden Sie eine Rechnung an den Kunden Flussgold GmbH (Org.-Nr. 939332332) über 23500 NOK ohne MwSt. Die Rechnung betrifft Systementwicklung.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 36.27,
+  "service": "tripletex-agent-2"
+}

@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-21_18-18-01",
+  "prompt": "Gjennomfør hele prosjektsyklusen for 'Digitalportal Lysgård' (Lysgård AS, org.nr 807315072): 1) Prosjektet har budsjett 344850 kr. 2) Registrer timer: Silje Bakken (prosjektleder, silje.bakken@example.org) 20 timer og Hilde Nilsen (konsulent, hilde.nilsen@example.org) 112 timer. 3) Registrer leverandørkostnad 27900 kr fra Polaris AS (org.nr 897090961). 4) Opprett kundefaktura for prosjektet.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 5.18,
+  "service": "tripletex-agent-2"
+}

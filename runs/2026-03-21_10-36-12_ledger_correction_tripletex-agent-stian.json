@@ -1,0 +1,107 @@
+{
+  "timestamp": "2026-03-21 10:36:12",
+  "prompt": "Descobrimos erros no livro razão de janeiro e fevereiro de 2026. Revise todos os vouchers e encontre os 4 erros: um lançamento na conta errada (conta 6300 usada em vez de 7100, valor 5600 NOK), um voucher duplicado (conta 6590, valor 1500 NOK), uma linha de IVA em falta (conta 7300, valor sem IVA 5900 NOK falta IVA na conta 2710), e um valor incorreto (conta 6540, 12050 NOK registado em vez de 10600 NOK). Corrija todos os erros com lançamentos corretivos.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 422,
+      "duration_s": 2.82
+    }
+  ],
+  "errors": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 422,
+      "duration_s": 2.82
+    }
+  ],
+  "task_type": "ledger_correction",
+  "params": {
+    "dateFrom": "2026-01-01",
+    "dateTo": "2026-02-28",
+    "corrections": [
+      {
+        "description": "Correção: lançamento na conta errada - mover de conta 6300 para conta 7100",
+        "type": "wrong_account",
+        "originalAccount": 6300,
+        "correctAccount": 7100,
+        "amount": 5600,
+        "currency": "NOK",
+        "postings": [
+          {
+            "account": 6300,
+            "debitAmount": 0,
+            "creditAmount": 5600,
+            "description": "Reversão do lançamento incorreto na conta 6300"
+          },
+          {
+            "account": 7100,
+            "debitAmount": 5600,
+            "creditAmount": 0,
+            "description": "Lançamento correto na conta 7100"
+          }
+        ]
+      },
+      {
+        "description": "Correção: voucher duplicado - reverter duplicação na conta 6590",
+        "type": "duplicate_voucher",
+        "account": 6590,
+        "amount": 1500,
+        "currency": "NOK",
+        "postings": [
+          {
+            "account": 6590,
+            "debitAmount": 0,
+            "creditAmount": 1500,
+            "description": "Reversão do voucher duplicado na conta 6590"
+          }
+        ]
+      },
+      {
+        "description": "Correção: linha de IVA em falta - adicionar IVA na conta 2710 para lançamento na conta 7300",
+        "type": "missing_vat",
+        "account": 7300,
+        "vatAccount": 2710,
+        "amountExcludingVat": 5900,
+        "currency": "NOK",
+        "postings": [
+          {
+            "account": 2710,
+            "debitAmount": 1475,
+            "creditAmount": 0,
+            "description": "IVA em falta (25% de 5900 NOK) na conta 2710"
+          }
+        ]
+      },
+      {
+        "description": "Correção: valor incorreto - ajustar de 12050 para 10600 na conta 6540",
+        "type": "incorrect_amount",
+        "account": 6540,
+        "originalAmount": 12050,
+        "correctAmount": 10600,
+        "differenceAmount": 1450,
+        "currency": "NOK",
+        "postings": [
+          {
+            "account": 6540,
+            "debitAmount": 0,
+            "creditAmount": 1450,
+            "description": "Correção do valor: reduzir de 12050 para 10600 NOK (diferença 1450 NOK)"
+          }
+        ]
+      }
+    ]
+  },
+  "error_details": [
+    {
+      "status": 422,
+      "endpoint": "POST /ledger/voucher",
+      "message": "Validering feilet. | validation: [{'field': 'postings', 'message': 'Kan ikke være null.', 'path': 'null.postings', 'rootId': None}, {'field': 'description', 'message': 'Kan ikke være null.', 'path': 'null.description', 'rootId': None}]"
+    }
+  ],
+  "status": "error",
+  "service": "tripletex-agent-stian"
+}

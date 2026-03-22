@@ -1,0 +1,16 @@
+{
+  "task_type": "update_project",
+  "prompts": {
+    "no": "Oppdater prosjekt Kontoroppussing med sluttdato 2024-12-31",
+    "en": "Update project Office Renovation with end date 2024-12-31",
+    "es": "Actualice el proyecto Renovacion de Oficina con fecha de finalizacion 2024-12-31",
+    "pt": "Atualize o projeto Renovacao do Escritorio com data de termino 2024-12-31",
+    "nn": "Oppdater prosjekt Kontoroppussing med sluttdato 2024-12-31",
+    "de": "Aktualisieren Sie das Projekt Buroerneuerung mit dem Enddatum 2024-12-31",
+    "fr": "Mettez a jour le projet Renovation du Bureau avec date de fin 2024-12-31"
+  },
+  "expected_params": {
+    "name": "Kontoroppussing",
+    "endDate": "2024-12-31"
+  }
+}

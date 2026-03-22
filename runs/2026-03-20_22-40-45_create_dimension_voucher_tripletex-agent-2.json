@@ -1,0 +1,87 @@
+{
+  "timestamp": "2026-03-20 22:40:45",
+  "prompt": "Create a custom accounting dimension \"Marked\" with the values \"Offentlig\" and \"Privat\". Then post a voucher on account 7300 for 37250 NOK, linked to the dimension value \"Privat\".",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/ledger/accountingDimensionName",
+      "status": 200,
+      "duration_s": 0.29
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionName",
+      "status": 201,
+      "duration_s": 0.31
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/accountingDimensionValue/search",
+      "status": 200,
+      "duration_s": 0.31
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionValue",
+      "status": 201,
+      "duration_s": 0.37
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/accountingDimensionValue/search",
+      "status": 200,
+      "duration_s": 0.51
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/accountingDimensionValue",
+      "status": 201,
+      "duration_s": 0.29
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.23
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.43
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 201,
+      "duration_s": 0.56
+    }
+  ],
+  "errors": [],
+  "task_type": "create_dimension_voucher",
+  "params": {
+    "dimensionName": "Marked",
+    "dimensionValues": [
+      "Offentlig",
+      "Privat"
+    ],
+    "linkedValue": "Privat",
+    "postings": [
+      {
+        "account": 7300,
+        "amount": 37250
+      }
+    ],
+    "description": "Voucher posted to account 7300 linked to dimension value Privat"
+  },
+  "handler": "CreateDimensionVoucherHandler",
+  "total_api_calls": 9,
+  "total_duration_s": 5.99,
+  "result": {
+    "id": 608867459,
+    "dimensionId": 1502,
+    "action": "voucher_with_dimension_created"
+  },
+  "service": "tripletex-agent-2"
+}

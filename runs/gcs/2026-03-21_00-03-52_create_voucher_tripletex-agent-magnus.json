@@ -1,0 +1,87 @@
+{
+  "timestamp": "2026-03-21 00:03:52",
+  "prompt": "Processe o salário de Beatriz Pereira (beatriz.pereira@example.org) para este mês. O salário base é de 58650 NOK. Adicione um bónus único de 8850 NOK além do salário base.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2 git=unknown",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/employee",
+      "status": 200,
+      "duration_s": 0.27
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.25
+    },
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.22
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 201,
+      "duration_s": 0.5
+    }
+  ],
+  "errors": [],
+  "task_type": "create_voucher",
+  "params": {
+    "description": "Processamento de salário - Beatriz Pereira - salário base + bónus",
+    "employee": {
+      "firstName": "Beatriz",
+      "lastName": "Pereira",
+      "email": "beatriz.pereira@example.org"
+    },
+    "salary": {
+      "baseSalary": 58650,
+      "bonus": 8850,
+      "totalGross": 67500,
+      "currency": "NOK"
+    },
+    "postings": [
+      {
+        "description": "Salário base - Beatriz Pereira",
+        "debitAccount": "5000",
+        "amount": 58650
+      },
+      {
+        "description": "Bónus único - Beatriz Pereira",
+        "debitAccount": "5000",
+        "amount": 8850
+      },
+      {
+        "description": "Salário a pagar - Beatriz Pereira",
+        "creditAccount": "2930",
+        "amount": 67500
+      }
+    ]
+  },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "body": "{\"date\": \"2026-03-21\", \"description\": \"Processamento de salário - Beatriz Pereira - salário base + bónus\", \"postings\": [{\"row\": 1, \"account\": {\"id\": 461822359}, \"amount\": 58650, \"description\": \"Salário base - Beatriz Pereira\", \"amountGross\": 0, \"amountGrossCurrency\": 0}, {\"row\": 2, \"account\": {\"id\":"
+    }
+  ],
+  "created_entities": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "id": "608879407",
+      "fields": "{'date': '2026-03-21', 'number': 1, 'description': 'Processamento de salário - Beatriz Pereira - salário base + bónus'}"
+    }
+  ],
+  "handler": "CreateVoucherHandler",
+  "total_api_calls": 4,
+  "total_duration_s": 6.46,
+  "result": {
+    "id": 608879407,
+    "action": "created"
+  },
+  "service": "tripletex-agent-magnus"
+}
