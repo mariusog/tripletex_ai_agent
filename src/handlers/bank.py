@@ -34,6 +34,44 @@ class BankReconciliationHandler(BaseHandler):
         ensure_bank_account(api_client)
         results: dict[str, Any] = {"action": "reconciled", "payments": []}
 
+        # Convert flat "transactions" into customerPayments/supplierPayments
+        if "transactions" in params and not params.get("customerPayments"):
+            cust_payments = []
+            sup_payments = []
+            fees = []
+            for tx in params["transactions"]:
+                if tx.get("customer") and tx.get("amountIn"):
+                    cust_payments.append(
+                        {
+                            "customer": tx["customer"],
+                            "amount": tx["amountIn"],
+                            "date": tx.get("date", ""),
+                            "invoiceNumber": tx.get("invoiceNumber"),
+                        }
+                    )
+                elif tx.get("supplier") and tx.get("amountOut"):
+                    sup_payments.append(
+                        {
+                            "supplier": tx["supplier"],
+                            "amount": tx["amountOut"],
+                            "date": tx.get("date", ""),
+                        }
+                    )
+                elif tx.get("amountIn") or tx.get("amountOut"):
+                    fees.append(
+                        {
+                            "amount": tx.get("amountOut") or tx.get("amountIn", 0),
+                            "date": tx.get("date", ""),
+                            "description": tx.get("description", "Bankgebyr"),
+                        }
+                    )
+            if cust_payments:
+                params["customerPayments"] = cust_payments
+            if sup_payments:
+                params["supplierPayments"] = sup_payments
+            if fees:
+                params["bankFees"] = fees
+
         # Process customer payments (incoming)
         for cp in params.get("customerPayments", []):
             self._process_customer_payment(api_client, cp, results)
