@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-21_18-18-29",
+  "prompt": "Registe uma despesa de viagem para Rafael Sousa (rafael.sousa@example.org) referente a \"Visita cliente Tromsø\". A viagem durou 5 dias com ajudas de custo (taxa diária 800 NOK). Despesas: bilhete de avião 6000 NOK e táxi 750 NOK.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 44.26,
+  "service": "tripletex-agent-2"
+}

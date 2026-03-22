@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-21_18-25-45",
+  "prompt": "Du har motteke eit tilbodsbrev (sjaa vedlagt PDF) for ein ny tilsett. Utfor komplett onboarding: opprett den tilsette, tilknytt rett avdeling, set opp tilsetjingsforhold med stillingsprosent og arslonn, og konfigurer standard arbeidstid.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 21.22,
+  "service": "tripletex-agent-2"
+}

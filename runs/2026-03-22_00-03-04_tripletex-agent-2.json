@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-22_00-03-04",
+  "prompt": "Køyr løn for Eirik Brekke (eirik.brekke@example.org) for denne månaden. Grunnløn er 41050 kr. Legg til ein eingongsbonus på 9800 kr i tillegg til grunnløna.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 8.82,
+  "service": "tripletex-agent-2"
+}

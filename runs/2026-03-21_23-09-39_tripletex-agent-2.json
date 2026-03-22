@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-21_23-09-39",
+  "prompt": "Run payroll for Victoria Lewis (victoria.lewis@example.org) for this month. The base salary is 52050 NOK. Add a one-time bonus of 7200 NOK on top of the base salary. If the salary API is unavailable, you can use manual vouchers on salary accounts (5000-series) to record the payroll expense.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 4.86,
+  "service": "tripletex-agent-2"
+}

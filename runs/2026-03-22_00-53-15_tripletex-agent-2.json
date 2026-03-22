@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-22_00-53-15",
+  "prompt": "Necesitamos el gasto de Togbillett de este recibo registrado en el departamento Produksjon. Usa la cuenta de gastos correcta y asegura el tratamiento correcto del IVA.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 12.28,
+  "service": "tripletex-agent-2"
+}
