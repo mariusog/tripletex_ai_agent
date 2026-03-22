@@ -74,13 +74,14 @@ class CreateVoucherHandler(BaseHandler):
         "Use 2 postings: debit expense account with GROSS amount (inkl MVA), "
         "credit 2400 with negative gross amount. Do NOT manually split VAT — "
         "Tripletex handles it via the account's VAT type. "
-        "From receipts/PDFs: extract supplier name, org number, date, "
-        "invoice number, GROSS amount (total inkl MVA), and the correct "
-        "expense account based on what was purchased. "
-        "CRITICAL: ALWAYS use NUMERIC account codes (e.g. 6300, 5000, 1720), "
-        "NEVER use text names like 'kostkonto' or 'expense'. "
-        "If the prompt says 'kostkonto' or 'cost account' without specifying "
-        "the number, use a standard expense account like 6300."
+        "From receipts/PDFs: extract ALL fields: supplier name, org number, date, "
+        "invoiceNumber, dueDate, GROSS amount (total inkl MVA). "
+        "Choose expense account based on what was purchased: "
+        "6300=rent/lokale, 6340=utilities, 6500=tools, 6540=inventory/furniture, "
+        "6700=accounting/audit, 6800=office supplies, 6860=IT/software, "
+        "7000=travel, 7100=car, 7140=transport/train, 7300=marketing/sales. "
+        "ALWAYS use NUMERIC account codes. "
+        "Pass invoiceNumber as a separate param (not in postings)."
     )
 
     def get_task_type(self) -> str:
@@ -97,6 +98,14 @@ class CreateVoucherHandler(BaseHandler):
         for field in ("description", "number", "tempNumber"):
             if field in params and params[field] is not None:
                 body[field] = params[field]
+        # Map supplier invoice number to externalVoucherNumber
+        inv_num = params.get("invoiceNumber") or params.get("invoice_number")
+        if inv_num:
+            body["externalVoucherNumber"] = str(inv_num)
+        # Map due date
+        due_date = self.validate_date(params.get("dueDate"), "dueDate")
+        if due_date:
+            body["dueDate"] = due_date
         if "voucherType" in params:
             body["typeId"] = int(params["voucherType"])
 
