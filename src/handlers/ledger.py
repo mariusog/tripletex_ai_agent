@@ -311,6 +311,22 @@ class CreateVoucherHandler(BaseHandler):
                 logger.info("Voucher verify: %s", verify.get("value", {}))
             except Exception:
                 logger.debug("Could not verify voucher")
+            # Check if it appears as a supplier invoice
+            try:
+                si_resp = api_client.get(
+                    "/supplierInvoice",
+                    params={"count": 5, "voucherId": voucher_id},
+                    fields="id,invoiceNumber,supplier(id,name)",
+                )
+                si_vals = si_resp.get("values", [])
+                logger.info(
+                    "SupplierInvoice check for voucher %s: %d found, data=%s",
+                    voucher_id,
+                    len(si_vals),
+                    si_vals,
+                )
+            except Exception as e:
+                logger.info("SupplierInvoice endpoint: %s", e)
 
         return {"id": voucher_id, "action": "created"}
 
