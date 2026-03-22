@@ -88,7 +88,9 @@ class CreateVoucherHandler(BaseHandler):
         "From receipts/PDFs: extract ALL fields: supplier name, org number, date, "
         "invoiceNumber, dueDate, GROSS amount (total inkl MVA). "
         "Choose expense account based on what was purchased: "
-        "6300=rent/lokale, 6340=utilities, 6500=tools, 6540=inventory/furniture, "
+        "6300=rent/lokale, 6340=utilities, 6500=tools/verktøy, "
+        "6540=inventory/furniture/kontorstoler/whiteboard, "
+        "6800=office supplies/kontorrekvisita/papir, "
         "6700=accounting/audit, 6800=office supplies, 6860=IT/software, "
         "7000=travel, 7100=car/bilgodtgjørelse, 7140=transport/train/tog, "
         "7150=accommodation/overnatting, "
@@ -118,7 +120,6 @@ class CreateVoucherHandler(BaseHandler):
         inv_num = params.get("invoiceNumber") or params.get("invoice_number")
         if inv_num:
             body["externalVoucherNumber"] = str(inv_num)
-            body["vendorInvoiceNumber"] = str(inv_num)
 
         supplier_ref = _resolve_supplier(api_client, params.get("supplier"))
 
@@ -313,15 +314,21 @@ class CreateVoucherHandler(BaseHandler):
                 logger.debug("Could not verify voucher")
             # Check if it appears as a supplier invoice
             try:
+                from datetime import date as _dt3
+
                 si_resp = api_client.get(
                     "/supplierInvoice",
-                    params={"count": 5, "voucherId": voucher_id},
-                    fields="id,invoiceNumber,supplier(id,name)",
+                    params={
+                        "count": 5,
+                        "voucherId": voucher_id,
+                        "invoiceDateFrom": "2020-01-01",
+                        "invoiceDateTo": _dt3.today().isoformat(),
+                    },
+                    fields="id,invoiceNumber,supplier(id,name),voucher(id),amount,amountCurrency",
                 )
                 si_vals = si_resp.get("values", [])
                 logger.info(
-                    "SupplierInvoice check for voucher %s: %d found, data=%s",
-                    voucher_id,
+                    "SupplierInvoice check: %d found, data=%s",
                     len(si_vals),
                     si_vals,
                 )
