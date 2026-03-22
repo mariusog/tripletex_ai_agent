@@ -101,11 +101,14 @@ class CreateEmployeeHandler(BaseHandler):
             "email",
             "phoneNumberMobile",
             "nationalIdentityNumber",
-            "bankAccountNumber",
             "address",
         ):
             if params.get(field):
                 body[field] = params[field]
+        # Clean bank account number (strip dots/spaces)
+        bank_acct = params.get("bankAccountNumber")
+        if bank_acct:
+            body["bankAccountNumber"] = str(bank_acct).replace(".", "").replace(" ", "")
 
         if "department" in params:
             dept = params["department"]
@@ -171,29 +174,10 @@ class CreateEmployeeHandler(BaseHandler):
         # Occupation code (stillingskode) — needs ID reference
         job_code = params.get("jobCode") or params.get("occupationCode")
         if job_code:
-            code_str = str(job_code)
-            try:
-                occ_resp = api_client.get(
-                    "/employee/employment/occupationCode",
-                    params={"code": code_str, "count": 20},
-                    fields="id,code",
-                )
-                # Try exact prefix match first, then any match
-                best = None
-                for occ in occ_resp.get("values", []):
-                    occ_code = occ.get("code", "")
-                    if occ_code == code_str:
-                        best = occ
-                        break
-                    if occ_code.startswith(code_str) and not best:
-                        best = occ
-                if not best and occ_resp.get("values"):
-                    best = occ_resp["values"][0]
-                if best:
-                    emp_detail["occupationCode"] = {"id": best["id"]}
-                    logger.info("Occupation code %s -> id=%s", code_str, best["id"])
-            except TripletexApiError:
-                pass
+            code_str = str(job_code).strip()
+            occ_id = self._resolve_occupation_code(api_client, code_str)
+            if occ_id:
+                emp_detail["occupationCode"] = {"id": occ_id}
 
         # Working hours per day → shiftDurationHours on employmentDetails
         hours_per_day = params.get("hoursPerDay")
@@ -249,6 +233,63 @@ class CreateEmployeeHandler(BaseHandler):
         value = result.get("value", {})
         logger.info("Created employee id=%s", value.get("id"))
         return {"id": value.get("id"), "action": "created"}
+
+    @staticmethod
+    def _resolve_occupation_code(api_client: TripletexClient, code_str: str) -> int | None:
+        """Resolve occupation code to ID. Tries exact match, prefix, then broader search."""
+        # Strategy 1: search by code
+        try:
+            resp = api_client.get(
+                "/employee/employment/occupationCode",
+                params={"code": code_str, "count": 20},
+                fields="id,code",
+            )
+            best = None
+            for occ in resp.get("values", []):
+                occ_code = occ.get("code", "")
+                if occ_code == code_str:
+                    logger.info("Occupation code exact match: %s -> id=%s", code_str, occ["id"])
+                    return occ["id"]
+                if occ_code.startswith(code_str) and not best:
+                    best = occ
+            if best:
+                logger.info("Occupation code prefix match: %s -> id=%s", code_str, best["id"])
+                return best["id"]
+        except TripletexApiError:
+            pass
+        # Strategy 2: search by nameNO (description)
+        try:
+            resp = api_client.get(
+                "/employee/employment/occupationCode",
+                params={"nameNO": code_str, "count": 5},
+                fields="id,code,nameNO",
+            )
+            vals = resp.get("values", [])
+            if vals:
+                logger.info("Occupation code name match: %s -> id=%s", code_str, vals[0]["id"])
+                return vals[0]["id"]
+        except TripletexApiError:
+            pass
+        # Strategy 3: try without leading zeros or with padding
+        stripped = code_str.lstrip("0")
+        padded = code_str.zfill(4)
+        for variant in (stripped, padded):
+            if variant == code_str:
+                continue
+            try:
+                resp = api_client.get(
+                    "/employee/employment/occupationCode",
+                    params={"code": variant, "count": 5},
+                    fields="id,code",
+                )
+                vals = resp.get("values", [])
+                if vals:
+                    logger.info("Occupation code variant match: %s -> id=%s", variant, vals[0]["id"])
+                    return vals[0]["id"]
+            except TripletexApiError:
+                pass
+        logger.warning("Could not resolve occupation code: %s", code_str)
+        return None
 
 
 @register_handler
