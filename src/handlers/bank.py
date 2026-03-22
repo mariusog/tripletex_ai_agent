@@ -231,6 +231,8 @@ class BankReconciliationHandler(BaseHandler):
                 )
             else:
                 # No existing invoice — create new one with payment
+                # Bank amount is incl VAT, so divide by 1.25 for excl VAT price
+                price_excl_vat = round(amount / 1.25, 2)
                 inv_result = create_full_invoice(
                     api_client,
                     {
@@ -238,7 +240,7 @@ class BankReconciliationHandler(BaseHandler):
                         "orderLines": [
                             {
                                 "description": f"Faktura {inv_num}" if inv_num else "Faktura",
-                                "unitPriceExcludingVatCurrency": amount,
+                                "unitPriceExcludingVatCurrency": price_excl_vat,
                                 "count": 1,
                             }
                         ],
@@ -254,7 +256,14 @@ class BankReconciliationHandler(BaseHandler):
                     }
                 )
         except Exception as e:
-            logger.warning("Customer payment failed for %s: %s", cp.get("customer"), e)
+            logger.exception("Customer payment failed for %s: %s", cp.get("customer"), e)
+            # Still record the attempt so we don't lose data
+            results["payments"].append({
+                "customer": cp.get("customer", ""),
+                "amount": cp.get("amount", 0),
+                "status": "error",
+                "error": str(e)[:80],
+            })
 
     def _process_supplier_payment(
         self, api_client: TripletexClient, sp: dict[str, Any], results: dict
@@ -319,8 +328,16 @@ class BankReconciliationHandler(BaseHandler):
             bank_acct, _ = resolve_account(api_client, 1920)
             fee_acct, _ = resolve_account(api_client, 7770)
 
-            # Bank fee = expense: debit fee account, credit bank
+            # Bank fee: positive amount = expense (debit fee, credit bank)
+            # Negative amount or amountIn = refund (debit bank, credit fee)
+            is_refund = amount > 0 and fee.get("_from_amountIn", False)
             fee_abs = abs(amount)
+            if is_refund:
+                fee_amount = -fee_abs  # Credit fee account
+                bank_amount = fee_abs   # Debit bank
+            else:
+                fee_amount = fee_abs    # Debit fee account
+                bank_amount = -fee_abs  # Credit bank
             body: dict[str, Any] = {
                 "date": date,
                 "description": desc,
@@ -328,13 +345,13 @@ class BankReconciliationHandler(BaseHandler):
                     {
                         "row": 1,
                         "account": fee_acct,
-                        "amountGross": fee_abs,
-                        "amountGrossCurrency": fee_abs,
+                        "amountGross": fee_amount,
+                        "amountGrossCurrency": fee_amount,
                     },
                     {
                         "row": 2,
                         "account": bank_acct,
-                        "amountGross": -fee_abs,
+                        "amountGross": bank_amount,
                         "amountGrossCurrency": -fee_abs,
                     },
                 ],
