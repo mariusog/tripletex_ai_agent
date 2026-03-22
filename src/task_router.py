@@ -203,44 +203,46 @@ class TaskRouter:
                     )
 
             # If all steps were read-only, re-classify with the data
-            # This handles tasks like "analyze expenses and create projects"
             if all_read_only and step_results:
                 logger.info("All steps read-only, re-classifying with data")
-                # Pre-compute expense analysis if we have multiple balance sheets
                 step_results = self._enrich_with_analysis(step_results)
-                new_tasks = self._reclassify_with_data(request, step_results)
-                write_tasks = [t for t in new_tasks if t.task_type != "balance_sheet_report"]
-                if write_tasks:
-                    logger.info(
-                        "Re-classified %d action task(s): %s",
-                        len(write_tasks),
-                        [t.task_type for t in write_tasks],
-                    )
-                    for i, classification in enumerate(write_tasks):
-                        task_type = classification.task_type
-                        params = _strip_placeholders(classification.params)
-                        params = normalize_params(params)
-                        if context:
-                            params = _inject_context(params, context)
-                        handler = self._registry.get(task_type)
-                        if not handler:
-                            continue
-                        try:
-                            result = handler.execute(api_client, params)
-                            _update_context(context, result, params, task_type)
-                            elapsed = time.monotonic() - start
-                            logger.info(
-                                "Handler result step=R%d task_type=%s "
-                                "writes=%d errors=%d duration=%.2fs result=%s",
-                                i + 1,
-                                task_type,
-                                api_client.write_call_count,
-                                api_client.error_count,
-                                elapsed,
-                                result,
-                            )
-                        except Exception:
-                            logger.exception("Re-classified step R%d failed", i + 1)
+                analysis = next(
+                    (sr for sr in step_results if sr.get("action") == "expense_analysis"),
+                    None,
+                )
+                # For expense analysis: create projects+activities directly
+                if analysis and analysis.get("top_increases"):
+                    self._execute_expense_analysis(api_client, analysis, start)
+                else:
+                    new_tasks = self._reclassify_with_data(request, step_results)
+                    write_tasks = [t for t in new_tasks if t.task_type != "balance_sheet_report"]
+                    if write_tasks:
+                        logger.info(
+                            "Re-classified %d action task(s): %s",
+                            len(write_tasks),
+                            [t.task_type for t in write_tasks],
+                        )
+                        for i, classification in enumerate(write_tasks):
+                            task_type = classification.task_type
+                            params = _strip_placeholders(classification.params)
+                            params = normalize_params(params)
+                            handler = self._registry.get(task_type)
+                            if not handler:
+                                continue
+                            try:
+                                result = handler.execute(api_client, params)
+                                elapsed = time.monotonic() - start
+                                logger.info(
+                                    "Handler result step=R%d task_type=%s "
+                                    "writes=%d errors=%d duration=%.2fs",
+                                    i + 1,
+                                    task_type,
+                                    api_client.write_call_count,
+                                    api_client.error_count,
+                                    elapsed,
+                                )
+                            except Exception:
+                                logger.exception("Re-classified step R%d failed", i + 1)
 
         except Exception:
             elapsed = time.monotonic() - start
@@ -313,6 +315,44 @@ class TaskRouter:
             logger.info("Expense analysis: %s", analysis["summary"])
             return [*step_results, analysis]
         return step_results
+
+    def _execute_expense_analysis(
+        self,
+        api_client: TripletexClient,
+        analysis: dict[str, Any],
+        start: float,
+    ) -> None:
+        """Create internal projects + activities for top expense increases."""
+        top = analysis["top_increases"][:3]
+        project_handler = self._registry.get("create_project")
+        activity_handler = self._registry.get("create_activity")
+        if not project_handler or not activity_handler:
+            return
+        for i, item in enumerate(top):
+            name = item["account_name"]
+            try:
+                proj_result = project_handler.execute(
+                    api_client,
+                    {"name": name, "isInternal": True, "startDate": "2026-01-01"},
+                )
+                elapsed = time.monotonic() - start
+                logger.info(
+                    "Expense project R%d '%s' id=%s duration=%.2fs",
+                    i + 1,
+                    name,
+                    proj_result.get("id"),
+                    elapsed,
+                )
+                # Create activity for this project
+                act_result = activity_handler.execute(api_client, {"name": name})
+                logger.info(
+                    "Expense activity R%d '%s' id=%s",
+                    i + 1,
+                    name,
+                    act_result.get("id"),
+                )
+            except Exception:
+                logger.exception("Expense analysis step %d failed", i + 1)
 
     def _validate_classifications(
         self,
