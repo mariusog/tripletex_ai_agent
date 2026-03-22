@@ -62,7 +62,10 @@ _ACCOUNT_NUMBER_NAMES: dict[int, str] = {
     6800: "Kontorrekvisita",
     6860: "Møter, kurs",
     7000: "Reisekostnad",
+    7140: "Reisekostnad, ikke oppgavepliktig",
+    7150: "Diettkostnad",
     7300: "Salgskostnad",
+    7350: "Representasjon",
     8700: "Skattekostnad",
 }
 
