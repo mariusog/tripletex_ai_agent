@@ -55,7 +55,9 @@ class CreateSupplierHandler(BaseHandler):
                 if isinstance(addr, str):
                     body[addr_field] = {"addressLine1": addr}
                 elif isinstance(addr, dict):
-                    body[addr_field] = addr
+                    from src.handlers.customer import _normalize_address
+
+                    body[addr_field] = _normalize_address(addr)
         body = self.strip_none_values(body)
         result = api_client.post("/supplier", data=body)
         value = result.get("value", {})

@@ -11,6 +11,21 @@ from src.handlers.base import BaseHandler, ParamSpec, register_handler
 logger = logging.getLogger(__name__)
 
 
+def _normalize_address(addr: dict) -> dict:
+    """Map LLM address keys to Tripletex address fields."""
+    result = dict(addr)
+    # "street" → "addressLine1"
+    if "street" in result and "addressLine1" not in result:
+        result["addressLine1"] = result.pop("street")
+    # "zip" → "postalCode"
+    if "zip" in result and "postalCode" not in result:
+        result["postalCode"] = result.pop("zip")
+    # "zipCode" → "postalCode"
+    if "zipCode" in result and "postalCode" not in result:
+        result["postalCode"] = result.pop("zipCode")
+    return result
+
+
 @register_handler
 class CreateCustomerHandler(BaseHandler):
     """POST /customer with extracted fields. 1 API call."""
@@ -52,7 +67,7 @@ class CreateCustomerHandler(BaseHandler):
                 if isinstance(addr, str):
                     body[addr_field] = {"addressLine1": addr}
                 elif isinstance(addr, dict):
-                    body[addr_field] = addr
+                    body[addr_field] = _normalize_address(addr)
 
         # Sometimes LLM extracts a flat "address" — map to postalAddress
         if params.get("address") and "postalAddress" not in body:
@@ -60,7 +75,7 @@ class CreateCustomerHandler(BaseHandler):
             if isinstance(addr, str):
                 body["postalAddress"] = {"addressLine1": addr}
             elif isinstance(addr, dict):
-                body["postalAddress"] = addr
+                body["postalAddress"] = _normalize_address(addr)
 
         body = self.strip_none_values(body)
         result = api_client.post("/customer", data=body)
@@ -112,7 +127,10 @@ class UpdateCustomerHandler(BaseHandler):
 
         for addr_field in ("postalAddress", "physicalAddress", "deliveryAddress"):
             if params.get(addr_field):
-                customer[addr_field] = params[addr_field]
+                addr = params[addr_field]
+                if isinstance(addr, dict):
+                    addr = _normalize_address(addr)
+                customer[addr_field] = addr
 
         result = api_client.put(f"/customer/{cust_id}", data=customer)
         logger.info("Updated customer id=%s", cust_id)
