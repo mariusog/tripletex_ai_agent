@@ -84,9 +84,7 @@ class LedgerCorrectionHandler(BaseHandler):
             return {"error": "no_postings", "action": "correction_skipped"}
 
         body = self.strip_none_values(body)
-        result = api_client.post(
-            "/ledger/voucher", data=body, params={"sendToLedger": "true"}
-        )
+        result = api_client.post("/ledger/voucher", data=body, params={"sendToLedger": "true"})
         value = result.get("value", {})
         logger.info("Created correction voucher id=%s", value.get("id"))
         return {"id": value.get("id"), "action": "correction_created"}
