@@ -114,6 +114,8 @@ class TaskRouter:
             base_url=request.tripletex_credentials.base_url,
             session_token=request.tripletex_credentials.session_token,
         )
+        # Run metadata collected for GCS export
+        self._run_meta: dict[str, Any] = {}
 
         try:
             classifications = self._classify(request)
@@ -253,6 +255,22 @@ class TaskRouter:
 
             with contextlib.suppress(UnboundLocalError):
                 self._verify_run(api_client, context, step_results)
+
+            # Collect run metadata for GCS export
+            with contextlib.suppress(UnboundLocalError):
+                task_types = [c.task_type for c in classifications]
+                self._run_meta = {
+                    "task_types": task_types,
+                    "task_type": task_types[0] if len(task_types) == 1 else "multi",
+                    "steps": len(task_types),
+                    "api_calls": api_client.api_call_count,
+                    "writes": api_client.write_call_count,
+                    "errors": api_client.error_count,
+                    "results": [
+                        {k: v for k, v in r.items() if k in ("id", "action", "error")}
+                        for r in step_results
+                    ],
+                }
             api_client.close()
 
         return SolveResponse(status="completed")

@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-21_23-16-23",
+  "prompt": "Vi trenger Whiteboard fra denne kvitteringen bokfort pa avdeling Lager. Bruk riktig utgiftskonto basert pa kjopet, og sorg for korrekt MVA-behandling.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 8.56,
+  "service": "tripletex-agent-2"
+}

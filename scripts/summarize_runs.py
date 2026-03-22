@@ -49,11 +49,48 @@ OPTIMAL_CALLS = {
 ALL_TASKS = list(OPTIMAL_CALLS.keys())
 
 
+def _normalize_run(raw: dict) -> dict:
+    """Normalize GCS run format to match capture_runs format."""
+    run = dict(raw)
+    # Map new GCS fields to summarize format
+    if "task_type" not in run and "task_types" in run:
+        types = run["task_types"]
+        run["task_type"] = types[0] if len(types) == 1 else "+".join(types)
+    if "total_api_calls" not in run and "api_calls" in run:
+        run["total_api_calls"] = run["api_calls"]
+    # Normalize total_api_calls: could be int or list of call dicts
+    calls = run.get("total_api_calls", 0)
+    if isinstance(calls, list):
+        run["total_api_calls"] = len(calls)
+    if "total_duration_s" not in run and "duration_s" in run:
+        run["total_duration_s"] = run["duration_s"]
+    # Normalize errors to a list for len() compatibility
+    errs = run.get("errors", [])
+    if isinstance(errs, int):
+        run["errors"] = [None] * errs
+    elif not isinstance(errs, list):
+        run["errors"] = []
+    return run
+
+
 def main() -> None:
+    import sys
+
+    runs_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else RUNS_DIR
     runs = []
-    for f in sorted(RUNS_DIR.glob("*.json")):
-        with open(f) as fh:
-            runs.append(json.load(fh))
+    # Load from specified dir and gcs/ subfolder
+    search_dirs = [runs_dir]
+    gcs_dir = runs_dir / "gcs"
+    if gcs_dir.is_dir() and runs_dir == RUNS_DIR:
+        search_dirs.append(gcs_dir)
+    seen_files: set[str] = set()
+    for d in search_dirs:
+        for f in sorted(d.glob("*.json")):
+            if f.name in seen_files:
+                continue
+            seen_files.add(f.name)
+            with open(f) as fh:
+                runs.append(_normalize_run(json.load(fh)))
 
     if not runs:
         print("No runs found. Run: python scripts/capture_runs.py")

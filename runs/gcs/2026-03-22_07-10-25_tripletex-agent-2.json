@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-22_07-10-25",
+  "prompt": "El pago de Montaña SL (org. nº 908725255) por la factura \"Licencia de software\" (11250 NOK sin IVA) fue devuelto por el banco. Revierta el pago para que la factura vuelva a mostrar el importe pendiente.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 4.78,
+  "service": "tripletex-agent-2"
+}

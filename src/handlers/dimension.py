@@ -120,8 +120,22 @@ class CreateDimensionVoucherHandler(BaseHandler):
         # Handle LLM sending voucher info as a sub-object
         voucher_info = params.get("voucher", {})
         if not postings and voucher_info:
-            acct = voucher_info.get("account", 7300)
-            amt = voucher_info.get("amount", 0)
+            # Extract postings list from voucher sub-object
+            postings = voucher_info.get("postings", [])
+            # Also check for dimensionValue in individual postings
+            for p in postings:
+                dv = p.get("dimensionValue", "")
+                if dv and not linked_value:
+                    linked_value = dv
+            # Fallback: single account/amount style
+            if not postings:
+                acct = voucher_info.get("account", 7300)
+                amt = voucher_info.get("amount", 0)
+                if amt:
+                    postings = [
+                        {"account": acct, "amount": amt},
+                        {"account": 1920, "amount": -amt},
+                    ]
             linked_value = linked_value or voucher_info.get("dimensionValue", "")
             if linked_value and not linked_val_id:
                 linked_val_id = value_ids.get(linked_value.lower())
@@ -129,11 +143,6 @@ class CreateDimensionVoucherHandler(BaseHandler):
                     linked_val_id = _find_or_create_dimension_value(
                         api_client, dim_index, linked_value
                     )
-            if amt:
-                postings = [
-                    {"account": acct, "amount": amt},
-                    {"account": 1920, "amount": -amt},
-                ]
         if not postings:
             return {
                 "dimensionId": dim_id,
@@ -148,7 +157,9 @@ class CreateDimensionVoucherHandler(BaseHandler):
         voucher_postings = []
         for i, p in enumerate(postings):
             posting = _build_posting(api_client, p, row=i + 1)
-            if linked_val_id:
+            # Apply dimension to postings that reference it, or to first posting
+            has_dim_value = p.get("dimensionValue")
+            if linked_val_id and (has_dim_value or i == 0):
                 posting[dim_field] = {"id": linked_val_id}
             voucher_postings.append(posting)
 
@@ -167,7 +178,7 @@ class CreateDimensionVoucherHandler(BaseHandler):
 
         body: dict[str, Any] = {
             "date": date_val,
-            "description": params.get("description", f"Voucher med {dim_name}"),
+            "description": params.get("description") or voucher_info.get("description") or f"Voucher med {dim_name}",
             "postings": voucher_postings,
         }
 

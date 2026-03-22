@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-21_23-45-17",
+  "prompt": "One of your customers has an overdue invoice. Find the overdue invoice and post a reminder fee of 40 NOK. Debit accounts receivable (1500), credit reminder fees (3400). Also create an invoice for the reminder fee to the customer and send it. Additionally, register a partial payment of 5000 NOK on the overdue invoice.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 7.46,
+  "service": "tripletex-agent-2"
+}

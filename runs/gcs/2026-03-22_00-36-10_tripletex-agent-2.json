@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-22_00-36-10",
+  "prompt": "Utfør månedsavslutning for mars 2026. Periodiser forskuddsbetalt kostnad (7850 kr per måned fra konto 1700 til kostkonto). Bokfør månedlig avskrivning for et driftsmiddel med anskaffelseskost 251550 kr og levetid 4 år (lineær avskrivning til konto 6030). Kontroller at saldobalansen går i null. Bokfør også en lønnsavsetning (debet lønnskostnad konto 5000, kredit påløpt lønn konto 2900).",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 15.73,
+  "service": "tripletex-agent-2"
+}
