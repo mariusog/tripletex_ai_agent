@@ -18,6 +18,11 @@ class CreateProjectHandler(BaseHandler):
 
     tier = 1
     description = "Create a new project"
+    disambiguation = (
+        "If the prompt asks to create a project linked to a customer, "
+        "classify as ONE create_project task with the customer in params. "
+        "Do NOT split into create_customer + create_project — the handler creates the customer automatically."
+    )
     param_schema = {
         "name": ParamSpec(description="Project name"),
         "number": ParamSpec(required=False),

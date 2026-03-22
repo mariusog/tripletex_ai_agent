@@ -19,10 +19,13 @@ class CostAnalysisHandler(BaseHandler):
     tier = 3
     description = "Analyze expense increases and create internal projects"
     disambiguation = (
-        "For tasks asking to analyze costs/expenses between two periods, "
-        "identify top expense accounts with biggest INCREASE, and create "
-        "internal projects + activities for each. "
-        "Keywords: kostnadsanalyse, expense analysis, biggest increase."
+        "ALWAYS use cost_analysis (not balance_sheet_report) when the task asks to: "
+        "analyze costs/expenses between two periods AND create projects/activities. "
+        "This handler does EVERYTHING: fetches balance data, finds top increases, "
+        "creates internal projects + activities. Do NOT split into multiple tasks. "
+        "Keywords in any language: kostnadsanalyse, kostnadsauke, expense analysis, "
+        "Kostenanalyse, analyse des coûts, análisis de costos, análise de custos, "
+        "biggest increase, mayor incremento, største økning."
     )
     param_schema = {
         "dateFrom": ParamSpec(type="date", description="Start of first period (e.g. 2026-01-01)"),
