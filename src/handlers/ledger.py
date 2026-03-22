@@ -178,6 +178,9 @@ def _build_posting(
     # Add custom dimension ref if provided
     if dimension_ref:
         result["freeAccountingDimension1"] = dimension_ref
+    # Add department if specified on posting
+    if posting.get("department"):
+        result["department"] = BaseHandler.ensure_ref(posting["department"], "department")
     return {k: v for k, v in result.items() if v is not None}
 
 
@@ -254,6 +257,11 @@ class CreateVoucherHandler(BaseHandler):
                 except (TypeError, ValueError):
                     pass
 
+        # Propagate top-level department to all postings if not set per-posting
+        dept_ref = None
+        if params.get("department"):
+            dept_ref = BaseHandler.ensure_ref(params["department"], "department")
+
         # Build postings — resolve account numbers to IDs
         # Handle split debit/credit format: expand into two postings
         raw_postings = params.get("postings", [])
@@ -299,6 +307,12 @@ class CreateVoucherHandler(BaseHandler):
                         "description": body.get("description", ""),
                     }
                 )
+
+            # Add department to postings that don't have one
+            if dept_ref:
+                for p in expanded:
+                    if "department" not in p:
+                        p["department"] = dept_ref
 
             body["postings"] = [
                 _build_posting(
