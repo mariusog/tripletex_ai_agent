@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-03-22_13-02-23",
+  "prompt": "Du har mottatt en arbeidskontrakt (se vedlagt PDF). Opprett den ansatte i Tripletex med alle detaljer fra kontrakten: personnummer, fodselsdato, avdeling, stillingskode, lonn, stillingsprosent og startdato.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 113.52,
+  "service": "tripletex-agent-2",
+  "task_types": [
+    "create_employee"
+  ],
+  "task_type": "create_employee",
+  "steps": 1,
+  "api_calls": 7,
+  "writes": 1,
+  "errors": 0,
+  "results": [
+    {
+      "id": 18808665,
+      "action": "created"
+    }
+  ]
+}
