@@ -107,9 +107,11 @@ class RegisterPaymentHandler(BaseHandler):
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         today = dt_date.today().isoformat()
 
-        # Use overdue invoice from previous step if available (late fee flow)
+        # Use overdue invoice for partial payment (late fee flow)
         overdue_id = params.get("_overdue_invoice_id")
-        if overdue_id and not params.get("invoiceId"):
+        if overdue_id:
+            # Always use overdue invoice for payment — the invoiceId from
+            # context might be the reminder fee invoice, not the overdue one
             params["invoiceId"] = overdue_id
 
         invoice_id = _find_invoice_id(api_client, params)
