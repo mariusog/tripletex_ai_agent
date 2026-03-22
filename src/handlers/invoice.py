@@ -89,9 +89,17 @@ class RegisterPaymentHandler(BaseHandler):
     )
     param_schema = {
         "customer": ParamSpec(required=False),
-        "amount": ParamSpec(type="number", description="Payment amount in NOK"),
+        "amount": ParamSpec(type="number", description="Payment amount in NOK (negative for reversals)"),
         "paymentDate": ParamSpec(required=False, type="date"),
-        "reversal": ParamSpec(required=False, type="boolean"),
+        "reversal": ParamSpec(
+            required=False,
+            type="boolean",
+            description="true if reversing/returning a payment",
+        ),
+        "description": ParamSpec(
+            required=False,
+            description="Invoice/payment description (e.g. product/service name)",
+        ),
         "orderLines": ParamSpec(required=False, type="list"),
         "exchangeRate": ParamSpec(
             required=False, type="number", description="Payment exchange rate"
@@ -119,7 +127,14 @@ class RegisterPaymentHandler(BaseHandler):
         # If no existing invoice, create one first (full flow)
         if not invoice_id and params.get("customer"):
             pay_amount = params.get("amount", 0)
-            is_reversal = params.get("reversal") or (pay_amount and pay_amount < 0)
+            # Detect reversal from flag, negative amount, or description keywords
+            desc_lower = (params.get("description") or "").lower()
+            reversal_keywords = ("reverser", "returnert", "reversal", "reversed", "return")
+            is_reversal = (
+                params.get("reversal")
+                or (pay_amount and pay_amount < 0)
+                or any(kw in desc_lower for kw in reversal_keywords)
+            )
             abs_amount = abs(pay_amount) if pay_amount else 0
 
             inv_params = dict(params)
