@@ -109,6 +109,10 @@ def _normalize_posting(posting: dict[str, Any]) -> dict[str, Any]:
     """Normalize a single voucher posting from LLM output."""
     p = dict(posting)
 
+    # Normalize accountNumber → account
+    if "accountNumber" in p and "account" not in p:
+        p["account"] = p.pop("accountNumber")
+
     # Nested debit/credit objects → flatten
     # e.g. {"debit": {"account": 1500, "amount": 100}} → {"account": 1500, "debit": 100}
     for side in ("debit", "credit"):
