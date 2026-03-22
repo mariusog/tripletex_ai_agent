@@ -55,35 +55,98 @@ class BankReconciliationHandler(BaseHandler):
     def _process_customer_payment(
         self, api_client: TripletexClient, cp: dict[str, Any], results: dict
     ) -> None:
-        """Create customer, invoice, and register payment."""
+        """Find existing invoice and register payment. Create only if not found."""
         try:
+            from src.api_client import TripletexApiError
+
             customer_name = cp.get("customer", "")
             amount = cp.get("amount", 0)
             date = cp.get("date", "")
             inv_num = cp.get("invoiceNumber", "")
 
-            inv_result = create_full_invoice(
-                api_client,
-                {
-                    "customer": {"name": customer_name},
-                    "orderLines": [
-                        {
-                            "description": f"Faktura {inv_num}" if inv_num else "Faktura",
-                            "unitPriceExcludingVatCurrency": amount,
-                            "count": 1,
-                        }
-                    ],
-                    "register_payment": {"amount": amount, "paymentDate": date},
-                },
-            )
-            results["payments"].append(
-                {
-                    "customer": customer_name,
-                    "invoice_id": inv_result.invoice_id,
-                    "amount": amount,
-                    "status": "paid",
-                }
-            )
+            # Try to find existing invoice first
+            invoice_id = None
+            search: dict[str, Any] = {"count": 10}
+            if inv_num:
+                search["invoiceNumber"] = inv_num
+            # Search by customer name
+            if customer_name:
+                try:
+                    cust_resp = api_client.get(
+                        "/customer",
+                        params={"name": customer_name, "count": 5},
+                        fields="id,name",
+                    )
+                    for cv in cust_resp.get("values", []):
+                        if cv.get("name", "").strip().lower() == customer_name.strip().lower():
+                            search["customerId"] = cv["id"]
+                            break
+                except TripletexApiError:
+                    pass
+
+            if "customerId" in search or "invoiceNumber" in search:
+                try:
+                    inv_resp = api_client.get(
+                        "/invoice", params=search, fields="id,amount,amountOutstanding"
+                    )
+                    for inv in inv_resp.get("values", []):
+                        outstanding = inv.get("amountOutstanding") or inv.get("amount", 0)
+                        if outstanding > 0:
+                            invoice_id = inv["id"]
+                            break
+                except TripletexApiError:
+                    pass
+
+            if invoice_id:
+                # Register payment on existing invoice
+                pt_resp = api_client.get_cached(
+                    "invoice_payment_type",
+                    "/invoice/paymentType",
+                    params={"count": 1},
+                    fields="id",
+                )
+                pt_values = pt_resp.get("values", [])
+                pt_id = pt_values[0]["id"] if pt_values else 0
+                api_client.put(
+                    f"/invoice/{invoice_id}/:payment",
+                    params={
+                        "paymentDate": date,
+                        "paymentTypeId": pt_id,
+                        "paidAmount": amount,
+                    },
+                )
+                results["payments"].append(
+                    {
+                        "customer": customer_name,
+                        "invoice_id": invoice_id,
+                        "amount": amount,
+                        "status": "paid",
+                    }
+                )
+            else:
+                # No existing invoice — create new one with payment
+                inv_result = create_full_invoice(
+                    api_client,
+                    {
+                        "customer": {"name": customer_name},
+                        "orderLines": [
+                            {
+                                "description": f"Faktura {inv_num}" if inv_num else "Faktura",
+                                "unitPriceExcludingVatCurrency": amount,
+                                "count": 1,
+                            }
+                        ],
+                        "register_payment": {"amount": amount, "paymentDate": date},
+                    },
+                )
+                results["payments"].append(
+                    {
+                        "customer": customer_name,
+                        "invoice_id": inv_result.invoice_id,
+                        "amount": amount,
+                        "status": "paid",
+                    }
+                )
         except Exception as e:
             logger.warning("Customer payment failed for %s: %s", cp.get("customer"), e)
 
