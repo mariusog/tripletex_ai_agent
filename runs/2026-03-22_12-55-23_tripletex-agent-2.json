@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-03-22_12-55-23",
+  "prompt": "Opprett og send ein faktura til kunden Strandvik AS (org.nr 993504815) på 1800 kr eksklusiv MVA. Fakturaen gjeld Opplæring.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 31.58,
+  "service": "tripletex-agent-2",
+  "task_types": [
+    "create_invoice",
+    "send_invoice"
+  ],
+  "task_type": "multi",
+  "steps": 2,
+  "api_calls": 8,
+  "writes": 5,
+  "errors": 0,
+  "results": [
+    {
+      "id": 2147708072,
+      "action": "created"
+    },
+    {
+      "id": 2147708072,
+      "action": "sent"
+    }
+  ]
+}
