@@ -96,7 +96,18 @@ def _ensure_employee_ready(api_client: TripletexClient, emp_id: int) -> None:
             }
             if div_ref:
                 emp_data["division"] = div_ref
-            api_client.post("/employee/employment", data=emp_data)
+            new_emp = api_client.post("/employee/employment", data=emp_data)
+            # Division may not stick on POST — set it via PUT
+            new_emp_id = new_emp.get("value", {}).get("id")
+            if div_ref and new_emp_id:
+                try:
+                    api_client.put(
+                        f"/employee/employment/{new_emp_id}",
+                        data={"id": new_emp_id, "division": div_ref},
+                    )
+                    logger.info("Set division on employment %s", new_emp_id)
+                except TripletexApiError:
+                    logger.warning("Could not set division on %s", new_emp_id)
     except TripletexApiError as e:
         logger.warning("Failed to ensure employee %s ready: %s", emp_id, e)
 
