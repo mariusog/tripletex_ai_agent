@@ -6,6 +6,7 @@ Used by ledger.py, bank.py, reporting.py, dimension.py.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from typing import Any
 
@@ -202,9 +203,13 @@ def build_posting(
         result["vatType"] = vat_ref
     if supplier:
         result["supplier"] = supplier
-    # Department ref on posting (resolve name to ID if string)
+    # Department ref on posting — only for expense/cost accounts (4000+)
     dept = posting.get("department")
-    if dept:
+    acct_num_for_dept = 0
+    if acct:
+        with contextlib.suppress(TypeError, ValueError):
+            acct_num_for_dept = int(acct)
+    if dept and acct_num_for_dept >= 4000:
         if isinstance(dept, dict) and "id" in dept:
             result["department"] = dept
         elif isinstance(dept, str):
