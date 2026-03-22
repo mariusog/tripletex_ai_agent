@@ -23,14 +23,19 @@ class CreateEmployeeHandler(BaseHandler):
         "Each missing field loses points. You MUST find ALL of these: "
         "1) email (e-post, look for @), "
         "2) nationalIdentityNumber (personnummer/fødselsnummer/identitetsnummer, "
-        "11 digits like DDMMYYXXXXX), "
-        "3) bankAccountNumber (kontonummer/bankkonto, 11 digits), "
-        "4) dateOfBirth (fødselsdato), 5) startDate (tiltredelse/oppstart), "
-        "6) annualSalary (årslønn/grunnlønn), "
-        "7) employmentPercentage (stillingsprosent/stillingsdel), "
-        "8) hoursPerDay (arbeidstid per dag, 7.5 for 100%, 6.0 for 80%), "
-        "9) department (avdeling), 10) jobCode (stillingskode, 4-digit STYRK). "
-        "SCAN THE ENTIRE PDF — fields may be in tables, headers, or fine print."
+        "11 digits like DDMMYYXXXXX — derive dateOfBirth from first 6 digits), "
+        "3) bankAccountNumber (kontonummer/bankkonto, 11 digits like XXXX.XX.XXXXX), "
+        "4) dateOfBirth (fødselsdato — OR derive from personnummer DDMMYY), "
+        "5) startDate (tiltredelse/oppstart/ansettelsesdato), "
+        "6) annualSalary (årslønn/grunnlønn/fastlønn, number only), "
+        "7) employmentPercentage (stillingsprosent/stillingsdel, e.g. 100), "
+        "8) hoursPerDay (arbeidstid per dag — if not stated: 7.5 for 100%, "
+        "6.0 for 80%, scale proportionally), "
+        "9) department (avdeling/seksjon/enhet), "
+        "10) jobCode (stillingskode, 4-digit STYRK/occupation code), "
+        "11) phoneNumberMobile (mobilnummer/telefon). "
+        "SCAN THE ENTIRE PDF — fields may be in tables, headers, footers, "
+        "or fine print. Check BOTH pages if multi-page."
     )
     param_schema = {
         "firstName": ParamSpec(description="Employee first name"),
@@ -61,13 +66,35 @@ class CreateEmployeeHandler(BaseHandler):
         has_email = bool(params.get("email"))
         user_type = params.get("userType", "STANDARD" if has_email else "NO_ACCESS")
 
+        # Derive dateOfBirth from personnummer if not explicitly provided
+        dob = self.validate_date(params.get("dateOfBirth"), "dateOfBirth")
+        nin = params.get("nationalIdentityNumber", "")
+        if not dob and nin and len(str(nin)) >= 6:
+            digits = str(nin).replace(" ", "")
+            dd, mm, yy = digits[:2], digits[2:4], digits[4:6]
+            try:
+                # Century: individual digits (pos 6-8) determine century
+                year = int(yy)
+                if len(digits) >= 9:
+                    individ = int(digits[6:9])
+                    if individ < 500:
+                        century = 1900
+                    elif individ < 750 and year >= 54:
+                        century = 1800
+                    else:
+                        century = 2000 if year < 40 else 1900
+                else:
+                    century = 1900 if year > 25 else 2000
+                dob = f"{century + year}-{mm}-{dd}"
+                logger.info("Derived dateOfBirth %s from personnummer", dob)
+            except (ValueError, IndexError):
+                pass
+
         body: dict[str, Any] = {
             "firstName": params["firstName"],
             "lastName": params["lastName"],
             "userType": user_type,
-            "dateOfBirth": (
-                self.validate_date(params.get("dateOfBirth"), "dateOfBirth") or "1990-01-01"
-            ),
+            "dateOfBirth": dob or "1990-01-01",
         }
 
         for field in (
