@@ -103,18 +103,30 @@ class CreateVoucherHandler(BaseHandler):
         for field in ("description", "number", "tempNumber"):
             if field in params and params[field] is not None:
                 body[field] = params[field]
-        # Map supplier invoice number to externalVoucherNumber
+        # Map supplier invoice number
         inv_num = params.get("invoiceNumber") or params.get("invoice_number")
         if inv_num:
             body["externalVoucherNumber"] = str(inv_num)
-        # Map due date
-        due_date = self.validate_date(params.get("dueDate"), "dueDate")
-        if due_date:
-            body["dueDate"] = due_date
-        if "voucherType" in params:
-            body["typeId"] = int(params["voucherType"])
+            body["vendorInvoiceNumber"] = str(inv_num)
 
         supplier_ref = _resolve_supplier(api_client, params.get("supplier"))
+
+        # For supplier invoices, set voucherType to "Leverandørfaktura"
+        if supplier_ref or params.get("supplier") or params.get("has_attachments"):
+            try:
+                vt_resp = api_client.get_cached(
+                    "supplier_voucher_type",
+                    "/ledger/voucherType",
+                    params={"count": 20},
+                    fields="id,name",
+                )
+                for vt in vt_resp.get("values", []):
+                    vt_name = (vt.get("name") or "").lower()
+                    if "leverandør" in vt_name or "supplier" in vt_name:
+                        body["voucherType"] = {"id": vt["id"]}
+                        break
+            except Exception:
+                logger.debug("Could not look up supplier voucher type")
 
         customer_ref = None
         if params.get("customer"):
@@ -262,6 +274,9 @@ class CreateVoucherHandler(BaseHandler):
                     acct_num = 0
                 if customer_ref and 1500 <= acct_num <= 1599:
                     posting["customer"] = customer_ref
+                # Set invoice number on AP posting (2400)
+                if inv_num and 2400 <= acct_num <= 2499:
+                    posting["invoiceNumber"] = str(inv_num)
                 built.append(posting)
             body["postings"] = built
 
