@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-22_07-21-19",
+  "prompt": "Sett fastpris 274950 kr på prosjektet \"Nettbutikk-utvikling\" for Skogheim AS (org.nr 826912324). Prosjektleiar er Bjørn Kvamme (bjrn.kvamme@example.org). Fakturer kunden for 50 % av fastprisen som ei delbetaling.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 16.31,
+  "service": "tripletex-agent-2"
+}
