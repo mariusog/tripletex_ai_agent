@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-03-22_14-41-45",
+  "prompt": "Registre 26 horas para Lucía Martínez (lucia.martinez@example.org) en la actividad \"Utvikling\" del proyecto \"Desarrollo e-commerce\" para Montaña SL (org. nº 869049328). Tarifa por hora: 1100 NOK/h. Genere una factura de proyecto al cliente basada en las horas registradas.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 251.31,
+  "service": "tripletex-agent-2",
+  "task_types": [
+    "log_timesheet"
+  ],
+  "task_type": "log_timesheet",
+  "steps": 1,
+  "api_calls": 21,
+  "writes": 11,
+  "errors": 0,
+  "results": [
+    {
+      "action": "timesheet_logged"
+    }
+  ]
+}
