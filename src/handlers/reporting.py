@@ -55,7 +55,14 @@ class LedgerCorrectionHandler(BaseHandler):
         postings = params.get("postings", [])
         corrections = params.get("corrections", [])
         if not postings and corrections:
+            # Try structured conversion first
             postings = self._corrections_to_postings(corrections)
+            # Fallback: extract nested postings from corrections[].postings[]
+            if not postings:
+                for c in corrections:
+                    nested = c.get("postings", [])
+                    for p in nested:
+                        postings.append(p)
         if postings:
             body["postings"] = [
                 _build_posting(api_client, p, row=i + 1) for i, p in enumerate(postings)
@@ -76,7 +83,8 @@ class LedgerCorrectionHandler(BaseHandler):
         if not body.get("postings"):
             return {"error": "no_postings", "action": "correction_skipped"}
 
-        result = api_client.post("/ledger/voucher", data=body)
+        body = self.strip_none_values(body)
+        result = api_client.post("/ledger/voucher", data=body, params={"sendToLedger": "true"})
         value = result.get("value", {})
         logger.info("Created correction voucher id=%s", value.get("id"))
         return {"id": value.get("id"), "action": "correction_created"}
@@ -140,11 +148,18 @@ class LedgerCorrectionHandler(BaseHandler):
                     postings.append({"account": acct, "debit": abs(diff), "description": desc})
                     postings.append({"account": 1920, "credit": abs(diff), "description": desc})
             else:
-                # Generic fallback
+                # Generic fallback: handle debitAccount/creditAccount format
+                debit_acct = c.get("debitAccount") or c.get("debit_account")
+                credit_acct = c.get("creditAccount") or c.get("credit_account")
                 amt = c.get("amount", 0)
-                acct = c.get("account", c.get("debitAccount", 7300))
-                counter = c.get("counterAccount", c.get("creditAccount", 1920))
-                if amt:
+                if debit_acct and credit_acct and amt:
+                    postings.append({"account": debit_acct, "debit": abs(amt), "description": desc})
+                    postings.append(
+                        {"account": credit_acct, "credit": abs(amt), "description": desc}
+                    )
+                elif amt:
+                    acct = c.get("account", 7300)
+                    counter = c.get("counterAccount", 1920)
                     postings.append({"account": acct, "debit": abs(amt), "description": desc})
                     postings.append({"account": counter, "credit": abs(amt), "description": desc})
 

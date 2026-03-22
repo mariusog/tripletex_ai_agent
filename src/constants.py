@@ -140,6 +140,7 @@ TIER_3_TASKS = [
     "ledger_correction",
     "year_end_closing",
     "balance_sheet_report",
+    "cost_analysis",
 ]
 
 # All known task types

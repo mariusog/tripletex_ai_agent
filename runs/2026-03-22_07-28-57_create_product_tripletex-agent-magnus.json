@@ -1,0 +1,35 @@
+{
+  "timestamp": "2026-03-22 07:28:57",
+  "prompt": "Opprett produktet \"Analyserapport\" med produktnummer 1908. Prisen er 18050 kr eksklusiv MVA, og standard MVA-sats på 25 % skal nyttast.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2 git=unknown",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/ledger/vatType",
+      "status": 200,
+      "duration_s": 0.46
+    },
+    {
+      "method": "POST",
+      "endpoint": "/product",
+      "status": 201,
+      "duration_s": 0.49
+    }
+  ],
+  "errors": [],
+  "task_type": "create_product",
+  "params": {
+    "name": "Analyserapport",
+    "number": 1908,
+    "priceExcludingVatCurrency": 18050,
+    "vatType": "25"
+  },
+  "handler": "CreateProductHandler",
+  "total_api_calls": 2,
+  "total_duration_s": 3.36,
+  "result": {
+    "id": 84436190,
+    "action": "created"
+  },
+  "service": "tripletex-agent-magnus"
+}
