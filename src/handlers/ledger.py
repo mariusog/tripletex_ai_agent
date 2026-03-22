@@ -180,6 +180,27 @@ class CreateVoucherHandler(BaseHandler):
                     }
                 )
             else:
+                # Infer missing amount for salary accrual postings
+                acct = p.get("account")
+                amt = p.get("amount", p.get("amountGross", 0))
+                if not amt and acct:
+                    try:
+                        acct_num = int(acct)
+                    except (TypeError, ValueError):
+                        acct_num = 0
+                    if acct_num == 5000:
+                        inferred = self._infer_missing_amount(
+                            api_client, {"debitAccount": "5000", "creditAccount": "2900"}
+                        )
+                        if inferred:
+                            p["amount"] = inferred
+                    elif acct_num == 2900 and len(raw_postings) > 1:
+                        # Find matching 5000 posting to get the same amount
+                        for other in raw_postings:
+                            other_acct = other.get("account")
+                            if other_acct and str(other_acct) == "5000" and other.get("amount"):
+                                p["amount"] = -abs(other["amount"])
+                                break
                 if vat_rate and "vatRate" not in p and "vatType" not in p:
                     p["vatRate"] = vat_rate
                 postings.append(p)

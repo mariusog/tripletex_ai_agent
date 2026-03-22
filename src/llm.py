@@ -76,6 +76,15 @@ invoicing, you MUST decompose into the FULL workflow: create_project first, then
 for each employee, then create_voucher for supplier costs, then create_invoice. Do NOT just \
 create entities — execute the complete workflow.
 
+ACCOUNTING RULES:
+- For DEPRECIATION postings: debit the depreciation EXPENSE account (6010/6020/6030), \
+credit the ACCUMULATED DEPRECIATION account (1209 for machinery, 1249 for inventory, \
+1259 for software). NEVER credit account 1700 (prepaid expenses) for depreciation.
+- For PREPAID EXPENSE amortization: debit an operating expense account (6300 for rent, etc.), \
+credit 1700/1720. NEVER use 6010 for prepaid expense — 6010 is only for depreciation.
+- For SALARY ACCRUAL without specified amount: set amount to 0, it will be inferred from data.
+- ALWAYS use NUMERIC account codes (e.g. 6300, 1209), never text names.
+
 EFFICIENCY RULES:
 - Only POST/PUT/DELETE/PATCH calls count for efficiency scoring. GET requests are FREE.
 - Every 4xx error (400, 404, 422) reduces the efficiency bonus. Avoid trial-and-error.
