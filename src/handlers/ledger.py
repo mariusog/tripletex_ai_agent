@@ -196,14 +196,42 @@ class CreateVoucherHandler(BaseHandler):
         raw_postings = params.get("postings", [])
         raw_postings = self._fix_tax_amounts(api_client, raw_postings, date_val)
 
-        # Skip if ALL postings have zero amounts (LLM couldn't calculate)
+        # Try to infer missing amounts before giving up
         all_zero = all(
             not (p.get("amount") or p.get("amountGross") or p.get("debit") or p.get("credit"))
             for p in raw_postings
         )
         if all_zero and raw_postings:
-            logger.warning("All postings have zero amounts, skipping voucher")
-            return {"action": "skipped_zero_amounts"}
+            # Attempt inference for salary accruals (5000/2900)
+            for p in raw_postings:
+                # Try debitAccount/creditAccount format first
+                inferred = self._infer_missing_amount(api_client, p)
+                if inferred:
+                    p["amount"] = inferred
+                    all_zero = False
+                    break
+                # Try single account format (account=5000 → infer from balance sheet)
+                acct = p.get("account")
+                if acct:
+                    try:
+                        acct_num = int(acct)
+                    except (TypeError, ValueError):
+                        continue
+                    if 5000 <= acct_num <= 5099:
+                        inferred = self._infer_missing_amount(
+                            api_client, {"debitAccount": str(acct_num), "creditAccount": "2900"}
+                        )
+                        if inferred:
+                            p["amount"] = inferred
+                            all_zero = False
+                            # Also set matching 2900 posting amount
+                            for other in raw_postings:
+                                if str(other.get("account")) == "2900":
+                                    other["amount"] = -abs(inferred)
+                            break
+            if all_zero:
+                logger.warning("All postings have zero amounts, skipping voucher")
+                return {"action": "skipped_zero_amounts"}
 
         # Merge manual VAT split if present
         vat_rate = params.get("vatRate") or params.get("vat")
