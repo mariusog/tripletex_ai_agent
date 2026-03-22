@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from typing import Any
 
@@ -213,22 +214,20 @@ class CreateVoucherHandler(BaseHandler):
                 # Try single account format (account=5000 → infer from balance sheet)
                 acct = p.get("account")
                 if acct:
-                    try:
+                    with contextlib.suppress(TypeError, ValueError):
                         acct_num = int(acct)
-                    except (TypeError, ValueError):
-                        continue
-                    if 5000 <= acct_num <= 5099:
-                        inferred = self._infer_missing_amount(
-                            api_client, {"debitAccount": str(acct_num), "creditAccount": "2900"}
-                        )
-                        if inferred:
-                            p["amount"] = inferred
-                            all_zero = False
-                            # Also set matching 2900 posting amount
-                            for other in raw_postings:
-                                if str(other.get("account")) == "2900":
-                                    other["amount"] = -abs(inferred)
-                            break
+                        if 5000 <= acct_num <= 5099:
+                            inferred = self._infer_missing_amount(
+                                api_client,
+                                {"debitAccount": str(acct_num), "creditAccount": "2900"},
+                            )
+                            if inferred:
+                                p["amount"] = inferred
+                                all_zero = False
+                                for other in raw_postings:
+                                    if str(other.get("account")) == "2900":
+                                        other["amount"] = -abs(inferred)
+                                break
             if all_zero:
                 logger.warning("All postings have zero amounts, skipping voucher")
                 return {"action": "skipped_zero_amounts"}
@@ -476,14 +475,10 @@ class CreateVoucherHandler(BaseHandler):
             value = result.get("value", {})
             si_id = value.get("id")
             voucher_id = value.get("voucher", {}).get("id")
-            logger.info(
-                "Created supplier invoice id=%s voucher_id=%s", si_id, voucher_id
-            )
+            logger.info("Created supplier invoice id=%s voucher_id=%s", si_id, voucher_id)
             return {"id": si_id or voucher_id, "action": "created"}
         except TripletexApiError as e:
-            logger.warning(
-                "POST /supplierInvoice failed: %s, falling back to voucher", e
-            )
+            logger.warning("POST /supplierInvoice failed: %s, falling back to voucher", e)
             return None
 
     @staticmethod
