@@ -100,8 +100,10 @@ class LedgerCorrectionHandler(BaseHandler):
 
             if ctype == "wrong_account":
                 amt = c.get("amount", 0)
-                postings.append({"account": c["correctAccount"], "debit": amt, "description": desc})
-                postings.append({"account": c["wrongAccount"], "credit": amt, "description": desc})
+                correct = c.get("correctAccount") or c.get("correct_account")
+                wrong = c.get("wrongAccount") or c.get("wrong_account") or c.get("account")
+                postings.append({"account": correct, "debit": amt, "description": desc})
+                postings.append({"account": wrong, "credit": amt, "description": desc})
 
             elif ctype in (
                 "duplicate_voucher",
@@ -127,8 +129,8 @@ class LedgerCorrectionHandler(BaseHandler):
             elif ctype == "incorrect_amount":
                 diff = c.get("difference")
                 if diff is None:
-                    recorded = c.get("recordedAmount", 0)
-                    correct = c.get("correctAmount", 0)
+                    recorded = c.get("recordedAmount") or c.get("amount") or 0
+                    correct = c.get("correctAmount") or 0
                     diff = recorded - correct
                 acct = c.get("account", 7300)
                 if diff > 0:
