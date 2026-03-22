@@ -380,6 +380,8 @@ class TaskRouter:
         balance_sheets = [sr for sr in step_results if sr.get("action") == "report_retrieved"]
         if len(balance_sheets) < 2:
             return step_results
+        # Sort by dateFrom to ensure period1=earlier, period2=later
+        balance_sheets.sort(key=lambda bs: bs.get("dateFrom", ""))
         # Compare expense/cost accounts (4000-7999) between periods
         # Exclude 8000+ (financial items) and 3000- (revenue)
         period1 = {
