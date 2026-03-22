@@ -306,7 +306,9 @@ def _resolve_employee(api_client: TripletexClient, value: Any) -> dict[str, int]
                 pass
         # Fallback: search all employees for name match
         try:
-            all_resp = api_client.get("/employee", params={"count": 50}, fields="id,firstName,lastName")
+            all_resp = api_client.get(
+                "/employee", params={"count": 50}, fields="id,firstName,lastName"
+            )
             for v in all_resp.get("values", []):
                 vf = (v.get("firstName") or "").strip().lower()
                 vl = (v.get("lastName") or "").strip().lower()

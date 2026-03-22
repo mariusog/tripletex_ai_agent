@@ -156,7 +156,9 @@ class LedgerCorrectionHandler(BaseHandler):
                 amt = c.get("amount", 0)
                 if debit_acct and credit_acct and amt:
                     postings.append({"account": debit_acct, "debit": abs(amt), "description": desc})
-                    postings.append({"account": credit_acct, "credit": abs(amt), "description": desc})
+                    postings.append(
+                        {"account": credit_acct, "credit": abs(amt), "description": desc}
+                    )
                 elif amt:
                     acct = c.get("account", 7300)
                     counter = c.get("counterAccount", 1920)
