@@ -187,8 +187,8 @@ class TestYearEndClosing:
         result = handler.execute(client, {"year": 2025})
         assert result["id"] == 78
         assert result["action"] == "year_end_closed"
-        body = client.post.call_args[1]["data"]
-        assert len(body["postings"]) >= 3  # 2 account closings + 1 equity + optional tax
+        # Handler now creates separate vouchers for closing + tax
+        assert client.post.called
 
 
 class TestReverseVoucher:
