@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-22_01-50-08",
+  "prompt": "Opprett ein faktura til kunden Elvdal AS (org.nr 841457943) med tre produktlinjer: Vedlikehald (6897) til 17950 kr med 25 % MVA, Analyserapport (6588) til 10550 kr med 15 % MVA (næringsmiddel), og Skylagring (1052) til 5600 kr med 0 % MVA (avgiftsfri).",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 21.49,
+  "service": "tripletex-agent-2"
+}
