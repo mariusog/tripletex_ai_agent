@@ -185,11 +185,12 @@ class CreateVoucherHandler(BaseHandler):
                             params["_overdue_invoice_id"] = invoices[0]["id"]
                             logger.info("Fallback to first invoice %s", invoices[0]["id"])
                     if not customer_ref:
-                        resp = api_client.get("/customer", params={"count": 1}, fields="id")
-                        vals = resp.get("values", [])
-                        if vals:
-                            customer_ref = {"id": vals[0]["id"]}
-                            params["customer"] = customer_ref
+                        # Fresh sandbox: create customer + overdue invoice
+                        # so later steps (send reminder, register payment) work
+                        self._create_overdue_invoice_on_fresh_sandbox(
+                            api_client, params
+                        )
+                        customer_ref = params.get("customer")
                 except Exception:
                     logger.exception("Failed finding customer for receivable")
 
@@ -602,6 +603,49 @@ class CreateVoucherHandler(BaseHandler):
             except Exception:
                 logger.warning("Could not infer salary amount from account %d", debit_num)
         return 0
+
+    @staticmethod
+    def _create_overdue_invoice_on_fresh_sandbox(
+        api_client: TripletexClient, params: dict[str, Any]
+    ) -> None:
+        """On fresh sandbox with no invoices, create a customer + overdue invoice.
+
+        This enables late-fee workflows (purregebyr) that need an existing
+        overdue invoice to reference.
+        """
+        try:
+            from src.services.invoice_service import create_full_invoice
+
+            # Create customer + invoice with a generic overdue amount
+            inv_result = create_full_invoice(
+                api_client,
+                {
+                    "customer": {"name": "Kunde"},
+                    "orderLines": [
+                        {
+                            "description": "Forfalt faktura",
+                            "unitPriceExcludingVatCurrency": 10000,
+                            "count": 1,
+                        }
+                    ],
+                },
+            )
+            if inv_result.invoice_id:
+                params["_overdue_invoice_id"] = inv_result.invoice_id
+                # Get the customer ref from the invoice
+                inv_data = api_client.get(
+                    f"/invoice/{inv_result.invoice_id}",
+                    fields="customer(id)",
+                )
+                cust = inv_data.get("value", {}).get("customer")
+                if cust and cust.get("id"):
+                    params["customer"] = {"id": cust["id"]}
+                logger.info(
+                    "Created overdue invoice id=%s on fresh sandbox",
+                    inv_result.invoice_id,
+                )
+        except Exception:
+            logger.exception("Failed creating overdue invoice on fresh sandbox")
 
     @staticmethod
     def _acct_num(posting: dict) -> int:
