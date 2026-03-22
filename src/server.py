@@ -6,7 +6,6 @@ and executes them via the Tripletex REST API.
 
 from __future__ import annotations
 
-import asyncio
 import json as _json
 import logging
 import os
@@ -19,9 +18,6 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from src.constants import LOG_FORMAT, LOG_LEVEL, SERVER_HOST, SERVER_PORT
 from src.models import SolveRequest, SolveResponse
-
-# Serialize solve requests — only one at a time to avoid proxy session conflicts
-_solve_lock = asyncio.Lock()
 
 logging.basicConfig(level=LOG_LEVEL, format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
@@ -50,8 +46,7 @@ async def solve(
     _auth: None = Depends(verify_api_key),
 ) -> SolveResponse:
     """Receive an accounting task prompt and execute it via Tripletex API."""
-    async with _solve_lock:
-        return await _solve_impl(request)
+    return await _solve_impl(request)
 
 
 async def _solve_impl(request: SolveRequest) -> SolveResponse:
