@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-03-22_10-59-20",
+  "prompt": "Enviámos uma fatura de 14566 EUR ao Horizonte Lda (org. nº 846332855) quando a taxa de câmbio era 10.56 NOK/EUR. O cliente pagou agora, mas a taxa é 10.33 NOK/EUR. Registe o pagamento e lance a diferença cambial (disagio) na conta correta.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 17.39,
+  "service": "tripletex-agent-2",
+  "task_types": [
+    "register_payment",
+    "create_voucher"
+  ],
+  "task_type": "multi",
+  "steps": 2,
+  "api_calls": 11,
+  "writes": 2,
+  "errors": 0,
+  "results": [
+    {
+      "id": 2147697564,
+      "action": "payment_registered"
+    },
+    {
+      "id": 609408692,
+      "action": "created"
+    }
+  ]
+}

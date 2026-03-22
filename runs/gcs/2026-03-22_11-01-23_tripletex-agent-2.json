@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-03-22_11-01-23",
+  "prompt": "Create a custom accounting dimension \"Produktlinje\" with the values \"Avansert\" and \"Premium\". Then post a voucher on account 6300 for 25750 NOK, linked to the dimension value \"Premium\".",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 11.26,
+  "service": "tripletex-agent-2",
+  "task_types": [
+    "create_dimension_voucher"
+  ],
+  "task_type": "create_dimension_voucher",
+  "steps": 1,
+  "api_calls": 12,
+  "writes": 4,
+  "errors": 0,
+  "results": [
+    {
+      "id": 609409653,
+      "action": "voucher_with_dimension_created"
+    }
+  ]
+}
