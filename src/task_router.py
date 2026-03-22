@@ -274,6 +274,15 @@ class TaskRouter:
                     "customer(id,name),invoiceDate",
                 )
                 logger.info("VERIFY invoice: %s", inv.get("value", {}))
+            # Also verify overdue invoice if present
+            overdue_id = context.get("_overdue_invoice_id")
+            if overdue_id and overdue_id != inv_id:
+                ov = api_client.get(
+                    f"/invoice/{overdue_id}",
+                    fields="id,invoiceNumber,amount,amountOutstanding,"
+                    "customer(id,name),invoiceDate",
+                )
+                logger.info("VERIFY overdue invoice: %s", ov.get("value", {}))
 
             # Verify created voucher
             v_id = context.get("voucherId")
