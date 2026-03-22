@@ -84,7 +84,11 @@ class CreateProjectHandler(BaseHandler):
             if bool_field in params:
                 body[bool_field] = params[bool_field]
 
-        # fixedPrice is not a direct field on ProjectDTO — ignore for now
+        # fixedprice (lowercase) is a valid Project field
+        fixed = params.get("fixedPrice") or params.get("fixedprice") or params.get("budget")
+        if fixed:
+            body["fixedprice"] = float(fixed)
+            body["isFixedPrice"] = True
 
         # Resolve customer (search first, create if not found)
         if "customer" in params:
