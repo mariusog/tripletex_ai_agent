@@ -129,13 +129,22 @@ class RegisterPaymentHandler(BaseHandler):
         # If no existing invoice, create one first (full flow)
         if not invoice_id and params.get("customer"):
             pay_amount = params.get("amount", 0)
-            # Detect reversal from flag, negative amount, or description keywords
-            desc_lower = (params.get("description") or "").lower()
-            reversal_keywords = ("reverser", "returnert", "reversal", "reversed", "return")
+            # Detect reversal from flag, negative amount, or any text field keywords
+            all_text = " ".join(
+                str(v) for v in params.values() if isinstance(v, str)
+            ).lower()
+            # Also check orderLines descriptions
+            for ol in params.get("orderLines", []):
+                if isinstance(ol, dict):
+                    all_text += " " + (ol.get("description") or "").lower()
+            reversal_keywords = (
+                "reverser", "returnert", "reversal", "reversed", "return",
+                "tilbakefør", "refund", "rückbuchung", "annulation",
+            )
             is_reversal = (
                 params.get("reversal")
                 or (pay_amount and pay_amount < 0)
-                or any(kw in desc_lower for kw in reversal_keywords)
+                or any(kw in all_text for kw in reversal_keywords)
             )
             abs_amount = abs(pay_amount) if pay_amount else 0
 

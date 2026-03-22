@@ -36,9 +36,11 @@ CLASSIFICATION RULES (important!):
 - If the task mentions creating an order/invoice AND registering payment, classify as \
 "create_invoice" and include payment info in register_payment param
 - If the task ONLY creates an order (no invoice), classify as "create_order"
-- If the task mentions REVERSING a payment, returned payment, or "reversering av betaling", \
-classify as "register_payment" with negative amount and "reversal": true. \
-Include "orderLines" with the product/service name and amount from the original invoice.
+- PAYMENT REVERSAL (CRITICAL): If the task mentions reversing/returning a payment, \
+bank return, "returned by the bank", "reversering", "returnert", "rückbuchung", \
+"devolución", "devolução", "annulation" — you MUST set "reversal": true AND \
+make amount NEGATIVE. Without reversal:true the handler will register a normal \
+payment instead of reversing! Include "orderLines" with the product/service name.
 - Do NOT classify payment reversals as "reverse_voucher" — use "register_payment" instead
 - If the task mentions a customer by name, pass as "customer" object: \
 {"name": "...", "organizationNumber": "..."} (include org number if mentioned)
