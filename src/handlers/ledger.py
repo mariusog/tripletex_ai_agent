@@ -128,15 +128,19 @@ class CreateVoucherHandler(BaseHandler):
             )
             if needs_customer:
                 try:
-                    # Search for invoices with outstanding amount (overdue)
                     inv_resp = api_client.get(
                         "/invoice",
                         params={"count": 20},
-                        fields="id,customer(id,name),amountOutstanding,amountRest",
+                        fields="id,customer(id,name),amount,amountOutstanding",
                     )
-                    for inv in inv_resp.get("values", []):
-                        outstanding = inv.get("amountOutstanding") or inv.get("amountRest") or 0
-                        if outstanding > 0:
+                    invoices = inv_resp.get("values", [])
+                    logger.info("Overdue search: found %d invoices", len(invoices))
+                    for inv in invoices:
+                        outstanding = inv.get("amountOutstanding") or 0
+                        # If amountOutstanding not available, treat any invoice as candidate
+                        if outstanding > 0 or (
+                            inv.get("amount", 0) > 0 and "amountOutstanding" not in inv
+                        ):
                             cust = inv.get("customer")
                             if cust and cust.get("id"):
                                 customer_ref = {"id": cust["id"]}
@@ -148,6 +152,14 @@ class CreateVoucherHandler(BaseHandler):
                                     cust["id"],
                                 )
                                 break
+                    # Fallback: use first invoice's customer
+                    if not customer_ref and invoices:
+                        cust = invoices[0].get("customer")
+                        if cust and cust.get("id"):
+                            customer_ref = {"id": cust["id"]}
+                            params["customer"] = customer_ref
+                            params["_overdue_invoice_id"] = invoices[0]["id"]
+                            logger.info("Fallback to first invoice %s", invoices[0]["id"])
                     if not customer_ref:
                         resp = api_client.get("/customer", params={"count": 1}, fields="id")
                         vals = resp.get("values", [])
@@ -155,7 +167,7 @@ class CreateVoucherHandler(BaseHandler):
                             customer_ref = {"id": vals[0]["id"]}
                             params["customer"] = customer_ref
                 except Exception:
-                    logger.warning("Could not find customer for receivable posting")
+                    logger.exception("Failed finding customer for receivable")
 
         # Override tax amounts with actual P&L calculation
         raw_postings = params.get("postings", [])
