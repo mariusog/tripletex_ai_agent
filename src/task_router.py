@@ -343,14 +343,24 @@ class TaskRouter:
                     proj_result.get("id"),
                     elapsed,
                 )
-                # Create activity for this project
+                # Create activity and link to project
                 act_result = activity_handler.execute(api_client, {"name": name})
+                act_id = act_result.get("id")
                 logger.info(
                     "Expense activity R%d '%s' id=%s",
                     i + 1,
                     name,
-                    act_result.get("id"),
+                    act_id,
                 )
+                proj_id = proj_result.get("id")
+                if proj_id and act_id:
+                    try:
+                        api_client.post(
+                            f"/project/{proj_id}/projectActivity",
+                            data={"activity": {"id": act_id}},
+                        )
+                    except Exception:
+                        logger.warning("Could not link activity to project")
             except Exception:
                 logger.exception("Expense analysis step %d failed", i + 1)
 
