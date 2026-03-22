@@ -66,6 +66,8 @@ _ACCOUNT_NUMBER_NAMES: dict[int, str] = {
     7150: "Diettkostnad",
     7300: "Salgskostnad",
     7350: "Representasjon",
+    8060: "Agio (valutagevinst)",
+    8160: "Disagio (valutatap)",
     8700: "Skattekostnad",
 }
 

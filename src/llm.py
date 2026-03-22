@@ -84,6 +84,8 @@ credit the ACCUMULATED DEPRECIATION account (1209 for machinery, 1249 for invent
 credit 1700/1720. NEVER use 6010 for prepaid expense — 6010 is only for depreciation.
 - For SALARY ACCRUAL without specified amount: set amount to 0, it will be inferred from data.
 - ALWAYS use NUMERIC account codes (e.g. 6300, 1209), never text names.
+- For exchange rate differences: use account 8060 for AGIO (gain), 8160 for DISAGIO (loss).
+- Accumulated depreciation accounts: 1209 (machinery), 1249 (inventory), 1259 (software).
 
 EFFICIENCY RULES:
 - Only POST/PUT/DELETE/PATCH calls count for efficiency scoring. GET requests are FREE.
