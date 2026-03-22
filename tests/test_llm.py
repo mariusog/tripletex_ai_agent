@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.llm import LLMClient
-from src.models import FileAttachment, TaskClassification
+from src.models import FileAttachment
 
 
 @pytest.fixture
@@ -20,7 +20,7 @@ def llm_client() -> LLMClient:
 
 
 def _make_response(text: str) -> MagicMock:
-    """Build a mock Claude API response with tool_use content."""
+    """Build a mock Claude API response with tool_use content (new tasks array format)."""
     import json as _json
 
     block = MagicMock()
@@ -30,6 +30,9 @@ def _make_response(text: str) -> MagicMock:
         parsed = _json.loads(text.strip().strip("`").removeprefix("json\n"))
     except _json.JSONDecodeError:
         parsed = {"task_type": "unknown", "params": {}}
+    # Wrap single-task format into tasks array for new schema
+    if "tasks" not in parsed and "task_type" in parsed:
+        parsed = {"tasks": [parsed]}
     block.input = parsed
     response = MagicMock()
     response.content = [block]
@@ -49,10 +52,10 @@ class TestClassifyAndExtract:
         mock_resp = _make_response(response_text)
         llm_client._client.messages.create = MagicMock(return_value=mock_resp)
 
-        result = llm_client.classify_and_extract("Create employee John Doe")
-        assert isinstance(result, TaskClassification)
-        assert result.task_type == "create_employee"
-        assert result.params["firstName"] == "John"
+        results = llm_client.classify_and_extract("Create employee John Doe")
+        assert isinstance(results, list)
+        assert results[0].task_type == "create_employee"
+        assert results[0].params["firstName"] == "John"
 
     def test_handles_markdown_code_fences(self, llm_client: LLMClient) -> None:
         inner = json.dumps({"task_type": "create_customer", "params": {}})
@@ -60,24 +63,24 @@ class TestClassifyAndExtract:
         mock_resp = _make_response(response_text)
         llm_client._client.messages.create = MagicMock(return_value=mock_resp)
 
-        result = llm_client.classify_and_extract("Create a new customer")
-        assert result.task_type == "create_customer"
+        results = llm_client.classify_and_extract("Create a new customer")
+        assert results[0].task_type == "create_customer"
 
     def test_unknown_task_type(self, llm_client: LLMClient) -> None:
         response_text = json.dumps({"task_type": "unknown", "params": {}})
         mock_resp = _make_response(response_text)
         llm_client._client.messages.create = MagicMock(return_value=mock_resp)
 
-        result = llm_client.classify_and_extract("Do something weird")
-        assert result.task_type == "unknown"
+        results = llm_client.classify_and_extract("Do something weird")
+        assert results[0].task_type == "unknown"
 
     def test_missing_task_type_defaults_unknown(self, llm_client: LLMClient) -> None:
         response_text = json.dumps({"params": {"name": "Test"}})
         mock_resp = _make_response(response_text)
         llm_client._client.messages.create = MagicMock(return_value=mock_resp)
 
-        result = llm_client.classify_and_extract("Some prompt")
-        assert result.task_type == "unknown"
+        results = llm_client.classify_and_extract("Some prompt")
+        assert results[0].task_type == "unknown"
 
 
 class TestBuildMessages:
@@ -150,8 +153,8 @@ class TestRetryBehavior:
             body=None,
         )
         llm_client._client.messages.create = MagicMock(side_effect=[error, success_resp])
-        result = llm_client.classify_and_extract("test")
-        assert result.task_type == "create_employee"
+        results = llm_client.classify_and_extract("test")
+        assert results[0].task_type == "create_employee"
 
     def test_no_retry_on_400(self, llm_client: LLMClient) -> None:
         import anthropic
@@ -172,8 +175,8 @@ class TestRetryBehavior:
         success = _make_response(json.dumps({"task_type": "create_employee", "params": {}}))
         conn_err = anthropic.APIConnectionError(request=MagicMock())
         llm_client._client.messages.create = MagicMock(side_effect=[conn_err, success])
-        result = llm_client.classify_and_extract("test")
-        assert result.task_type == "create_employee"
+        results = llm_client.classify_and_extract("test")
+        assert results[0].task_type == "create_employee"
 
 
 class TestNorwegianAndTimeout:
@@ -189,9 +192,9 @@ class TestNorwegianAndTimeout:
         mock_resp = _make_response(response_text)
         llm_client._client.messages.create = MagicMock(return_value=mock_resp)
 
-        result = llm_client.classify_and_extract("Opprett en ny ansatt med navn Ola Nordmann")
-        assert result.task_type == "create_employee"
-        assert result.params["firstName"] == "Ola"
+        results = llm_client.classify_and_extract("Opprett en ny ansatt med navn Ola Nordmann")
+        assert results[0].task_type == "create_employee"
+        assert results[0].params["firstName"] == "Ola"
 
     def test_timeout_raises_error(self, llm_client: LLMClient) -> None:
         import anthropic

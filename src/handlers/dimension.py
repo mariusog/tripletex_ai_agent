@@ -8,7 +8,8 @@ from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
 from src.handlers.base import BaseHandler, register_handler
-from src.handlers.ledger import _build_posting, _resolve_account
+from src.services.posting_builder import build_posting as _build_posting
+from src.services.posting_builder import resolve_account as _resolve_account
 
 logger = logging.getLogger(__name__)
 
@@ -17,11 +18,11 @@ def _find_or_create_dimension(api_client: TripletexClient, name: str) -> tuple[i
     """Find or create an accounting dimension by name. Returns (id, index)."""
     resp = api_client.get(
         "/ledger/accountingDimensionName",
-        fields="id,dimensionName,number",
+        fields="id,dimensionName",
     )
-    for dim in resp.get("values", []):
+    for i, dim in enumerate(resp.get("values", []), start=1):
         if (dim.get("dimensionName") or "").strip().lower() == name.strip().lower():
-            return dim["id"], dim.get("number", 1)
+            return dim["id"], i
 
     result = api_client.post(
         "/ledger/accountingDimensionName",
@@ -29,7 +30,13 @@ def _find_or_create_dimension(api_client: TripletexClient, name: str) -> tuple[i
     )
     value = result.get("value", {})
     dim_id = value.get("id", 0)
-    dim_index = value.get("number", 1)
+    # Re-fetch to determine the index position
+    all_dims = api_client.get("/ledger/accountingDimensionName", fields="id")
+    dim_index = 1
+    for i, d in enumerate(all_dims.get("values", []), start=1):
+        if d.get("id") == dim_id:
+            dim_index = i
+            break
     logger.info("Created dimension '%s' id=%s index=%s", name, dim_id, dim_index)
     return dim_id, dim_index
 
@@ -67,12 +74,11 @@ def _find_or_create_dimension_value(
 class CreateDimensionVoucherHandler(BaseHandler):
     """Create accounting dimensions with values, then post a voucher linked to them."""
 
+    tier = 3
+    description = "Create dimension with values and linked voucher"
+
     def get_task_type(self) -> str:
         return "create_dimension_voucher"
-
-    @property
-    def required_params(self) -> list[str]:
-        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         today = dt_date.today().isoformat()
@@ -111,6 +117,23 @@ class CreateDimensionVoucherHandler(BaseHandler):
 
         # Step 2: Create voucher with dimension if postings provided
         postings = params.get("postings", [])
+        # Handle LLM sending voucher info as a sub-object
+        voucher_info = params.get("voucher", {})
+        if not postings and voucher_info:
+            acct = voucher_info.get("account", 7300)
+            amt = voucher_info.get("amount", 0)
+            linked_value = linked_value or voucher_info.get("dimensionValue", "")
+            if linked_value and not linked_val_id:
+                linked_val_id = value_ids.get(linked_value.lower())
+                if not linked_val_id:
+                    linked_val_id = _find_or_create_dimension_value(
+                        api_client, dim_index, linked_value
+                    )
+            if amt:
+                postings = [
+                    {"account": acct, "amount": amt},
+                    {"account": 1920, "amount": -amt},
+                ]
         if not postings:
             return {
                 "dimensionId": dim_id,

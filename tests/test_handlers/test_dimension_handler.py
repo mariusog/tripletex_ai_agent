@@ -20,19 +20,32 @@ class TestFindOrCreateDimension:
 
         client = MagicMock()
         client.get.return_value = sample_api_response(
-            values=[{"id": 5, "dimensionName": "Region", "number": 2}]
+            values=[
+                {"id": 3, "dimensionName": "Other"},
+                {"id": 5, "dimensionName": "Region"},
+            ]
         )
         dim_id, dim_index = _find_or_create_dimension(client, "Region")
         assert dim_id == 5
-        assert dim_index == 2
+        assert dim_index == 2  # second in list
         client.post.assert_not_called()
 
     def test_creates_new_dimension(self):
         from src.handlers.dimension import _find_or_create_dimension
 
         client = MagicMock()
-        client.get.return_value = sample_api_response(values=[])
-        client.post.return_value = sample_api_response(value={"id": 10, "number": 3})
+        # First GET: search existing (none found), POST: create, second GET: re-fetch all
+        client.get.side_effect = [
+            sample_api_response(values=[]),
+            sample_api_response(
+                values=[
+                    {"id": 1},
+                    {"id": 2},
+                    {"id": 10},
+                ]
+            ),
+        ]
+        client.post.return_value = sample_api_response(value={"id": 10})
         dim_id, dim_index = _find_or_create_dimension(client, "Segment")
         assert dim_id == 10
         assert dim_index == 3

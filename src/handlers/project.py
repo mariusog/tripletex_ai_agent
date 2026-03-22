@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from src.api_client import TripletexClient
-from src.handlers.base import BaseHandler, register_handler
+from src.handlers.base import BaseHandler, ParamSpec, register_handler
 from src.handlers.entity_resolver import resolve as _resolve
 
 logger = logging.getLogger(__name__)
@@ -16,35 +16,85 @@ logger = logging.getLogger(__name__)
 class CreateProjectHandler(BaseHandler):
     """POST /project with extracted fields. 1 API call."""
 
+    tier = 1
+    description = "Create a new project"
+    param_schema = {
+        "name": ParamSpec(description="Project name"),
+        "number": ParamSpec(required=False),
+        "startDate": ParamSpec(required=False, type="date"),
+        "endDate": ParamSpec(required=False, type="date"),
+        "customer": ParamSpec(required=False, description="Customer name or ref"),
+        "projectManager": ParamSpec(
+            required=False,
+            description="PM as {firstName, lastName, email} — always include email if mentioned",
+        ),
+    }
+
     def get_task_type(self) -> str:
         return "create_project"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["name"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         import secrets
         from datetime import date as dt_date
 
-        from src.api_client import TripletexApiError
+        # Resolve PM: use the requested PM, fall back to account owner
+        emp_search = api_client.get_cached(
+            "account_owner", "/employee", params={"count": 1}, fields="id"
+        )
+        emp_values = emp_search.get("values", [])
+        pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
 
-        # Resolve project manager — use the requested PM directly
         pm = params.get("projectManager")
-        pm_ref = None
-        if pm and isinstance(pm, dict) and "id" not in pm:
-            try:
-                pm_ref = _resolve(api_client, "employee", pm)
-            except Exception:
-                logger.warning("PM employee resolution failed")
-
-        # Fall back to account owner if PM couldn't be resolved
-        if not pm_ref or not pm_ref.get("id"):
-            emp_search = api_client.get_cached(
-                "account_owner", "/employee", params={"count": 1}, fields="id"
-            )
-            emp_values = emp_search.get("values", [])
-            pm_ref = {"id": emp_values[0]["id"]} if emp_values else {"id": 0}
+        if pm:
+            if isinstance(pm, str):
+                parts = pm.strip().split()
+                if len(parts) >= 2:
+                    pm = {"firstName": parts[0], "lastName": " ".join(parts[1:])}
+                else:
+                    pm = {"firstName": pm}
+            if isinstance(pm, dict) and "email" not in pm:
+                pm_email = params.get("projectManagerEmail") or params.get("pmEmail")
+                if pm_email:
+                    pm["email"] = pm_email
+            if isinstance(pm, dict) and "id" not in pm:
+                # Light-weight PM resolution: search first, create minimal if needed
+                try:
+                    pm_email = pm.get("email")
+                    pm_first = pm.get("firstName", "")
+                    pm_last = pm.get("lastName", "")
+                    found = False
+                    if pm_email:
+                        resp = api_client.get(
+                            "/employee", params={"email": pm_email, "count": 1}, fields="id"
+                        )
+                        if resp.get("values"):
+                            pm_ref = {"id": resp["values"][0]["id"]}
+                            found = True
+                    if not found and pm_first:
+                        resp = api_client.get(
+                            "/employee",
+                            params={"firstName": pm_first, "lastName": pm_last, "count": 1},
+                            fields="id",
+                        )
+                        if resp.get("values"):
+                            pm_ref = {"id": resp["values"][0]["id"]}
+                            found = True
+                    if not found:
+                        # Create minimal employee (no _ensure_employee_ready overhead)
+                        emp_body: dict[str, Any] = {
+                            "firstName": pm_first or "PM",
+                            "lastName": pm_last or "Manager",
+                            "dateOfBirth": "1990-01-01",
+                            "userType": "STANDARD" if pm_email else "NO_ACCESS",
+                        }
+                        if pm_email:
+                            emp_body["email"] = pm_email
+                        res = api_client.post("/employee", data=emp_body)
+                        emp_id = res.get("value", {}).get("id")
+                        if emp_id:
+                            pm_ref = {"id": emp_id}
+                except Exception:
+                    logger.warning("PM employee resolution failed")
 
         proj_num = str(params.get("number", secrets.randbelow(90000) + 10000))
 
@@ -66,23 +116,16 @@ class CreateProjectHandler(BaseHandler):
             if bool_field in params:
                 body[bool_field] = params[bool_field]
 
-        # Always create customer if specified (competition checks attributes)
+        # fixedprice (lowercase) is a valid Project field
+        fixed = params.get("fixedPrice") or params.get("fixedprice") or params.get("budget")
+        if fixed:
+            body["fixedprice"] = float(fixed)
+            body["isFixedPrice"] = True
+
+        # Resolve customer (search first, create if not found)
         if "customer" in params:
             cust = params["customer"]
-            if isinstance(cust, dict) and "id" not in cust:
-                cust_name = cust.get("name", "")
-                cust_body: dict[str, Any] = {"name": cust_name}
-                if cust.get("organizationNumber"):
-                    cust_body["organizationNumber"] = str(cust["organizationNumber"])
-                if cust.get("email"):
-                    cust_body["email"] = cust["email"]
-                try:
-                    cust_result = api_client.post("/customer", data=cust_body)
-                    body["customer"] = {"id": cust_result.get("value", {}).get("id")}
-                except TripletexApiError:
-                    body["customer"] = _resolve(api_client, "customer", cust)
-            else:
-                body["customer"] = self.ensure_ref(cust, "customer")
+            body["customer"] = _resolve(api_client, "customer", cust)
 
         if "department" in params:
             body["department"] = self.ensure_ref(params["department"], "department")
@@ -114,12 +157,11 @@ def _find_project(api_client: TripletexClient, params: dict[str, Any]) -> dict[s
 class UpdateProjectHandler(BaseHandler):
     """GET /project (search by name or ID) then PUT. 2 API calls."""
 
+    tier = 2
+    description = "Update an existing project"
+
     def get_task_type(self) -> str:
         return "update_project"
-
-    @property
-    def required_params(self) -> list[str]:
-        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         project = _find_project(api_client, params)
@@ -133,7 +175,7 @@ class UpdateProjectHandler(BaseHandler):
         elif "name" in params and params["name"] != project.get("name"):
             project["name"] = params["name"]
 
-        for field in ("number", "isClosed", "isInternal"):
+        for field in ("number", "isClosed", "isInternal", "fixedPrice"):
             if field in params:
                 project[field] = params[field]
 
@@ -154,6 +196,20 @@ class UpdateProjectHandler(BaseHandler):
             else:
                 project["customer"] = self.ensure_ref(cust, "customer")
 
+        # Strip internal read-only fields that cause 422 on PUT
+        for internal in (
+            "projectRateTypes",
+            "projectHourlyRates",
+            "projectActivities",
+            "displayName",
+            "description",
+        ):
+            project.pop(internal, None)
+
+        # fixedPrice must be numeric, not a nested object
+        if "fixedPrice" in project and isinstance(project["fixedPrice"], dict):
+            project.pop("fixedPrice", None)
+
         result = api_client.put(f"/project/{proj_id}", data=project)
         logger.info("Updated project id=%s", proj_id)
         return {"id": proj_id, "action": "updated", "value": result.get("value", {})}
@@ -163,12 +219,12 @@ class UpdateProjectHandler(BaseHandler):
 class LinkProjectCustomerHandler(BaseHandler):
     """Find project by name/ID, resolve customer, then PUT. 2-3 API calls."""
 
+    tier = 2
+    description = "Link a customer to a project"
+    param_schema = {"customer": ParamSpec(description="Customer name or ref")}
+
     def get_task_type(self) -> str:
         return "link_project_customer"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["customer"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         proj_data = _find_project(api_client, params)
@@ -182,6 +238,8 @@ class LinkProjectCustomerHandler(BaseHandler):
         else:
             proj_data["customer"] = self.ensure_ref(cust, "customer")
 
+        for internal in ("projectRateTypes", "projectHourlyRates"):
+            proj_data.pop(internal, None)
         api_client.put(f"/project/{proj_id}", data=proj_data)
         logger.info("Linked customer to project id=%s", proj_id)
         return {"id": proj_id, "action": "customer_linked"}
@@ -191,17 +249,17 @@ class LinkProjectCustomerHandler(BaseHandler):
 class CreateActivityHandler(BaseHandler):
     """POST /activity with name and optional fields. 1 API call."""
 
+    tier = 2
+    description = "Create a new activity"
+    param_schema = {"name": ParamSpec(description="Activity name")}
+
     def get_task_type(self) -> str:
         return "create_activity"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["name"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         body: dict[str, Any] = {
             "name": params["name"],
-            "activityType": params.get("activityType", "GENERAL_ACTIVITY"),
+            "activityType": params.get("activityType", "PROJECT_GENERAL_ACTIVITY"),
         }
 
         for field in ("number", "description"):

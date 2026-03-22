@@ -1,0 +1,49 @@
+{
+  "timestamp": "2026-03-21 07:36:08",
+  "prompt": "Registrer leverandøren Tindra AS med organisasjonsnummer 888286195. E-post: faktura@tindra.no.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "POST",
+      "endpoint": "/supplier",
+      "status": 403,
+      "duration_s": 0.06
+    }
+  ],
+  "errors": [
+    {
+      "method": "POST",
+      "endpoint": "/supplier",
+      "status": 403,
+      "duration_s": 0.06
+    }
+  ],
+  "task_type": "register_payment",
+  "params": {
+    "customer": {
+      "name": "Vestfjord AS",
+      "organizationNumber": "880860666"
+    },
+    "amount": -16000,
+    "reversal": true,
+    "description": "Reversering av betaling - returnert av banken",
+    "orderLines": [
+      {
+        "product": {
+          "name": "Analyserapport"
+        },
+        "count": 1,
+        "unitPriceExcludingVatCurrency": 16000
+      }
+    ]
+  },
+  "error_details": [
+    {
+      "status": 403,
+      "endpoint": "POST /supplier",
+      "message": " | validation: []"
+    }
+  ],
+  "status": "error",
+  "service": "tripletex-agent-2"
+}

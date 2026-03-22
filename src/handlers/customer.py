@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from src.api_client import TripletexClient
-from src.handlers.base import BaseHandler, register_handler
+from src.handlers.base import BaseHandler, ParamSpec, register_handler
 
 logger = logging.getLogger(__name__)
 
@@ -15,12 +15,17 @@ logger = logging.getLogger(__name__)
 class CreateCustomerHandler(BaseHandler):
     """POST /customer with extracted fields. 1 API call."""
 
+    tier = 1
+    description = "Create a new customer"
+    param_schema = {
+        "name": ParamSpec(description="Customer name"),
+        "email": ParamSpec(required=False),
+        "phoneNumber": ParamSpec(required=False),
+        "organizationNumber": ParamSpec(required=False),
+    }
+
     def get_task_type(self) -> str:
         return "create_customer"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["name"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         body: dict[str, Any] = {"name": params["name"]}
@@ -40,7 +45,7 @@ class CreateCustomerHandler(BaseHandler):
         if body.get("email") and not body.get("invoiceEmail"):
             body["invoiceEmail"] = body["email"]
 
-        # Address fields — Tripletex expects objects, not strings
+        # Address fields — Tripletex has postalAddress, physicalAddress, deliveryAddress
         for addr_field in ("postalAddress", "physicalAddress", "deliveryAddress"):
             if params.get(addr_field):
                 addr = params[addr_field]
@@ -68,12 +73,12 @@ class CreateCustomerHandler(BaseHandler):
 class UpdateCustomerHandler(BaseHandler):
     """GET /customer (search by name) then PUT /customer/{id}. 2 API calls."""
 
+    tier = 1
+    description = "Update an existing customer"
+    param_schema = {"name": ParamSpec(description="Customer name to find")}
+
     def get_task_type(self) -> str:
         return "update_customer"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["name"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         name = params["name"]

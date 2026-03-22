@@ -6,9 +6,12 @@ and executes them via the Tripletex REST API.
 
 from __future__ import annotations
 
+import asyncio
+import json as _json
 import logging
 import os
 import time
+from datetime import UTC
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -16,6 +19,9 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from src.constants import LOG_FORMAT, LOG_LEVEL, SERVER_HOST, SERVER_PORT
 from src.models import SolveRequest, SolveResponse
+
+# Serialize solve requests — only one at a time to avoid proxy session conflicts
+_solve_lock = asyncio.Lock()
 
 logging.basicConfig(level=LOG_LEVEL, format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
@@ -43,16 +49,13 @@ async def solve(
     request: SolveRequest,
     _auth: None = Depends(verify_api_key),
 ) -> SolveResponse:
-    """Receive an accounting task prompt and execute it via Tripletex API.
+    """Receive an accounting task prompt and execute it via Tripletex API."""
+    async with _solve_lock:
+        return await _solve_impl(request)
 
-    Flow:
-    1. Parse the request (prompt, files, credentials)
-    2. Use LLM to classify task type and extract parameters
-    3. Execute the appropriate handler with deterministic API calls
-    4. Return {"status": "completed"} regardless of outcome
-    """
-    import json as _json
 
+async def _solve_impl(request: SolveRequest) -> SolveResponse:
+    """Actual solve implementation, protected by _solve_lock."""
     start_time = time.monotonic()
     base_url = request.tripletex_credentials.base_url if request.tripletex_credentials else "?"
     is_competition = "tx-proxy" in (request.tripletex_credentials.base_url or "")
@@ -65,7 +68,6 @@ async def solve(
     logger.info("Received solve request, prompt length=%d", len(request.prompt))
 
     try:
-        # Import here to avoid circular imports and allow lazy initialization
         from src.task_router import create_router
 
         router = create_router()
@@ -77,8 +79,42 @@ async def solve(
         elapsed = time.monotonic() - start_time
         logger.exception("Task failed after %.2fs", elapsed)
 
+    # Save competition run data to GCS
+    if is_competition:
+        _save_run_to_gcs(request.prompt, base_url, elapsed)
+
     # Always return completed -- scoring checks account state independently
     return SolveResponse(status="completed")
+
+
+def _save_run_to_gcs(prompt: str, base_url: str, elapsed: float) -> None:
+    """Save competition run data to GCS bucket for team sharing."""
+    try:
+        from datetime import datetime
+
+        from google.cloud import storage
+
+        ts = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S")
+        service = os.environ.get("K_SERVICE", "tripletex-agent-2")
+        run_data = {
+            "timestamp": ts,
+            "prompt": prompt[:500],
+            "base_url": base_url,
+            "duration_s": round(elapsed, 2),
+            "service": service,
+        }
+        bucket_name = "ai-nm26osl-1792-nmiai"
+        blob_path = f"tripletex-runs/{ts}_{service}.json"
+        client = storage.Client()
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(blob_path)
+        blob.upload_from_string(
+            _json.dumps(run_data, ensure_ascii=False, indent=2),
+            content_type="application/json",
+        )
+        logger.info("Saved run to gs://%s/%s", bucket_name, blob_path)
+    except Exception:
+        logger.warning("Failed to save run to GCS (non-critical)")
 
 
 @app.get("/health")

@@ -1,0 +1,33 @@
+{
+  "timestamp": "2026-03-20 23:56:21",
+  "prompt": "Erstellen Sie eine Rechnung für den Kunden Brückentor GmbH (Org.-Nr. 804379010) mit drei Produktzeilen: Schulung (2626) zu 17300 NOK mit 25 % MwSt., Beratungsstunden (7746) zu 12850 NOK mit 15 % MwSt. (Lebensmittel), und Cloud-Speicher (5675) zu 7050 NOK mit 0 % MwSt. (befreit).",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "status": 201,
+      "duration_s": 0.32
+    }
+  ],
+  "errors": [],
+  "task_type": "create_customer",
+  "params": {
+    "name": "Solmar SL",
+    "organizationNumber": "879505631",
+    "email": "post@solmar.no",
+    "postalAddress": {
+      "addressLine1": "Parkveien 49",
+      "postalCode": "4611",
+      "city": "Kristiansand"
+    }
+  },
+  "handler": "CreateCustomerHandler",
+  "total_api_calls": 1,
+  "total_duration_s": 3.19,
+  "result": {
+    "id": 108300163,
+    "action": "created"
+  },
+  "service": "tripletex-agent-2"
+}

@@ -140,50 +140,67 @@ TIER_3_TASKS = [
     "ledger_correction",
     "year_end_closing",
     "balance_sheet_report",
-    "cost_analysis",
 ]
 
 # All known task types
 ALL_TASK_TYPES = TIER_1_TASKS + TIER_2_TASKS + TIER_3_TASKS
 
 # ---------------------------------------------------------------------------
-# Optimal API call counts per task (for efficiency tracking)
-# Updated as we discover the minimal sequences
+# Optimal WRITE call counts per task (for efficiency tracking)
+# IMPORTANT: Only POST, PUT, DELETE, PATCH count toward efficiency.
+# GET requests are FREE and do not affect scoring.
+# Zero 4xx errors = maximum efficiency bonus.
 # ---------------------------------------------------------------------------
 
-OPTIMAL_CALL_COUNTS: dict[str, int] = {
-    # Tier 1: simple CRUD (1-2 calls)
+OPTIMAL_WRITE_COUNTS: dict[str, int] = {
+    # Tier 1: simple CRUD
     "create_employee": 1,  # POST /employee
-    "update_employee": 2,  # GET /employee + PUT /employee/{id}
+    "update_employee": 1,  # PUT /employee/{id}
     "create_customer": 1,  # POST /customer
-    "update_customer": 2,  # GET /customer + PUT /customer/{id}
+    "update_customer": 1,  # PUT /customer/{id}
     "create_product": 1,  # POST /product
     "create_department": 1,  # POST /department
+    "update_department": 1,  # PUT /department/{id}
     "create_project": 1,  # POST /project
-    "enable_module": 2,  # GET /modules + PUT /modules
-    "assign_role": 2,  # GET /employee/{id} + PUT /employee/{id}
-    # Tier 2: multi-step (1-3 calls)
-    "create_order": 2,  # POST /order + POST /order/orderline/list (batch)
-    "create_invoice": 3,  # POST /order + POST /order/orderline/list + POST /invoice
-    "send_invoice": 1,  # POST /invoice/{id}/:send
-    "register_payment": 1,  # POST /invoice/{id}/:payment (1 with direct ID, 2 with search)
-    "create_credit_note": 1,  # POST /invoice/{id}/:createCreditNote (1 w/ ID, 2 w/ search)
-    "create_travel_expense": 1,  # POST /travelExpense
-    "deliver_travel_expense": 1,  # PUT /travelExpense/{id}/:deliver
-    "approve_travel_expense": 1,  # PUT /travelExpense/{id}/:approve
-    "link_project_customer": 2,  # GET /project/{id} + PUT /project/{id}
+    "enable_module": 1,  # PUT /modules
+    "assign_role": 1,  # PUT /employee/{id}
+    "delete_customer": 1,  # DELETE /customer/{id}
+    "delete_product": 1,  # DELETE /product/{id}
+    "delete_department": 1,  # DELETE /department/{id}
+    "delete_project": 1,  # DELETE /project/{id}
+    # Tier 2: multi-step
+    "create_order": 2,  # POST /order + POST /order/orderline/list
+    "create_invoice": 3,  # POST /order + POST /orderline/list + PUT /order/:invoice
+    "send_invoice": 1,  # PUT /invoice/:send (or 4 if creating first)
+    "register_payment": 1,  # PUT /invoice/:payment (or 4 if creating first)
+    "create_credit_note": 1,  # PUT /invoice/:createCreditNote (or 4 if creating first)
+    "create_travel_expense": 1,  # POST /travelExpense (+ 1 per cost)
+    "deliver_travel_expense": 1,  # PUT /travelExpense/:deliver
+    "approve_travel_expense": 1,  # PUT /travelExpense/:approve
+    "delete_travel_expense": 1,  # DELETE /travelExpense/{id}
+    "delete_order": 1,  # DELETE /order/{id}
+    "link_project_customer": 1,  # PUT /project/{id}
     "create_activity": 1,  # POST /activity
-    "update_project": 2,  # GET /project/{id} + PUT /project/{id}
+    "update_project": 1,  # PUT /project/{id}
     "create_asset": 1,  # POST /asset
-    "update_asset": 2,  # GET /asset/{id} + PUT /asset/{id}
-    # Tier 3: complex workflows (1-2 calls)
-    "create_voucher": 1,  # POST /ledger/voucher (postings inline)
-    "reverse_voucher": 1,  # PUT /ledger/voucher/{id}/:reverse
-    "bank_reconciliation": 1,  # POST /bank/reconciliation (+ 1 per adjustment)
-    "ledger_correction": 1,  # POST /ledger/voucher (correction postings)
-    "year_end_closing": 1,  # POST /ledger/voucher (closing entries)
-    "balance_sheet_report": 1,  # GET /balanceSheet
+    "update_asset": 1,  # PUT /asset/{id}
+    "create_supplier": 1,  # POST /supplier
+    "delete_supplier": 1,  # DELETE /supplier/{id}
+    # Tier 3: complex workflows
+    "create_voucher": 1,  # POST /ledger/voucher
+    "reverse_voucher": 1,  # PUT /ledger/voucher/:reverse
+    "delete_voucher": 1,  # DELETE /ledger/voucher/{id}
+    "run_payroll": 1,  # POST /salary/transaction
+    "create_dimension_voucher": 1,  # POST /ledger/voucher (+ dimension setup)
+    "log_timesheet": 1,  # POST /timesheet/entry
+    "bank_reconciliation": 1,  # POST /bank/reconciliation
+    "ledger_correction": 1,  # POST /ledger/voucher
+    "year_end_closing": 1,  # POST /ledger/voucher
+    "balance_sheet_report": 0,  # GET only — no writes needed
 }
+
+# Backward compat alias
+OPTIMAL_CALL_COUNTS = OPTIMAL_WRITE_COUNTS
 
 # ---------------------------------------------------------------------------
 # Server configuration
@@ -193,7 +210,7 @@ OPTIMAL_CALL_COUNTS: dict[str, int] = {
 SERVER_PORT = 8080
 
 # Host binding
-SERVER_HOST = "0.0.0.0"  # noqa: S104  # Bind all interfaces for container deployment
+SERVER_HOST = "0.0.0.0"  # nosec B104  # noqa: S104  # Bind all interfaces for container deployment
 
 # ---------------------------------------------------------------------------
 # Logging

@@ -5,14 +5,18 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from src.api_client import TripletexApiError
-from src.handlers.resolvers import (
+from src.handlers.api_helpers import (
     ensure_bank_account,
     find_cost_category,
     find_invoice_id,
     find_travel_expense,
     get_travel_payment_type,
-    resolve_customer,
-    resolve_product,
+)
+from src.handlers.entity_resolver import (
+    _resolve_customer as resolve_customer,
+)
+from src.handlers.entity_resolver import (
+    _resolve_product as resolve_product,
 )
 from src.models import ApiError
 from tests.conftest import sample_api_response
@@ -25,7 +29,7 @@ from tests.conftest import sample_api_response
 class TestEnsureBankAccount:
     def setup_method(self):
         # Clear cache between tests
-        from src.handlers.resolvers import _bank_account_set
+        from src.handlers.api_helpers import _bank_account_set
 
         _bank_account_set.clear()
 
@@ -305,9 +309,13 @@ class TestFindInvoiceId:
         client.get.return_value = sample_api_response(values=[{"id": 400}])
         assert find_invoice_id(client, {"customer": {"id": 5}}) == 400
 
-    def test_customer_dict_with_name_returns_none(self):
+    def test_customer_dict_with_name_resolves(self):
         client = MagicMock()
-        assert find_invoice_id(client, {"customer": {"name": "ACME"}}) is None
+        client.get.side_effect = [
+            sample_api_response(values=[{"id": 50, "name": "ACME"}]),
+            sample_api_response(values=[{"id": 500}]),
+        ]
+        assert find_invoice_id(client, {"customer": {"name": "ACME"}}) == 500
 
     def test_no_search_params_returns_none(self):
         client = MagicMock()

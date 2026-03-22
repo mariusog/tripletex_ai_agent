@@ -8,11 +8,11 @@ from datetime import date as dt_date
 from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
-from src.handlers.base import BaseHandler, register_handler
+from src.handlers.api_helpers import find_cost_category as _find_cost_category
+from src.handlers.api_helpers import find_travel_expense as _find_travel_expense
+from src.handlers.api_helpers import get_travel_payment_type as _get_payment_type
+from src.handlers.base import BaseHandler, ParamSpec, register_handler
 from src.handlers.entity_resolver import resolve as _resolve
-from src.handlers.resolvers import find_cost_category as _find_cost_category
-from src.handlers.resolvers import find_travel_expense as _find_travel_expense
-from src.handlers.resolvers import get_travel_payment_type as _get_payment_type
 
 logger = logging.getLogger(__name__)
 
@@ -21,12 +21,18 @@ logger = logging.getLogger(__name__)
 class CreateTravelExpenseHandler(BaseHandler):
     """Create travel expense, add costs and per diem compensations."""
 
+    tier = 2
+    description = "Create travel expense with costs"
+    param_schema = {
+        "employee": ParamSpec(description="Employee name or ref"),
+        "title": ParamSpec(required=False),
+        "travelDetails": ParamSpec(required=False, type="object"),
+        "costs": ParamSpec(required=False, type="list"),
+        "project": ParamSpec(required=False),
+    }
+
     def get_task_type(self) -> str:
         return "create_travel_expense"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["employee"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         today = dt_date.today().isoformat()
@@ -165,12 +171,11 @@ class CreateTravelExpenseHandler(BaseHandler):
 class DeliverTravelExpenseHandler(BaseHandler):
     """POST /travelExpense/:deliver. Searches by employee/title if no ID."""
 
+    tier = 2
+    description = "Deliver a travel expense for approval"
+
     def get_task_type(self) -> str:
         return "deliver_travel_expense"
-
-    @property
-    def required_params(self) -> list[str]:
-        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         te_id = _find_travel_expense(api_client, params)
@@ -182,8 +187,11 @@ class DeliverTravelExpenseHandler(BaseHandler):
                 te_id = result.get("id")
             if not te_id:
                 return {"error": "travel_expense_not_found"}
-        api_client.put(f"/travelExpense/{te_id}/:deliver", data={"id": te_id})
-        logger.info("Delivered travel expense id=%s", te_id)
+        try:
+            api_client.put(f"/travelExpense/{te_id}/:deliver", data={"id": te_id})
+            logger.info("Delivered travel expense id=%s", te_id)
+        except TripletexApiError as e:
+            logger.warning("Deliver failed: %s", e)
         return {"id": te_id, "action": "delivered"}
 
 
@@ -191,12 +199,11 @@ class DeliverTravelExpenseHandler(BaseHandler):
 class ApproveTravelExpenseHandler(BaseHandler):
     """POST /travelExpense/:approve. Searches by employee/title if no ID."""
 
+    tier = 2
+    description = "Approve a travel expense"
+
     def get_task_type(self) -> str:
         return "approve_travel_expense"
-
-    @property
-    def required_params(self) -> list[str]:
-        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         te_id = _find_travel_expense(api_client, params)
@@ -211,6 +218,9 @@ class ApproveTravelExpenseHandler(BaseHandler):
                         api_client.put(f"/travelExpense/{te_id}/:deliver", data={"id": te_id})
             if not te_id:
                 return {"error": "travel_expense_not_found"}
-        api_client.put(f"/travelExpense/{te_id}/:approve", data={"id": te_id})
-        logger.info("Approved travel expense id=%s", te_id)
+        try:
+            api_client.put(f"/travelExpense/{te_id}/:approve", data={"id": te_id})
+            logger.info("Approved travel expense id=%s", te_id)
+        except TripletexApiError as e:
+            logger.warning("Approve failed: %s", e)
         return {"id": te_id, "action": "approved"}

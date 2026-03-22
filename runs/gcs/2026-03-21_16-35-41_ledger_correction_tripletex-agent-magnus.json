@@ -1,0 +1,46 @@
+{
+  "timestamp": "2026-03-21 16:35:41",
+  "prompt": "Los costos totales aumentaron significativamente de enero a febrero de 2026. Analice el libro mayor e identifique las tres cuentas de gastos con el mayor incremento en monto. Cree un proyecto interno para cada una de las tres cuentas con el nombre de la cuenta. También cree una actividad para cada proyecto.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2 git=unknown",
+  "api_calls": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 422,
+      "duration_s": 0.3
+    }
+  ],
+  "errors": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 422,
+      "duration_s": 0.3
+    }
+  ],
+  "task_type": "ledger_correction",
+  "params": {
+    "date": "2026-02-28",
+    "description": "Análisis del libro mayor para identificar las tres cuentas de gastos con mayor incremento entre enero y febrero de 2026",
+    "dateFrom": "2026-01-01",
+    "dateTo": "2026-02-28",
+    "analysisType": "expense_increase",
+    "topAccounts": 3
+  },
+  "request_bodies": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "body": "{\"date\": \"2026-02-28\", \"description\": \"Análisis del libro mayor para identificar las tres cuentas de gastos con mayor incremento entre enero y febrero de 2026\"}"
+    }
+  ],
+  "error_details": [
+    {
+      "status": 422,
+      "endpoint": "POST /ledger/voucher",
+      "message": "Validering feilet. | validation: [{'field': 'postings', 'message': 'Kan ikke være null.', 'path': 'null.postings', 'rootId': None}]"
+    }
+  ],
+  "status": "error",
+  "service": "tripletex-agent-magnus"
+}

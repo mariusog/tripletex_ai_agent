@@ -144,9 +144,14 @@ class TestRunPayrollHandler:
 
     @patch("src.handlers.salary.resolve", return_value={"id": 1})
     @patch("src.handlers.salary._find_salary_type", return_value={"id": 10})
-    def test_api_error_returns_error(self, _mock_type, _mock_emp):
+    def test_api_error_falls_back_to_voucher(self, _mock_type, _mock_emp):
         client = MagicMock()
-        client.post.side_effect = TripletexApiError(ApiError(status=400, message="Bad request"))
+        # First post (salary) fails, second post (voucher fallback) succeeds
+        client.post.side_effect = [
+            TripletexApiError(ApiError(status=400, message="Bad request")),
+            sample_api_response(value={"id": 999}),
+        ]
+        client.get_cached.return_value = {"values": [{"id": 100, "number": 5000}]}
 
         handler = get_handler("run_payroll")
         result = handler.execute(
@@ -156,7 +161,8 @@ class TestRunPayrollHandler:
                 "baseSalary": 50000,
             },
         )
-        assert "error" in result
+        assert result.get("action") == "payroll_voucher_fallback"
+        assert result.get("id") == 999
 
     @patch("src.handlers.salary.resolve", return_value={"id": 1})
     @patch("src.handlers.salary._find_salary_type", return_value={"id": 10})

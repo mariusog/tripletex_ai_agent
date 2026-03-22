@@ -6,22 +6,34 @@ import logging
 from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
-from src.handlers.base import BaseHandler, register_handler
+from src.handlers.base import BaseHandler, ParamSpec, register_handler
 from src.handlers.entity_resolver import _resolve_supplier
+from src.services.posting_builder import build_posting, merge_vat_postings, resolve_account
 
 logger = logging.getLogger(__name__)
+
+# Re-export for backward compatibility (bank.py, dimension.py, reporting.py)
+_build_posting = build_posting
+_resolve_account = resolve_account
 
 
 @register_handler
 class CreateSupplierHandler(BaseHandler):
     """POST /supplier with extracted fields. 1 API call."""
 
+    tier = 2
+    description = "Create a new supplier"
+    param_schema = {
+        "name": ParamSpec(description="Supplier name"),
+        "organizationNumber": ParamSpec(required=False),
+        "email": ParamSpec(required=False),
+        "phoneNumber": ParamSpec(required=False),
+        "postalAddress": ParamSpec(required=False, type="object"),
+    }
+    disambiguation = "Suppliers provide goods/services TO us. NOT create_customer."
+
     def get_task_type(self) -> str:
         return "create_supplier"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["name"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         body: dict[str, Any] = {"name": params["name"]}
@@ -35,7 +47,6 @@ class CreateSupplierHandler(BaseHandler):
         ):
             if params.get(field):
                 body[field] = params[field]
-        # Also set email as invoiceEmail if not separately provided
         if body.get("email") and not body.get("invoiceEmail"):
             body["invoiceEmail"] = body["email"]
         for addr_field in ("postalAddress", "physicalAddress"):
@@ -52,137 +63,174 @@ class CreateSupplierHandler(BaseHandler):
         return {"id": value.get("id"), "action": "created"}
 
 
-def _resolve_account(
-    api_client: TripletexClient, account: Any
-) -> tuple[dict[str, int], dict[str, int] | None]:
-    """Resolve account number to ({"id": N}, vatType ref or None)."""
-    if isinstance(account, dict) and "id" in account:
-        return {"id": int(account["id"])}, None
-    try:
-        number = int(account)
-    except (TypeError, ValueError):
-        return {"id": 0}, None
-    resp = api_client.get_cached(
-        f"account_{number}",
-        "/ledger/account",
-        params={"number": str(number), "count": 1},
-        fields="id,vatType(id)",
-    )
-    values = resp.get("values", [])
-    if values:
-        vat = values[0].get("vatType")
-        vat_ref = {"id": vat["id"]} if vat and vat.get("id") else None
-        return {"id": values[0]["id"]}, vat_ref
-    logger.warning("Account %d not found", number)
-    return {"id": 0}, None
-
-
-def _build_posting(
-    api_client: TripletexClient,
-    posting: dict[str, Any],
-    row: int = 0,
-    supplier: dict[str, int] | None = None,
-    customer: dict[str, int] | None = None,
-) -> dict[str, Any]:
-    """Build a single voucher posting payload."""
-    result: dict[str, Any] = {"row": row}
-    vat_ref = None
-    acct = posting.get("account") or posting.get("debitAccount") or posting.get("creditAccount")
-    if acct:
-        acct_ref, vat_ref = _resolve_account(api_client, acct)
-        result["account"] = acct_ref
-    for field in ("amountCurrency", "amount", "description"):
-        if field in posting and posting[field] is not None:
-            result[field] = posting[field]
-    # Handle debit/credit amounts
-    debit = posting.get("debit", 0) or 0
-    credit = posting.get("credit", 0) or 0
-    if debit and not credit:
-        amount = abs(debit)
-    elif credit and not debit:
-        amount = -abs(credit)
-    elif "amountGross" in posting and posting["amountGross"] is not None:
-        amount = posting["amountGross"]
-    elif "amount" in posting and posting["amount"] is not None:
-        amount = posting["amount"]
-    else:
-        amount = 0
-    result["amountGross"] = amount
-    result["amountGrossCurrency"] = amount
-    # Set VAT type from account default if not explicitly provided
-    # vatType=0 means explicitly no VAT (used when LLM provides separate VAT postings)
-    if "vatType" in posting:
-        if posting["vatType"]:
-            result["vatType"] = BaseHandler.ensure_ref(posting["vatType"], "vatType")
-        # else: vatType=0/None/False → skip VAT entirely
-    elif vat_ref:
-        result["vatType"] = vat_ref
-
-    # Resolve account number for entity reference rules
-    acct_num = None
-    try:
-        acct_num = int(posting.get("account") or posting.get("debitAccount") or 0)
-    except (TypeError, ValueError):
-        pass
-
-    # Add supplier ref if provided (required for AP/supplier invoice postings)
-    if supplier:
-        result["supplier"] = supplier
-
-    # Add customer ref on receivable accounts (1500-1599)
-    if customer and acct_num and 1500 <= acct_num < 1600:
-        result["customer"] = customer
-
-    return {k: v for k, v in result.items() if v is not None}
-
-
 @register_handler
 class CreateVoucherHandler(BaseHandler):
-    """POST /ledger/voucher with debit/credit postings. 1 API call."""
+    """POST /ledger/voucher with debit/credit postings."""
+
+    tier = 3
+    description = "Create a voucher with debit/credit postings"
+    param_schema = {
+        "description": ParamSpec(description="Voucher description"),
+        "date": ParamSpec(required=False, type="date"),
+        "postings": ParamSpec(type="list", description="Debit/credit postings"),
+        "supplier": ParamSpec(required=False, description="Supplier name or ref"),
+        "invoiceNumber": ParamSpec(
+            required=False,
+            description="Supplier invoice/receipt number (fakturanr/kvitteringsnr)",
+        ),
+        "dueDate": ParamSpec(required=False, type="date"),
+    }
+    disambiguation = (
+        "For supplier invoices and receipts, use this. "
+        "Use 2 postings: debit expense account with GROSS amount (inkl MVA), "
+        "credit 2400 with negative gross amount. Do NOT manually split VAT — "
+        "Tripletex handles it via the account's VAT type. "
+        "From receipts/PDFs: extract ALL fields: supplier name, org number, date, "
+        "invoiceNumber, dueDate, GROSS amount (total inkl MVA). "
+        "Choose expense account based on what was purchased: "
+        "6300=rent/lokale, 6340=utilities, 6500=tools/verktøy, "
+        "6540=inventory/furniture/kontorstoler/whiteboard, "
+        "6800=office supplies/kontorrekvisita/papir, "
+        "6700=accounting/audit, 6800=office supplies, 6860=IT/software, "
+        "7000=travel, 7100=car/bilgodtgjørelse, 7140=transport/train/tog, "
+        "7150=accommodation/overnatting, "
+        "7350=representation/forretningslunsj/restaurant/meals, "
+        "7300=marketing/sales. "
+        "ALWAYS use NUMERIC account codes. "
+        "CRITICAL: From PDF receipts, ALWAYS extract the receipt/invoice number "
+        "(look for 'Fakturanr', 'Invoice No', 'Kvittering nr', 'Receipt #', etc.) "
+        "and pass it as 'invoiceNumber'. Also put department on each posting."
+    )
 
     def get_task_type(self) -> str:
         return "create_voucher"
 
-    @property
-    def required_params(self) -> list[str]:
-        return []
-
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         from datetime import date as dt_date
+
+        # Pre-flight: check for existing supplier invoices on sandbox
+        if params.get("supplier") or params.get("has_attachments"):
+            si_result = self._try_supplier_invoice_flow(api_client, params)
+            if si_result:
+                return si_result
 
         date_val = self.validate_date(params.get("date"), "date")
         if not date_val:
             date_val = dt_date.today().isoformat()
 
         body: dict[str, Any] = {"date": date_val}
-
         for field in ("description", "number", "tempNumber"):
             if field in params and params[field] is not None:
                 body[field] = params[field]
+        # Map supplier invoice number
+        inv_num = params.get("invoiceNumber") or params.get("invoice_number")
+        if inv_num:
+            body["externalVoucherNumber"] = str(inv_num)
+            body["vendorInvoiceNumber"] = str(inv_num)
 
-        if "voucherType" in params:
-            body["typeId"] = int(params["voucherType"])
-
-        # Resolve supplier if present (needed for supplier invoice vouchers)
         supplier_ref = _resolve_supplier(api_client, params.get("supplier"))
 
-        # Resolve customer if present (needed for receivable account 1500 postings)
+        # For supplier invoices, set voucherType to "Leverandørfaktura"
+        if supplier_ref or params.get("supplier") or params.get("has_attachments"):
+            try:
+                vt_resp = api_client.get_cached(
+                    "supplier_voucher_type",
+                    "/ledger/voucherType",
+                    params={"count": 20},
+                    fields="id,name",
+                )
+                for vt in vt_resp.get("values", []):
+                    vt_name = (vt.get("name") or "").lower()
+                    if "leverandør" in vt_name or "supplier" in vt_name:
+                        body["voucherType"] = {"id": vt["id"]}
+                        break
+            except Exception:
+                logger.debug("Could not look up supplier voucher type")
+
         customer_ref = None
         if params.get("customer"):
-            from src.handlers.invoice import _resolve_customer
-            customer_ref = _resolve_customer(api_client, params["customer"])
+            from src.handlers.entity_resolver import resolve as _resolve_entity
 
-        # Normalize postings: split debitAccount/creditAccount into separate rows
+            customer_ref = _resolve_entity(api_client, "customer", params["customer"])
+
+        # If postings use account 1500 (receivable) but no customer, find one
+        # Prefer customer with overdue invoices (for late fee tasks)
+        if not customer_ref:
+            needs_customer = any(
+                1500 <= self._acct_num(p) <= 1599 for p in params.get("postings", [])
+            )
+            if needs_customer:
+                try:
+                    inv_resp = api_client.get(
+                        "/invoice",
+                        params={
+                            "count": 20,
+                            "invoiceDateFrom": "2020-01-01",
+                            "invoiceDateTo": "2030-01-01",
+                        },
+                        fields="id,customer(id,name),amount,amountOutstanding",
+                    )
+                    invoices = inv_resp.get("values", [])
+                    logger.info("Overdue search: found %d invoices", len(invoices))
+                    for inv in invoices:
+                        outstanding = inv.get("amountOutstanding") or 0
+                        # If amountOutstanding not available, treat any invoice as candidate
+                        if outstanding > 0 or (
+                            inv.get("amount", 0) > 0 and "amountOutstanding" not in inv
+                        ):
+                            cust = inv.get("customer")
+                            if cust and cust.get("id"):
+                                customer_ref = {"id": cust["id"]}
+                                params["customer"] = customer_ref
+                                params["_overdue_invoice_id"] = inv["id"]
+                                logger.info(
+                                    "Found overdue invoice id=%s customer=%s",
+                                    inv["id"],
+                                    cust["id"],
+                                )
+                                break
+                    # Fallback: use first invoice's customer
+                    if not customer_ref and invoices:
+                        cust = invoices[0].get("customer")
+                        if cust and cust.get("id"):
+                            customer_ref = {"id": cust["id"]}
+                            params["customer"] = customer_ref
+                            params["_overdue_invoice_id"] = invoices[0]["id"]
+                            logger.info("Fallback to first invoice %s", invoices[0]["id"])
+                    if not customer_ref:
+                        resp = api_client.get("/customer", params={"count": 1}, fields="id")
+                        vals = resp.get("values", [])
+                        if vals:
+                            customer_ref = {"id": vals[0]["id"]}
+                            params["customer"] = customer_ref
+                except Exception:
+                    logger.exception("Failed finding customer for receivable")
+
+        # Override tax amounts with actual P&L calculation
         raw_postings = params.get("postings", [])
+        raw_postings = self._fix_tax_amounts(api_client, raw_postings, date_val)
+
+        # Merge manual VAT split if present
+        vat_rate = params.get("vatRate") or params.get("vat")
+        raw_postings = merge_vat_postings(raw_postings, vat_rate)
+
+        # Normalize debitAccount/creditAccount into separate rows
         postings: list[dict[str, Any]] = []
         for p in raw_postings:
             if "debitAccount" in p and "creditAccount" in p:
                 amt = p.get("amount", p.get("amountGross", 0))
+                if not amt:
+                    # Try to infer amount from existing data for salary accruals
+                    amt = self._infer_missing_amount(api_client, p)
+                if not amt:
+                    logger.warning("Skipping posting with no amount: %s", p)
+                    continue
                 postings.append(
                     {
                         "account": p["debitAccount"],
                         "debit": amt,
                         "description": p.get("description", ""),
+                        "vatRate": p.get("vatRate") or vat_rate,
                     }
                 )
                 postings.append(
@@ -193,72 +241,291 @@ class CreateVoucherHandler(BaseHandler):
                     }
                 )
             else:
+                # Infer missing amount for salary accrual postings
+                acct = p.get("account")
+                amt = p.get("amount", p.get("amountGross", 0))
+                if not amt and acct:
+                    try:
+                        acct_num = int(acct)
+                    except (TypeError, ValueError):
+                        acct_num = 0
+                    if acct_num == 5000:
+                        inferred = self._infer_missing_amount(
+                            api_client, {"debitAccount": "5000", "creditAccount": "2900"}
+                        )
+                        if inferred:
+                            p["amount"] = inferred
+                    elif acct_num == 2900 and len(raw_postings) > 1:
+                        # Find matching 5000 posting to get the same amount
+                        for other in raw_postings:
+                            other_acct = other.get("account")
+                            if other_acct and str(other_acct) == "5000" and other.get("amount"):
+                                p["amount"] = -abs(other["amount"])
+                                break
+                if vat_rate and "vatRate" not in p and "vatType" not in p:
+                    p["vatRate"] = vat_rate
                 postings.append(p)
 
-        if postings:
-            # If LLM provided explicit VAT postings (27xx), suppress auto-vatType
-            # on other postings to prevent double VAT decomposition
-            has_explicit_vat = any(
-                2700 <= int(p.get("account") or p.get("debitAccount") or 0) < 2800
-                for p in postings
-                if p.get("account") or p.get("debitAccount")
-            )
-            if has_explicit_vat:
-                for p in postings:
-                    acct = int(p.get("account") or p.get("debitAccount") or 0)
-                    if not (2700 <= acct < 2800):
-                        p["vatType"] = 0  # Force no-VAT
+        # Propagate top-level department to expense postings only (not AP/bank)
+        top_dept = params.get("department")
+        if top_dept and postings:
+            for p in postings:
+                if "department" not in p:
+                    acct = p.get("account") or p.get("debitAccount") or ""
+                    try:
+                        acct_num = int(acct)
+                    except (TypeError, ValueError):
+                        acct_num = 0
+                    # Only set department on expense/cost accounts (4000+)
+                    if acct_num >= 4000:
+                        p["department"] = top_dept
 
-            body["postings"] = [
-                _build_posting(
-                    api_client, p, row=i + 1,
-                    supplier=supplier_ref, customer=customer_ref,
-                )
-                for i, p in enumerate(postings)
-            ]
+        if postings:
+            built = []
+            for i, p in enumerate(postings):
+                posting = build_posting(api_client, p, row=i + 1, supplier=supplier_ref)
+                acct = p.get("account") or p.get("debitAccount") or p.get("creditAccount")
+                try:
+                    acct_num = int(acct) if acct else 0
+                except (TypeError, ValueError):
+                    acct_num = 0
+                if customer_ref and 1500 <= acct_num <= 1599:
+                    posting["customer"] = customer_ref
+                # Set invoice number on AP posting (2400)
+                if inv_num and 2400 <= acct_num <= 2499:
+                    posting["invoiceNumber"] = str(inv_num)
+                built.append(posting)
+            body["postings"] = built
 
         body = self.strip_none_values(body)
-        result = api_client.post(
-            "/ledger/voucher",
-            data=body,
-            params={"sendToLedger": "true"},
-        )
+        logger.info("Voucher body: %s", body)
+        result = api_client.post("/ledger/voucher", data=body, params={"sendToLedger": "true"})
         value = result.get("value", {})
-        logger.info("Created voucher id=%s", value.get("id"))
-        return {"id": value.get("id"), "action": "created"}
+        voucher_id = value.get("id")
+        logger.info("Created voucher id=%s", voucher_id)
+
+        # Read back to verify what was actually created
+        if voucher_id and (supplier_ref or params.get("has_attachments")):
+            try:
+                verify = api_client.get(
+                    f"/ledger/voucher/{voucher_id}",
+                    fields="id,number,date,description,voucherType(id,name),"
+                    "externalVoucherNumber,vendorInvoiceNumber,"
+                    "postings(account(number),amountGross,supplier(id,name),"
+                    "department(id,name),invoiceNumber,vatType(id))",
+                )
+                logger.info("Voucher verify: %s", verify.get("value", {}))
+            except Exception:
+                logger.debug("Could not verify voucher")
+            # Check if it appears as a supplier invoice
+            try:
+                from datetime import date as _dt3
+                from datetime import timedelta as _td
+
+                si_resp = api_client.get(
+                    "/supplierInvoice",
+                    params={
+                        "count": 5,
+                        "voucherId": voucher_id,
+                        "invoiceDateFrom": "2020-01-01",
+                        "invoiceDateTo": (_dt3.today() + _td(days=365)).isoformat(),
+                    },
+                    fields="id,invoiceNumber,supplier(id,name),voucher(id),amount,amountCurrency",
+                )
+                si_vals = si_resp.get("values", [])
+                logger.info(
+                    "SupplierInvoice check: %d found, data=%s",
+                    len(si_vals),
+                    si_vals,
+                )
+            except Exception as e:
+                logger.info("SupplierInvoice endpoint: %s", e)
+
+        return {"id": voucher_id, "action": "created"}
+
+    @staticmethod
+    def _try_supplier_invoice_flow(
+        api_client: TripletexClient, params: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """Check for pre-existing supplier invoices and try to work with them."""
+        try:
+            # Check for unapproved supplier invoices
+            si_resp = api_client.get(
+                "/supplierInvoice/forApproval",
+                params={"count": 20},
+                fields="id,invoiceNumber,supplier(id,name),voucher(id),amount",
+            )
+            pending = si_resp.get("values", [])
+            logger.info("Pre-flight: %d pending supplier invoices found", len(pending))
+            if pending:
+                for si in pending:
+                    logger.info("Pending SI: %s", si)
+        except TripletexApiError as e:
+            logger.info("No supplier invoice pre-flight: %s", e)
+        return None  # Fall through to normal voucher creation for now
+
+    @staticmethod
+    def _fix_tax_amounts(
+        api_client: TripletexClient,
+        postings: list[dict[str, Any]],
+        date: str,
+    ) -> list[dict[str, Any]]:
+        """Override LLM tax amounts with actual P&L calculation.
+
+        When postings include account 8700 (tax expense), compute the real
+        taxable profit from the balance sheet and use 22% of that.
+        """
+        # Check if any posting targets tax accounts (8700-8799)
+        has_tax = False
+        for p in postings:
+            acct = p.get("account") or p.get("debitAccount") or ""
+            try:
+                if 8700 <= int(acct) <= 8799:
+                    has_tax = True
+                    break
+            except (TypeError, ValueError):
+                continue
+
+        if not has_tax:
+            return postings
+
+        # Compute actual taxable profit from balance sheet
+        try:
+            year = date[:4] if date else "2025"
+            resp = api_client.get(
+                "/balanceSheet",
+                params={
+                    "dateFrom": f"{year}-01-01",
+                    "dateTo": f"{year}-12-31",
+                    "accountNumberFrom": 3000,
+                    "accountNumberTo": 8699,
+                },
+            )
+            entries = resp.get("values", [])
+            total = sum(e.get("balanceOut", 0) or 0 for e in entries)
+            # In Tripletex: revenue = negative balance, expenses = positive
+            # Profit = revenue - expenses = -total
+            profit = -total
+            logger.info(
+                "Tax calc: %d entries, total=%s, profit=%s",
+                len(entries),
+                total,
+                profit,
+            )
+            if profit <= 0:
+                # No profit — use absolute value of LLM's amount as-is
+                return postings
+            real_tax = round(profit * 0.22, 2)
+            logger.info("Tax override: profit=%s, tax 22%%=%s", profit, real_tax)
+        except Exception:
+            return postings
+
+        # Replace amounts in tax postings
+        fixed = []
+        for p in postings:
+            p = dict(p)
+            acct = p.get("account") or p.get("debitAccount") or ""
+            try:
+                acct_num = int(acct)
+            except (TypeError, ValueError):
+                acct_num = 0
+            if 8700 <= acct_num <= 8799:
+                # Tax expense — positive (debit)
+                for key in ("amount", "debit", "debitAmount", "amountGross"):
+                    if key in p:
+                        p[key] = real_tax
+            elif 2920 <= acct_num <= 2929:
+                # Tax payable — negative (credit)
+                for key in ("amount", "credit", "creditAmount", "amountGross"):
+                    if key in p:
+                        p[key] = -real_tax if p[key] < 0 else real_tax
+            fixed.append(p)
+        return fixed
+
+    @staticmethod
+    def _infer_missing_amount(api_client: TripletexClient, posting: dict[str, Any]) -> float:
+        """Try to infer a missing amount from existing sandbox data.
+
+        For salary accruals (5000/2900), queries existing salary postings.
+        """
+        debit_acct = posting.get("debitAccount", "")
+        credit_acct = posting.get("creditAccount", "")
+        try:
+            debit_num = int(debit_acct)
+            credit_num = int(credit_acct)
+        except (TypeError, ValueError):
+            return 0
+
+        # Salary accrual: debit 5000 (salary expense), credit 2900 (accrued)
+        # Look at existing salary postings on account 5000
+        if 5000 <= debit_num <= 5099 and 2900 <= credit_num <= 2999:
+            try:
+                from datetime import date as dt_date
+
+                today = dt_date.today()
+                resp = api_client.get(
+                    "/balanceSheet",
+                    params={
+                        "dateFrom": f"{today.year}-01-01",
+                        "dateTo": today.isoformat(),
+                        "accountNumberFrom": str(debit_num),
+                        "accountNumberTo": str(debit_num),
+                    },
+                )
+                entries = resp.get("values", [])
+                if entries:
+                    balance = entries[0].get("balanceOut", 0) or 0
+                    if balance > 0:
+                        logger.info(
+                            "Inferred salary accrual amount %s from account %d",
+                            balance,
+                            debit_num,
+                        )
+                        return balance
+            except Exception:
+                logger.warning("Could not infer salary amount from account %d", debit_num)
+        return 0
+
+    @staticmethod
+    def _acct_num(posting: dict) -> int:
+        acct = (
+            posting.get("account")
+            or posting.get("debitAccount")
+            or posting.get("creditAccount")
+            or 0
+        )
+        try:
+            return int(acct)
+        except (TypeError, ValueError):
+            return 0
 
 
 @register_handler
 class ReverseVoucherHandler(BaseHandler):
-    """POST /ledger/voucher/{id}/:reverse. 1 API call."""
+    """PUT /ledger/voucher/{id}/:reverse."""
+
+    tier = 3
+    description = "Reverse an existing voucher"
 
     def get_task_type(self) -> str:
         return "reverse_voucher"
 
-    @property
-    def required_params(self) -> list[str]:
-        return []
-
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         from datetime import date as dt_date
 
-        # If no voucherId, fall back to register_payment with reversal
         if "voucherId" not in params and params.get("customer"):
-            from src.handlers.invoice import RegisterPaymentHandler
+            from src.handlers.base import HANDLER_REGISTRY
 
             pay_params = dict(params)
             amount = params.get("amount", 0)
             pay_params["amount"] = -abs(amount) if amount > 0 else amount
             pay_params["reversal"] = True
-            handler = RegisterPaymentHandler()
+            handler = HANDLER_REGISTRY["register_payment"]
             return handler.execute(api_client, pay_params)
 
         voucher_id = params.get("voucherId")
-
-        # Search for voucher by number if ID seems like a voucher number
         if voucher_id:
             voucher_id = int(voucher_id)
-            # Verify the voucher exists; if not, search by number
             try:
                 api_client.get(f"/ledger/voucher/{voucher_id}")
             except TripletexApiError:
@@ -282,7 +549,6 @@ class ReverseVoucherHandler(BaseHandler):
         return {"id": voucher_id, "action": "reversed"}
 
     def _search_voucher(self, api_client: TripletexClient, params: dict[str, Any]) -> int | None:
-        """Search for a voucher by number or description."""
         from datetime import date as dt_date
 
         today = dt_date.today()

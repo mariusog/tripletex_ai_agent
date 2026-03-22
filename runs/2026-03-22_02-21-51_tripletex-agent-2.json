@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-22_02-21-51",
+  "prompt": "We have a new employee named Henry Smith, born 2. December 1988. Please create them as an employee with email henry.smith@example.org and start date 1. November 2026.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 14.26,
+  "service": "tripletex-agent-2"
+}

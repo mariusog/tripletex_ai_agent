@@ -32,7 +32,7 @@ class TripletexApiError(Exception):
         super().__init__(f"Tripletex API error {error.status}: {error.message}")
 
 
-_global_cache: dict[tuple[str, str], Any] = {}
+_global_cache: dict[tuple[str, str, str], Any] = {}  # (base_url, token_prefix, key)
 
 
 class TripletexClient:
@@ -44,7 +44,10 @@ class TripletexClient:
 
     def __init__(self, base_url: str, session_token: str) -> None:
         self.base_url = base_url.rstrip("/")
+        self._token_prefix = session_token[:16]  # For cache isolation
         self._api_call_count = 0
+        self._write_call_count = 0
+        self._error_count = 0
         self._cache: dict[str, Any] = {}
         self._client = httpx.Client(
             auth=(API_AUTH_USERNAME, session_token),
@@ -56,6 +59,16 @@ class TripletexClient:
     def api_call_count(self) -> int:
         """Total number of API calls made (excluding retries)."""
         return self._api_call_count
+
+    @property
+    def write_call_count(self) -> int:
+        """POST/PUT/DELETE/PATCH calls (counted for efficiency scoring)."""
+        return self._write_call_count
+
+    @property
+    def error_count(self) -> int:
+        """4xx error count (reduces efficiency bonus)."""
+        return self._error_count
 
     def close(self) -> None:
         """Close the underlying HTTP client."""
@@ -81,7 +94,7 @@ class TripletexClient:
         fields: str | None = None,
     ) -> Any:
         """GET with caching. Checks global process cache first."""
-        global_key = (self.base_url, cache_key)
+        global_key = (self.base_url, self._token_prefix, cache_key)
         if global_key in _global_cache:
             return _global_cache[global_key]
         if cache_key not in self._cache:
@@ -121,6 +134,8 @@ class TripletexClient:
         """Execute HTTP request with rate limit retry and error handling."""
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         self._api_call_count += 1
+        if method in ("POST", "PUT", "DELETE", "PATCH"):
+            self._write_call_count += 1
 
         # Pre-validation: strip None values from POST/PUT bodies
         if json_data is not None and method in ("POST", "PUT"):
@@ -164,6 +179,8 @@ class TripletexClient:
                 raise TripletexApiError(self._parse_error(response, response.status_code))
 
             if response.status_code >= 400:
+                if 400 <= response.status_code < 500:
+                    self._error_count += 1
                 error = self._parse_error(response, response.status_code)
                 logger.warning(
                     "API error %d on %s %s: %s | validation: %s",
@@ -173,6 +190,20 @@ class TripletexClient:
                     error.message,
                     error.validation_messages,
                 )
+
+                # Retry-with-fix: on 422, strip offending fields and retry once
+                if (
+                    response.status_code == 422
+                    and isinstance(json_data, dict)
+                    and error.validation_messages
+                    and attempt == 0
+                ):
+                    fixed = self._try_fix_payload(json_data, error.validation_messages)
+                    if fixed and fixed != json_data:
+                        logger.info("Retrying %s %s after stripping fields", method, endpoint)
+                        json_data = fixed
+                        continue
+
                 raise TripletexApiError(error)
 
             # Success — parse JSON if present
@@ -182,6 +213,48 @@ class TripletexClient:
 
         # Should not reach here, but handle defensively
         raise TripletexApiError(ApiError(status=429, message="Rate limit retries exhausted"))
+
+    # Fields that should never be stripped by retry-with-fix
+    _PROTECTED_FIELDS = frozenset(
+        {
+            "email",
+            "name",
+            "firstName",
+            "lastName",
+            "date",
+            "postings",
+            "employee",
+            "customer",
+            "account",
+            "amount",
+        }
+    )
+
+    @classmethod
+    def _try_fix_payload(
+        cls, data: dict[str, Any], validation_messages: list[dict[str, Any]]
+    ) -> dict[str, Any] | None:
+        """Try to fix a payload by stripping fields mentioned in validation errors."""
+        fixed = dict(data)
+        changed = False
+        for vm in validation_messages:
+            field = vm.get("field", "")
+            if not field or field == "None":
+                continue
+            # Strip "Internt felt (fieldName)" format
+            if field.startswith("Internt felt"):
+                inner = field.split("(")[-1].rstrip(")")
+                if inner in fixed and inner not in cls._PROTECTED_FIELDS:
+                    fixed.pop(inner)
+                    changed = True
+            # Strip dotted paths like "postings.customer.id" — skip
+            elif "." in field:
+                continue
+            # Strip direct field names (if not protected)
+            elif field in fixed and field not in cls._PROTECTED_FIELDS:
+                fixed.pop(field)
+                changed = True
+        return fixed if changed else None
 
     @staticmethod
     def _parse_error(response: httpx.Response, status_code: int) -> ApiError:

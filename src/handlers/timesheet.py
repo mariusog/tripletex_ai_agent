@@ -8,9 +8,9 @@ from datetime import date as dt_date
 from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
-from src.handlers.base import BaseHandler, register_handler
+from src.handlers.api_helpers import ensure_bank_account
+from src.handlers.base import BaseHandler, ParamSpec, register_handler
 from src.handlers.entity_resolver import resolve
-from src.handlers.resolvers import ensure_bank_account
 
 logger = logging.getLogger(__name__)
 
@@ -21,15 +21,19 @@ def _create_activity(
     project_ref: dict[str, int] | None = None,
 ) -> dict[str, int]:
     """Resolve an activity by name and link it to a project if provided."""
+    # Create as a project activity type so it can be used in timesheets
     act_ref = resolve(api_client, "activity", name)
     if not act_ref.get("id"):
         return {"id": 0}
-    # Link activity to project so it can be used in timesheet entries
+    # Link activity to project
     if project_ref and act_ref.get("id"):
         with contextlib.suppress(TripletexApiError):
             api_client.post(
                 "/project/projectActivity",
-                data={"project": project_ref, "activity": act_ref},
+                data={
+                    "project": project_ref,
+                    "activity": act_ref,
+                },
             )
     return act_ref
 
@@ -39,14 +43,25 @@ def _create_project(
     name: str,
     customer_ref: dict[str, int] | None = None,
     pm_ref: dict[str, int] | None = None,
+    entry_date: str | None = None,
 ) -> dict[str, int]:
-    """Always create a project by name."""
+    """Search for project by name first, create only if not found."""
     import secrets
 
+    # Search first (GET is free)
+    try:
+        resp = api_client.get("/project", params={"name": name, "count": 5}, fields="id,name")
+        for v in resp.get("values", []):
+            if (v.get("name") or "").strip().lower() == name.strip().lower():
+                return {"id": v["id"]}
+    except TripletexApiError:
+        pass
+    # Not found — create
+    start = entry_date or f"{dt_date.today().year}-01-01"
     body: dict[str, Any] = {
         "name": name,
         "number": str(secrets.randbelow(90000) + 10000),
-        "startDate": dt_date.today().isoformat(),
+        "startDate": start,
         "projectManager": pm_ref or {"id": 0},
     }
     if customer_ref:
@@ -57,11 +72,7 @@ def _create_project(
         logger.info("Created project '%s' id=%s", name, proj_id)
         return {"id": proj_id}
     except TripletexApiError:
-        # Search as fallback
-        resp = api_client.get("/project", params={"name": name, "count": 5}, fields="id,name")
-        for v in resp.get("values", []):
-            if (v.get("name") or "").strip().lower() == name.strip().lower():
-                return {"id": v["id"]}
+        pass
     return {"id": 0}
 
 
@@ -69,12 +80,21 @@ def _create_project(
 class LogTimesheetHandler(BaseHandler):
     """Log timesheet hours and optionally generate a project invoice."""
 
+    tier = 3
+    description = "Log timesheet hours, optionally invoice"
+    param_schema = {
+        "employee": ParamSpec(description="Employee name or {firstName, lastName, email}"),
+        "hours": ParamSpec(required=False, type="number"),
+        "activity": ParamSpec(required=False, description="Activity name"),
+        "project": ParamSpec(required=False, description="Project name"),
+        "customer": ParamSpec(required=False, type="object"),
+        "hourlyRate": ParamSpec(required=False, type="number"),
+        "date": ParamSpec(required=False, type="date"),
+        "generateInvoice": ParamSpec(required=False, type="boolean"),
+    }
+
     def get_task_type(self) -> str:
         return "log_timesheet"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["employee"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         today = dt_date.today().isoformat()
@@ -83,7 +103,9 @@ class LogTimesheetHandler(BaseHandler):
         emp_ref = resolve(api_client, "employee", params["employee"])
 
         # Step 2: Get PM (account owner) for project creation
-        pm_search = api_client.get("/employee", params={"count": 1}, fields="id")
+        pm_search = api_client.get_cached(
+            "account_owner", "/employee", params={"count": 1}, fields="id"
+        )
         pm_vals = pm_search.get("values", [])
         pm_ref = {"id": pm_vals[0]["id"]} if pm_vals else emp_ref
 
@@ -103,7 +125,10 @@ class LogTimesheetHandler(BaseHandler):
         if isinstance(proj_name, dict):
             proj_name = proj_name.get("name", "")
         if proj_name:
-            project_ref = _create_project(api_client, proj_name, customer_ref, pm_ref)
+            entry_date = params.get("date") or today
+            project_ref = _create_project(
+                api_client, proj_name, customer_ref, pm_ref, entry_date=entry_date
+            )
 
         # Step 5: Find or create activity
         activity_ref = None
@@ -113,27 +138,40 @@ class LogTimesheetHandler(BaseHandler):
         if act_name:
             activity_ref = _create_activity(api_client, act_name, project_ref)
 
-        # Step 6: Create timesheet entry
-        hours = params.get("hours") or params.get("hoursLogged") or 0
-        entry_body: dict[str, Any] = {
-            "employee": emp_ref,
-            "date": params.get("date") or today,
-            "hours": float(hours),
-        }
-        if project_ref:
-            entry_body["project"] = project_ref
-        if activity_ref:
-            entry_body["activity"] = activity_ref
-        if params.get("comment"):
-            entry_body["comment"] = params["comment"]
+        # Step 6: Create timesheet entries (split if > 24h per day)
+        total_hours = float(params.get("hours") or params.get("hoursLogged") or 0)
+        entry_date = params.get("date") or today
+        entry_id = None
 
-        try:
-            result = api_client.post("/timesheet/entry", data=entry_body)
-            entry_id = result.get("value", {}).get("id")
-            logger.info("Created timesheet entry id=%s", entry_id)
-        except TripletexApiError as e:
-            logger.warning("Timesheet entry failed: %s", e)
-            entry_id = None
+        from datetime import timedelta
+
+        remaining = total_hours
+        current_date = dt_date.fromisoformat(entry_date)
+        while remaining > 0:
+            day_hours = min(remaining, 7.5)  # Max 7.5h per day
+            entry_body: dict[str, Any] = {
+                "employee": emp_ref,
+                "date": current_date.isoformat(),
+                "hours": day_hours,
+            }
+            if project_ref:
+                entry_body["project"] = project_ref
+            if activity_ref:
+                entry_body["activity"] = activity_ref
+            if params.get("comment"):
+                entry_body["comment"] = params["comment"]
+
+            try:
+                result = api_client.post("/timesheet/entry", data=entry_body)
+                if entry_id is None:
+                    entry_id = result.get("value", {}).get("id")
+                logger.info("Created timesheet entry hours=%s date=%s", day_hours, current_date)
+            except TripletexApiError as e:
+                logger.warning("Timesheet entry failed: %s", e)
+                break
+
+            remaining -= day_hours
+            current_date += timedelta(days=1)
 
         # Step 7: Generate invoice if requested
         invoice_id = None

@@ -7,7 +7,7 @@ from datetime import date as dt_date
 from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
-from src.handlers.base import BaseHandler, register_handler
+from src.handlers.base import BaseHandler, ParamSpec, register_handler
 from src.handlers.entity_resolver import resolve
 
 logger = logging.getLogger(__name__)
@@ -75,12 +75,20 @@ def _find_salary_type(
 class RunPayrollHandler(BaseHandler):
     """Create a salary transaction with payslip for an employee."""
 
+    tier = 3
+    description = "Run payroll for an employee"
+    param_schema = {
+        "employee": ParamSpec(description="Employee name or {firstName, lastName, email}"),
+        "baseSalary": ParamSpec(required=False, type="number", description="Base monthly salary"),
+        "bonus": ParamSpec(required=False, type="number"),
+        "bonusDescription": ParamSpec(required=False),
+        "month": ParamSpec(required=False, type="number"),
+        "year": ParamSpec(required=False, type="number"),
+        "extras": ParamSpec(required=False, type="list", description="Additional salary lines"),
+    }
+
     def get_task_type(self) -> str:
         return "run_payroll"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["employee"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         today = dt_date.today()
@@ -164,6 +172,21 @@ class RunPayrollHandler(BaseHandler):
             ],
         }
 
+        # Log employment status for diagnostics (GET is free)
+        try:
+            emp_check = api_client.get(
+                "/employee/employment",
+                params={"employeeId": emp_ref.get("id"), "count": 5},
+                fields="id,division(id,name),startDate",
+            )
+            logger.info(
+                "Employment check for %s: %s",
+                emp_ref.get("id"),
+                emp_check.get("values", []),
+            )
+        except Exception:
+            logger.debug("Could not check employment")
+
         try:
             result = api_client.post("/salary/transaction", data=body)
             value = result.get("value", {})
@@ -171,5 +194,80 @@ class RunPayrollHandler(BaseHandler):
             logger.info("Created salary transaction id=%s", tx_id)
             return {"id": tx_id, "action": "payroll_created"}
         except TripletexApiError as e:
-            logger.warning("Salary transaction failed: %s", e)
-            return {"error": str(e)}
+            logger.warning("Salary transaction failed: %s, falling back to voucher", e)
+            return self._fallback_voucher(api_client, params, date)
+
+    @staticmethod
+    def _fallback_voucher(
+        api_client: TripletexClient, params: dict[str, Any], date: str
+    ) -> dict[str, Any]:
+        """Fall back to manual voucher when salary API is unavailable."""
+        from src.handlers.base import HANDLER_REGISTRY
+
+        total = 0.0
+        base = params.get("baseSalary") or params.get("salary") or 0
+        bonus = params.get("bonus") or 0
+        total = float(base) + float(bonus)
+
+        # Add extras
+        for extra in params.get("extras", []):
+            total += float(extra.get("amount", 0))
+
+        if not total:
+            return {"error": "no_salary_amount"}
+
+        voucher_params: dict[str, Any] = {
+            "description": "Lønn / Payroll",
+            "date": date,
+            "postings": [
+                {
+                    "debitAccount": "5000",
+                    "creditAccount": "2900",
+                    "amount": total,
+                    "description": "Lønn / Payroll",
+                }
+            ],
+        }
+
+        handler = HANDLER_REGISTRY.get("create_voucher")
+        if handler:
+            try:
+                result = handler.execute(api_client, voucher_params)
+                logger.info("Payroll fallback voucher id=%s", result.get("id"))
+                return {
+                    "id": result.get("id"),
+                    "action": "payroll_voucher_fallback",
+                }
+            except Exception:
+                logger.warning("Voucher handler failed, trying direct POST")
+        # Direct fallback: simple voucher POST
+        try:
+            from src.services.posting_builder import resolve_account
+
+            acct_5000, _ = resolve_account(api_client, 5000)
+            acct_2900, _ = resolve_account(api_client, 2900)
+            body = {
+                "date": date,
+                "description": "Lønn / Payroll",
+                "postings": [
+                    {
+                        "row": 1,
+                        "account": acct_5000,
+                        "amountGross": total,
+                        "amountGrossCurrency": total,
+                    },
+                    {
+                        "row": 2,
+                        "account": acct_2900,
+                        "amountGross": -total,
+                        "amountGrossCurrency": -total,
+                    },
+                ],
+            }
+            res = api_client.post("/ledger/voucher", data=body, params={"sendToLedger": "true"})
+            vid = res.get("value", {}).get("id")
+            logger.info("Direct payroll voucher id=%s", vid)
+            return {"id": vid, "action": "payroll_voucher_fallback"}
+        except TripletexApiError as e2:
+            logger.warning("Direct voucher also failed: %s", e2)
+            return {"error": str(e2)}

@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from src.api_client import TripletexClient
-from src.handlers.base import BaseHandler, register_handler
+from src.handlers.base import BaseHandler, ParamSpec, register_handler
 
 logger = logging.getLogger(__name__)
 
@@ -15,18 +15,21 @@ logger = logging.getLogger(__name__)
 class CreateAssetHandler(BaseHandler):
     """POST /asset with extracted fields."""
 
+    tier = 2
+    description = "Create a new asset"
+    param_schema = {"name": ParamSpec(description="Asset name")}
+
     def get_task_type(self) -> str:
         return "create_asset"
 
-    @property
-    def required_params(self) -> list[str]:
-        return ["name"]
-
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
+        from datetime import date as dt_date
+
         body: dict[str, Any] = {"name": params["name"]}
 
         for field in (
             "description",
+            "dateOfAcquisition",
             "acquisitionDate",
             "acquisitionCost",
             "depreciationPercentage",
@@ -36,6 +39,10 @@ class CreateAssetHandler(BaseHandler):
         ):
             if field in params:
                 body[field] = params[field]
+
+        # dateOfAcquisition is required by the API — default to today
+        if "dateOfAcquisition" not in body:
+            body["dateOfAcquisition"] = params.get("acquisitionDate", dt_date.today().isoformat())
 
         for ref_field in ("account", "depreciationAccount", "department", "type"):
             if ref_field in params:
@@ -51,12 +58,11 @@ class CreateAssetHandler(BaseHandler):
 class UpdateAssetHandler(BaseHandler):
     """Find asset by ID or name, then PUT with updated fields."""
 
+    tier = 2
+    description = "Update an existing asset"
+
     def get_task_type(self) -> str:
         return "update_asset"
-
-    @property
-    def required_params(self) -> list[str]:
-        return []
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         asset = None

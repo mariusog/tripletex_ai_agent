@@ -7,8 +7,9 @@ from datetime import date as dt_date
 from typing import Any
 
 from src.api_client import TripletexClient
-from src.handlers.base import BaseHandler, register_handler
+from src.handlers.base import BaseHandler, ParamSpec, register_handler
 from src.handlers.entity_resolver import resolve as _resolve
+from src.services.order_line_builder import build_and_post_order_lines
 
 logger = logging.getLogger(__name__)
 
@@ -17,12 +18,17 @@ logger = logging.getLogger(__name__)
 class CreateOrderHandler(BaseHandler):
     """POST /order then POST /order/orderline/list for line items."""
 
+    tier = 2
+    description = "Create an order with order lines"
+    param_schema = {
+        "customer": ParamSpec(description="Customer name or ref"),
+        "orderDate": ParamSpec(required=False, type="date"),
+        "deliveryDate": ParamSpec(required=False, type="date"),
+        "orderLines": ParamSpec(required=False, type="list", description="Line items"),
+    }
+
     def get_task_type(self) -> str:
         return "create_order"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["customer"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         customer_ref = _resolve(api_client, "customer", params.get("customer"))
@@ -44,36 +50,8 @@ class CreateOrderHandler(BaseHandler):
         order_id = order.get("id")
         logger.info("Created order id=%s", order_id)
 
-        # Add order lines if provided
         lines = params.get("orderLines", params.get("lines", []))
         if lines and order_id:
-            payloads = []
-            for line in lines:
-                ol: dict[str, Any] = {"order": {"id": order_id}}
-                if "product" in line:
-                    line_price = (
-                        line.get("unitPriceExcludingVatCurrency")
-                        or line.get("amount")
-                        or line.get("price")
-                    )
-                    ol["product"] = _resolve(
-                        api_client,
-                        "product",
-                        line["product"],
-                        extra_create_fields={"price": line_price},
-                    )
-                if "description" in line:
-                    ol["description"] = line["description"]
-                ol["count"] = line.get("count", line.get("quantity", 1))
-                if "unitPriceExcludingVatCurrency" in line:
-                    ol["unitPriceExcludingVatCurrency"] = line["unitPriceExcludingVatCurrency"]
-                elif "amount" in line:
-                    ol["unitPriceExcludingVatCurrency"] = line["amount"]
-                elif "price" in line:
-                    ol["unitPriceExcludingVatCurrency"] = line["price"]
-                payloads.append(self.strip_none_values(ol))
-            if payloads:
-                api_client.post("/order/orderline/list", data=payloads)
-                logger.info("Added %d order lines", len(payloads))
+            build_and_post_order_lines(api_client, order_id, lines)
 
         return {"id": order_id, "action": "created"}

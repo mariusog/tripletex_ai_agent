@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-22_00-47-45",
+  "prompt": "Opprett og send en faktura til kunden Snøhetta AS (org.nr 871844062) på 20100 kr eksklusiv MVA. Fakturaen gjelder Webdesign.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 12.37,
+  "service": "tripletex-agent-2"
+}

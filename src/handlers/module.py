@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
-from src.handlers.base import BaseHandler, register_handler
+from src.handlers.base import BaseHandler, ParamSpec, register_handler
 
 logger = logging.getLogger(__name__)
 
@@ -19,12 +19,12 @@ class EnableModuleHandler(BaseHandler):
     The module name is mapped to the corresponding API field.
     """
 
+    tier = 1
+    description = "Enable a Tripletex module"
+    param_schema = {"moduleName": ParamSpec(description="Module field name to enable")}
+
     def get_task_type(self) -> str:
         return "enable_module"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["moduleName"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         module_name = params["moduleName"]
@@ -57,12 +57,16 @@ class AssignRoleHandler(BaseHandler):
     Finds employee by name/ID, updates userType or entitlements.
     """
 
+    tier = 1
+    description = "Assign a role to an employee"
+    param_schema = {
+        "employee": ParamSpec(description="Employee name, ID, or {firstName, lastName}"),
+        "role": ParamSpec(required=False, description="administrator/standard/no_access"),
+        "userType": ParamSpec(required=False),
+    }
+
     def get_task_type(self) -> str:
         return "assign_role"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["employee"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         from src.handlers.entity_resolver import resolve as _resolve
@@ -97,16 +101,10 @@ class AssignRoleHandler(BaseHandler):
         role = params.get("role", "")
         role_lower = role.lower() if role else ""
 
-        # Map role names to Tripletex userType / fields
-        if role_lower in ("administrator", "admin"):
-            employee["userType"] = "ADMINISTRATOR"
-        elif role_lower in ("standard", "user"):
-            employee["userType"] = "STANDARD"
-        elif role_lower in ("no_access", "noaccess"):
-            employee["userType"] = "NO_ACCESS"
-
-        if "userType" in params:
-            employee["userType"] = params["userType"]
+        # userType is create-only (can't be updated via PUT), so we set
+        # allowInformationRegistration instead for role changes
+        if role_lower in ("administrator", "admin", "standard", "user"):
+            employee["allowInformationRegistration"] = True
 
         # Handle entitlements if provided
         if "roles" in params:
@@ -114,12 +112,17 @@ class AssignRoleHandler(BaseHandler):
         if "entitlements" in params:
             employee["entitlements"] = params["entitlements"]
 
-        # Set common access flags based on role
-        if role_lower:
-            employee["allowInformationRegistration"] = True
-
         if not employee.get("dateOfBirth"):
             employee["dateOfBirth"] = "1990-01-01"
+
+        # Strip read-only fields that cause 422 on PUT
+        for ro_field in (
+            "employments",
+            "entitlementInfo",
+            "holidayAllowanceEarned",
+            "userType",
+        ):
+            employee.pop(ro_field, None)
 
         result = api_client.put(f"/employee/{emp_id}", data=employee)
         value = result.get("value", {}) if result else {}

@@ -1,0 +1,94 @@
+{
+  "timestamp": "2026-03-21 00:18:00",
+  "prompt": "Registre 26 horas para Lucía Martínez (lucia.martinez@example.org) en la actividad \"Utvikling\" del proyecto \"Desarrollo e-commerce\" para Montaña SL (org. nº 869049328). Tarifa por hora: 1100 NOK/h. Genere una factura de proyecto al cliente basada en las horas registradas.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 7.73
+    },
+    {
+      "method": "POST",
+      "endpoint": "/customer",
+      "status": 201,
+      "duration_s": 8.31
+    },
+    {
+      "method": "GET",
+      "endpoint": "/employee",
+      "status": 200,
+      "duration_s": 6.88
+    },
+    {
+      "method": "POST",
+      "endpoint": "/project",
+      "status": 201,
+      "duration_s": 6.54
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order",
+      "status": 201,
+      "duration_s": 6.9
+    },
+    {
+      "method": "POST",
+      "endpoint": "/product",
+      "status": 201,
+      "duration_s": 7.83
+    },
+    {
+      "method": "POST",
+      "endpoint": "/order/orderline/list",
+      "status": 201,
+      "duration_s": 7.39
+    },
+    {
+      "method": "POST",
+      "endpoint": "/invoice",
+      "status": 201,
+      "duration_s": 8.37
+    }
+  ],
+  "errors": [],
+  "task_type": "create_invoice",
+  "params": {
+    "customer": {
+      "name": "Montaña SL",
+      "organizationNumber": "869049328"
+    },
+    "project": {
+      "name": "Desarrollo e-commerce"
+    },
+    "employee": {
+      "firstName": "Lucía",
+      "lastName": "Martínez",
+      "email": "lucia.martinez@example.org"
+    },
+    "activity": "Utvikling",
+    "hoursWorked": 26,
+    "hourlyRate": 1100,
+    "orderLines": [
+      {
+        "product": {
+          "name": "Utvikling"
+        },
+        "count": 26,
+        "unitPriceExcludingVatCurrency": 1100,
+        "description": "Utvikling - Desarrollo e-commerce"
+      }
+    ],
+    "projectInvoice": true
+  },
+  "handler": "CreateInvoiceHandler",
+  "total_api_calls": 8,
+  "total_duration_s": 64.68,
+  "result": {
+    "id": 2147558325,
+    "orderId": 401980438,
+    "action": "created"
+  },
+  "service": "tripletex-agent-stian"
+}

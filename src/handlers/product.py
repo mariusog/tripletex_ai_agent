@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
-from src.handlers.base import BaseHandler, register_handler
+from src.handlers.base import BaseHandler, ParamSpec, register_handler
 
 logger = logging.getLogger(__name__)
 
@@ -46,12 +46,17 @@ def _resolve_vat_type(api_client: TripletexClient, vat: Any) -> dict[str, int] |
 class CreateProductHandler(BaseHandler):
     """POST /product with extracted fields. 1 API call."""
 
+    tier = 1
+    description = "Create a new product"
+    param_schema = {
+        "name": ParamSpec(description="Product name"),
+        "number": ParamSpec(required=False, description="Product number"),
+        "priceExcludingVatCurrency": ParamSpec(required=False, type="number"),
+        "vatType": ParamSpec(required=False, description="VAT type percentage or ID"),
+    }
+
     def get_task_type(self) -> str:
         return "create_product"
-
-    @property
-    def required_params(self) -> list[str]:
-        return ["name"]
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         body: dict[str, Any] = {"name": params["name"]}

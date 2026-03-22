@@ -8,7 +8,6 @@ triggers auto-registration of all implemented handlers.
 from src.handlers import (  # noqa: F401
     asset,
     bank,
-    cost_analysis,
     customer,
     delete,
     department,

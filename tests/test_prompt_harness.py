@@ -27,10 +27,12 @@ ALL_TASK_TYPES = [f["task_type"] for f in ALL_FIXTURES]
 def _make_mock_llm(task_type: str, params: dict) -> MagicMock:
     """Create a mock LLMClient that returns the given classification."""
     mock = MagicMock()
-    mock.classify_and_extract.return_value = TaskClassification(
-        task_type=task_type,
-        params=params,
-    )
+    mock.classify_and_extract.return_value = [
+        TaskClassification(
+            task_type=task_type,
+            params=params,
+        )
+    ]
     return mock
 
 
@@ -48,10 +50,10 @@ def test_classification_accuracy_per_language(lang: str) -> None:
         expected_params = fixture["expected_params"]
 
         mock_llm = _make_mock_llm(task_type, expected_params)
-        result = mock_llm.classify_and_extract(prompt)
+        results = mock_llm.classify_and_extract(prompt)
 
-        assert result.task_type == task_type, (
-            f"Language={lang}: expected {task_type}, got {result.task_type}"
+        assert results[0].task_type == task_type, (
+            f"Language={lang}: expected {task_type}, got {results[0].task_type}"
         )
 
 
@@ -68,10 +70,10 @@ def test_classification_accuracy_per_task_type(task_type: str) -> None:
     for lang in LANGUAGES:
         prompt = fixture["prompts"][lang]
         mock_llm = _make_mock_llm(task_type, expected_params)
-        result = mock_llm.classify_and_extract(prompt)
+        results = mock_llm.classify_and_extract(prompt)
 
-        assert result.task_type == task_type, (
-            f"Task={task_type}, lang={lang}: got {result.task_type}"
+        assert results[0].task_type == task_type, (
+            f"Task={task_type}, lang={lang}: got {results[0].task_type}"
         )
 
 
@@ -88,7 +90,8 @@ def test_parameter_extraction_accuracy(task_type: str) -> None:
     # Test with Norwegian prompt (canonical language)
     prompt = fixture["prompts"]["no"]
     mock_llm = _make_mock_llm(task_type, expected_params)
-    result = mock_llm.classify_and_extract(prompt)
+    results = mock_llm.classify_and_extract(prompt)
+    result = results[0]
 
     for key, expected_val in expected_params.items():
         actual_val = result.params.get(key)
@@ -151,9 +154,9 @@ def test_real_llm_classification_per_language(lang: str) -> None:
     for fixture in ALL_FIXTURES:
         task_type = fixture["task_type"]
         prompt = fixture["prompts"][lang]
-        result = client.classify_and_extract(prompt)
-        if result.task_type != task_type:
-            failures.append(f"{task_type}: expected {task_type}, got {result.task_type}")
+        results = client.classify_and_extract(prompt)
+        if results[0].task_type != task_type:
+            failures.append(f"{task_type}: expected {task_type}, got {results[0].task_type}")
 
     assert not failures, f"Language={lang} failures:\n" + "\n".join(failures)
 
@@ -178,7 +181,7 @@ def test_real_llm_full_accuracy_report() -> None:
         for lang in LANGUAGES:
             prompt = fixture["prompts"][lang]
             result = client.classify_and_extract(prompt)
-            results[task_type][lang] = result.task_type == task_type
+            results[task_type][lang] = result[0].task_type == task_type
 
     report = generate_accuracy_matrix(results)
     print(f"\n{report}")

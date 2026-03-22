@@ -2,6 +2,7 @@
 
 Uses Claude API to classify incoming prompts into task types
 and extract structured parameters for handler execution.
+Supports multi-step task decomposition for complex prompts.
 """
 
 from __future__ import annotations
@@ -15,7 +16,6 @@ from typing import Any
 import anthropic
 
 from src.constants import (
-    ALL_TASK_TYPES,
     LLM_CLAUDE_MODEL,
     LLM_MAX_RETRIES,
     LLM_MAX_TOKENS,
@@ -29,11 +29,8 @@ from src.models import FileAttachment, TaskClassification
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = f"""You are a task classifier for Tripletex accounting software.
-Given a user prompt (in any language), identify the task type and extract parameters.
-
-TASK TYPES: {json.dumps(ALL_TASK_TYPES)}
-
+# Classification rules that are cross-cutting (not tied to any single handler).
+_CLASSIFICATION_RULES = """\
 CLASSIFICATION RULES (important!):
 - If the task mentions creating an order AND an invoice (or "faktura"), classify as "create_invoice"
 - If the task mentions creating an order/invoice AND registering payment, classify as \
@@ -44,14 +41,14 @@ classify as "register_payment" with negative amount and "reversal": true. \
 Include "orderLines" with the product/service name and amount from the original invoice.
 - Do NOT classify payment reversals as "reverse_voucher" — use "register_payment" instead
 - If the task mentions a customer by name, pass as "customer" object: \
-{{"name": "...", "organizationNumber": "..."}} (include org number if mentioned)
+{"name": "...", "organizationNumber": "..."} (include org number if mentioned)
 - If the task mentions products by name/number, include them in orderLines with product name/number
 - For SUPPLIERS (leverandør, supplier, Lieferant, fournisseur, proveedor, fornecedor), \
 classify as "create_supplier" — NOT create_customer. \
 Suppliers provide goods/services TO us; customers buy FROM us.
 - If the task asks to create MULTIPLE entities of the same type (e.g. "create three departments"), \
-extract ALL items in an "items" array. Example: {{"task_type": "create_department", \
-"params": {{"items": [{{"name": "Dept1"}}, {{"name": "Dept2"}}]}}}}
+extract ALL items in an "items" array. Example: {"task_type": "create_department", \
+"params": {"items": [{"name": "Dept1"}, {"name": "Dept2"}]}}
 - For supplier invoices (leverandørfaktura/Lieferantenrechnung), classify as "create_voucher"
 - For payroll/salary tasks (lønn, paie, Gehalt, nómina, run payroll), classify as "run_payroll"
 - For custom accounting dimensions (dimensjon, dimension, Dimension) with voucher, \
@@ -60,109 +57,119 @@ classify as "create_dimension_voucher"
 registrar horas), classify as "log_timesheet". If the task also asks to generate an \
 invoice from the hours, still classify as "log_timesheet" with generateInvoice: true
 
-PARAMETER SCHEMAS per task type:
-- create_employee: {{firstName, lastName, email, phoneNumberMobile, \
-userType ("STANDARD" or "ADMINISTRATOR")}}
-- update_employee: {{firstName, lastName (to find), fields to update...}}
-- create_customer: {{name, email, phoneNumber, organizationNumber, ...}}
-- update_customer: {{name (to find), fields to update...}}
-- create_product: {{name, number, priceExcludingVatCurrency, vatType, ...}}
-- create_department: {{name, departmentNumber, departmentManager, ...}}
-- create_project: {{name, number, startDate, endDate, customer, ...}}
-- update_project: {{projectId or name (to find), newName (if renaming), fields to update...}}
-- assign_role: {{employee (name string or {{firstName, lastName}}), \
-role ("administrator"/"standard"/"no_access"), userType}}
-- enable_module: {{moduleName, ...}}
-- create_order: {{customer, orderDate, deliveryDate, \
-orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency}}]}}
-- create_invoice: {{customer, invoiceDate, invoiceDueDate, \
-orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency or amount}}], \
-register_payment: {{amount, paymentDate}} (if payment mentioned)}}
-- send_invoice: {{invoiceId or customer + orderLines (will create and send)}}
-- register_payment: {{customer, amount, paymentDate, description, reversal (bool), \
-orderLines: [{{product: {{name, number}}, count, unitPriceExcludingVatCurrency}}]}}
-- create_credit_note: {{invoiceId or search criteria, ...}}
-- create_travel_expense: {{employee, project, travelDetails, costs, ...}}
-- deliver_travel_expense: {{travelExpenseId or employee (name/dict), title, \
-costs, travelDetails (same as create_travel_expense if creating first)}}
-- approve_travel_expense: {{travelExpenseId or employee (name/dict), title, \
-costs, travelDetails (same as create_travel_expense if creating first)}}
-- link_project_customer: {{projectId or name (to find project), customer, ...}}
-- create_activity: {{name, ...}}
-- create_asset: {{name, ...}}
-- update_asset: {{assetId or name (to find), fields to update...}}
-- create_supplier: {{name, organizationNumber, email, phoneNumber, postalAddress, ...}}
-- create_voucher: {{date, description, postings (debit/credit accounts, amounts), \
-supplier (name/orgNr if supplier invoice), customer (name/orgNr if using account 1500 kundefordringer)}}
-- reverse_voucher: {{voucherId or search criteria...}}
-- bank_reconciliation: {{accountId or accountNumber (e.g. 1920), \
-reconciliationDate, adjustments: [{{amount, description, date}}]}}
-- ledger_correction: {{corrections: [{{type, description, postings: [{{account, debit, credit, description}}]}}], \
-date, description}} — each correction MUST have balanced double-entry postings (total debit = total credit). \
-For wrong account: debit correct account, credit wrong account. For duplicate: credit the duplicate account, debit a balancing account. \
-For missing VAT: debit VAT account, credit supplier/AP account. For wrong amount: credit to reduce, debit to increase.
-- year_end_closing: {{year, ...}}
-- balance_sheet_report: {{dateFrom, dateTo, ...}}
-- cost_analysis: {{dateFrom, dateTo, topN (number of top accounts, default 3)}} \
-— use when prompt asks to ANALYZE expenses, find accounts with biggest changes, \
-and create projects/activities for them
-- update_department: {{name (to find), newName, departmentNumber, departmentManager, ...}}
-- delete_customer: {{name or id}}
-- delete_product: {{name, number, or id}}
-- delete_department: {{name or id}}
-- delete_project: {{name or id}}
-- delete_order: {{id}}
-- delete_travel_expense: {{id or title}}
-- delete_supplier: {{name or id}}
-- delete_voucher: {{voucherId or number or voucherNumber}}
-- run_payroll: {{employee (name string or {{firstName, lastName, email}}), \
-baseSalary (base monthly salary amount), bonus (one-time bonus amount), \
-bonusDescription, month, year, extras: [{{amount, description}}]}}
-- create_dimension_voucher: {{dimensionName, dimensionValues: ["val1", "val2"], \
-linkedValue (which value to link the voucher to), \
-postings: [{{account (number), amount}}], date, description}}
-- log_timesheet: {{employee (name or {{firstName, lastName, email}}), \
-hours (number), activity (name string), project (name string), \
-customer ({{name, organizationNumber}}), hourlyRate, date, \
-generateInvoice (bool, if task asks to invoice the hours)}}
+MULTI-STEP TASKS:
+- If the prompt asks for MULTIPLE DIFFERENT operations (e.g. "create a voucher AND send an \
+invoice AND register a payment"), decompose into separate tasks in the "tasks" array.
+- Order the tasks logically: create entities before referencing them, \
+book vouchers before invoices, etc.
+- Share context between steps: if step 1 creates a customer, use the same customer \
+name/reference in later steps that need it.
+- Common multi-step patterns:
+  * "Book a fee + create an invoice for it + send it" → create_voucher, create_invoice, send_invoice
+  * "Create invoice + register payment" → create_invoice (with register_payment in params)
+  * "Find overdue invoice + register partial payment" → register_payment (searches automatically)
+  * "Create employee + assign role" → create_employee, assign_role
+  * PROJECT LIFECYCLE (budget + hours + supplier cost + invoice) → \
+create_project, log_timesheet (per employee), create_voucher (supplier cost), create_invoice
+- IMPORTANT: For project lifecycle tasks that mention registering hours, supplier costs, AND \
+invoicing, you MUST decompose into the FULL workflow: create_project first, then log_timesheet \
+for each employee, then create_voucher for supplier costs, then create_invoice. Do NOT just \
+create entities — execute the complete workflow.
 
 ACCOUNTING RULES:
-- Exchange rate differences: account 8060 for AGIO (currency gain), 8160 for DISAGIO (currency loss)
-- Accumulated depreciation: 1209 (machinery/office), 1249 (inventory), 1259 (software)
-- Expense accounts: 6000-7999. Revenue: 3000-3999. Balance sheet: 1000-2999.
-- VAT rates: 25% standard, 15% food/beverage, 12% transport, 0% exempt
+- For DEPRECIATION postings: debit the depreciation EXPENSE account (6010/6020/6030), \
+credit the ACCUMULATED DEPRECIATION account (1209 for machinery, 1249 for inventory, \
+1259 for software). NEVER credit account 1700 (prepaid expenses) for depreciation.
+- For PREPAID EXPENSE amortization: debit an operating expense account (6300 for rent, etc.), \
+credit 1700/1720. NEVER use 6010 for prepaid expense — 6010 is only for depreciation.
+- For SALARY ACCRUAL without specified amount: set amount to 0, it will be inferred from data.
+- ALWAYS use NUMERIC account codes (e.g. 6300, 1209), never text names.
+- For exchange rate differences: use account 8060 for AGIO (gain), 8160 for DISAGIO (loss).
+- Accumulated depreciation accounts: 1209 (machinery), 1249 (inventory), 1259 (software).
+
+EFFICIENCY RULES:
+- Only POST/PUT/DELETE/PATCH calls count for efficiency scoring. GET requests are FREE.
+- Every 4xx error (400, 404, 422) reduces the efficiency bonus. Avoid trial-and-error.
+- A fresh empty sandbox is created for each submission — entities must be created before use.
 
 Extract ALL relevant parameters from the prompt. Use field names matching the Tripletex API.
 If dates are mentioned, format as yyyy-MM-dd.
 If the prompt references attached files, note that in params as "has_attachments": true."""
 
-CLASSIFY_TOOL = {
-    "name": "classify_task",
-    "description": "Classify the accounting task and extract all parameters.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "task_type": {
-                "type": "string",
-                "enum": ALL_TASK_TYPES,
-                "description": "The task type to execute",
-            },
-            "params": {
-                "type": "object",
-                "description": "Extracted parameters for the handler",
-            },
-        },
-        "required": ["task_type", "params"],
-    },
-}
+
+def build_system_prompt(handlers: dict[str, Any]) -> str:
+    """Assemble the classification prompt from handler metadata."""
+    all_task_types = sorted(handlers.keys())
+
+    # Group handlers by tier
+    tiers: dict[int, list[tuple[str, Any]]] = {1: [], 2: [], 3: []}
+    for task_type in all_task_types:
+        h = handlers[task_type]
+        tier = getattr(h, "tier", 1)
+        tiers.setdefault(tier, []).append((task_type, h))
+
+    # Build parameter schemas section
+    schema_lines = []
+    for tier_num in sorted(tiers.keys()):
+        tier_handlers = tiers[tier_num]
+        if not tier_handlers:
+            continue
+        tier_labels = {1: "simple CRUD", 2: "multi-step", 3: "complex workflows"}
+        schema_lines.append(
+            f"\nTier {tier_num} ({tier_labels.get(tier_num, '')}, x{tier_num} multiplier):"
+        )
+        for task_type, h in tier_handlers:
+            desc = getattr(h, "description", "") or ""
+            param_schema = getattr(h, "param_schema", {}) or {}
+
+            if param_schema:
+                param_parts = []
+                for pname, pspec in param_schema.items():
+                    hint = pspec.description
+                    req = "" if pspec.required else ", optional"
+                    param_parts.append(f"{pname}{req}" + (f" ({hint})" if hint else ""))
+                params_str = "{" + ", ".join(param_parts) + "}"
+            else:
+                params_str = "{...}"
+
+            line = f"- {task_type}: {params_str}"
+            if desc:
+                line = f"- {task_type} — {desc}: {params_str}"
+            schema_lines.append(line)
+
+    # Collect disambiguation notes from handlers
+    disambig_lines = []
+    for task_type in all_task_types:
+        h = handlers[task_type]
+        disambig = getattr(h, "disambiguation", None)
+        if disambig:
+            disambig_lines.append(f"- {task_type}: {disambig}")
+
+    # Assemble full prompt
+    parts = [
+        "You are a task classifier for Tripletex accounting software.",
+        "Given a user prompt (in any language), identify the task type(s) and extract parameters.",
+        "If the prompt requires MULTIPLE different operations, return them all in the tasks array.",
+        "",
+        f"TASK TYPES: {json.dumps(all_task_types)}",
+        "",
+        _CLASSIFICATION_RULES,
+    ]
+
+    if disambig_lines:
+        parts.append("")
+        parts.append("ADDITIONAL DISAMBIGUATION:")
+        parts.extend(disambig_lines)
+
+    parts.append("")
+    parts.append("PARAMETER SCHEMAS per task type:")
+    parts.extend(schema_lines)
+
+    return "\n".join(parts)
 
 
 class LLMClient:
-    """Client for LLM-based task classification and parameter extraction.
-
-    Uses Vertex AI by default (set ANTHROPIC_VERTEX_PROJECT_ID env var).
-    Falls back to direct Anthropic API if ANTHROPIC_API_KEY is set instead.
-    """
+    """Client for LLM-based task classification and parameter extraction."""
 
     def __init__(self, api_key: str | None = None) -> None:
         project_id = os.environ.get("ANTHROPIC_VERTEX_PROJECT_ID", LLM_VERTEX_PROJECT_ID)
@@ -184,13 +191,55 @@ class LLMClient:
             self._model = LLM_CLAUDE_MODEL
             logger.info("Using Claude via direct Anthropic API")
 
+        # Build system prompt from registered handlers
+        from src.handlers import HANDLER_REGISTRY
+
+        self._system_prompt = build_system_prompt(HANDLER_REGISTRY)
+        self._all_task_types = sorted(HANDLER_REGISTRY.keys())
+
     def classify_and_extract(
         self,
         prompt: str,
         files: list[FileAttachment] | None = None,
-    ) -> TaskClassification:
-        """Classify a prompt using tool_use for guaranteed structured output."""
+    ) -> list[TaskClassification]:
+        """Classify a prompt into one or more tasks with structured output.
+
+        Returns a list of TaskClassification objects. Single-task prompts
+        return a list with one element.
+        """
         messages = self._build_messages(prompt, files)
+
+        classify_tool = {
+            "name": "classify_task",
+            "description": "Classify the accounting task(s) and extract all parameters. "
+            "For multi-step prompts, include all tasks in the tasks array.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "tasks": {
+                        "type": "array",
+                        "description": "Ordered list of tasks to execute. "
+                        "Use a single item for simple prompts, multiple for multi-step.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "task_type": {
+                                    "type": "string",
+                                    "enum": self._all_task_types,
+                                    "description": "The task type to execute",
+                                },
+                                "params": {
+                                    "type": "object",
+                                    "description": "Extracted parameters for the handler",
+                                },
+                            },
+                            "required": ["task_type", "params"],
+                        },
+                    },
+                },
+                "required": ["tasks"],
+            },
+        }
 
         for attempt in range(LLM_MAX_RETRIES + 1):
             try:
@@ -198,9 +247,9 @@ class LLMClient:
                     model=self._model,
                     max_tokens=LLM_MAX_TOKENS,
                     temperature=LLM_TEMPERATURE,
-                    system=SYSTEM_PROMPT,
+                    system=self._system_prompt,
                     messages=messages,  # type: ignore[arg-type]
-                    tools=[CLASSIFY_TOOL],  # type: ignore[list-item]
+                    tools=[classify_tool],  # type: ignore[list-item]
                     tool_choice={"type": "tool", "name": "classify_task"},
                 )
                 return self._parse_response(response)
@@ -215,7 +264,6 @@ class LLMClient:
                     continue
                 raise
 
-        # Should not reach here
         raise RuntimeError("LLM retries exhausted")
 
     @staticmethod
@@ -229,7 +277,6 @@ class LLMClient:
         if files:
             for f in files:
                 media_type = f.mime_type
-                # Claude vision supports image types and PDFs
                 if media_type.startswith("image/"):
                     content.append(
                         {
@@ -253,7 +300,6 @@ class LLMClient:
                         }
                     )
                 else:
-                    # Decode and include as text context
                     try:
                         text = base64.b64decode(f.content_base64).decode("utf-8", errors="replace")
                         content.append(
@@ -269,17 +315,30 @@ class LLMClient:
         return [{"role": "user", "content": content}]
 
     @staticmethod
-    def _parse_response(response: Any) -> TaskClassification:
-        """Extract TaskClassification from tool_use response."""
+    def _parse_response(response: Any) -> list[TaskClassification]:
+        """Extract list of TaskClassification from tool_use response."""
         for block in response.content:
             if block.type == "tool_use" and block.name == "classify_task":
                 parsed = block.input
-                return TaskClassification(
-                    task_type=parsed.get("task_type", "unknown"),
-                    params=parsed.get("params", {}),
-                )
+                tasks = parsed.get("tasks", [])
+                if tasks:
+                    return [
+                        TaskClassification(
+                            task_type=t.get("task_type", "unknown"),
+                            params=t.get("params", {}),
+                        )
+                        for t in tasks
+                    ]
+                # Fallback: old single-task format
+                if "task_type" in parsed:
+                    return [
+                        TaskClassification(
+                            task_type=parsed.get("task_type", "unknown"),
+                            params=parsed.get("params", {}),
+                        )
+                    ]
 
-        # Fallback: parse text response (shouldn't happen with tool_choice)
+        # Fallback: parse text response
         for block in response.content:
             if block.type == "text":
                 text = block.text.strip()
@@ -289,14 +348,23 @@ class LLMClient:
                 try:
                     parsed = json.loads(text)
                     if isinstance(parsed, list):
-                        parsed = parsed[0] if parsed else {}
+                        return [
+                            TaskClassification(
+                                task_type=t.get("task_type", "unknown"),
+                                params=t.get("params", {}),
+                            )
+                            for t in parsed
+                            if isinstance(t, dict)
+                        ]
                     if isinstance(parsed, dict):
-                        return TaskClassification(
-                            task_type=parsed.get("task_type", "unknown"),
-                            params=parsed.get("params", {}),
-                        )
+                        return [
+                            TaskClassification(
+                                task_type=parsed.get("task_type", "unknown"),
+                                params=parsed.get("params", {}),
+                            )
+                        ]
                 except json.JSONDecodeError:
                     logger.warning("LLM text fallback non-JSON: %.200s", text)
 
         logger.warning("No tool_use or parseable text in LLM response")
-        return TaskClassification(task_type="unknown", params={})
+        return [TaskClassification(task_type="unknown", params={})]

@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-03-22_00-24-22",
+  "prompt": "Concilia el extracto bancario (CSV adjunto) con las facturas abiertas en Tripletex. Relaciona los pagos entrantes con las facturas de clientes y los pagos salientes con las facturas de proveedores. Maneja los pagos parciales correctamente.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "duration_s": 32.1,
+  "service": "tripletex-agent-2"
+}

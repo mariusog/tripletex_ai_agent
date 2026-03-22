@@ -1,8 +1,8 @@
-"""Shared entity resolvers and finder utilities.
+"""Domain-specific API lookup utilities and infrastructure helpers.
 
-Entity resolution is delegated to entity_resolver.py. This module
-re-exports those functions for backward compatibility and provides
-travel/invoice-specific finder utilities.
+Contains finder functions for invoices, travel expenses, cost categories,
+payment types, and bank account setup. These are NOT entity resolution
+(find-or-create) — that lives in entity_resolver.py.
 """
 
 from __future__ import annotations
@@ -12,11 +12,6 @@ from typing import Any
 
 from src.api_client import TripletexApiError, TripletexClient
 from src.constants import DEFAULT_BANK_ACCOUNT_NUMBER
-from src.handlers.entity_resolver import (
-    _resolve_customer,
-    _resolve_product,
-    resolve,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +20,7 @@ _bank_account_set: dict[str, bool] = {}
 
 def ensure_bank_account(api_client: TripletexClient) -> None:
     """Ensure the company has a bank account on ledger account 1920."""
-    cache_key = getattr(api_client, "base_url", "default")
+    cache_key = getattr(api_client, "base_url", "") + getattr(api_client, "_token_prefix", "")
     if _bank_account_set.get(cache_key):
         return
     try:
@@ -56,16 +51,6 @@ def ensure_bank_account(api_client: TripletexClient) -> None:
         _bank_account_set[cache_key] = True
     except TripletexApiError as e:
         logger.warning("Failed to set bank account: %s", e)
-
-
-# Re-export entity resolvers under their original names
-resolve_customer = _resolve_customer
-resolve_product = _resolve_product
-
-
-def resolve_employee(api_client: TripletexClient, employee: Any) -> dict[str, int]:
-    """Resolve employee to {"id": N}. Creates or finds, then ensures ready."""
-    return resolve(api_client, "employee", employee)
 
 
 # Map common cost descriptions to Tripletex costCategory descriptions
@@ -173,9 +158,17 @@ def find_travel_expense(api_client: TripletexClient, params: dict[str, Any]) -> 
 
 def find_invoice_id(api_client: TripletexClient, params: dict[str, Any]) -> int | None:
     """Resolve invoice ID: direct ID avoids a GET call, otherwise search."""
+    from datetime import date as _dt
+
     if "invoiceId" in params:
         return int(params["invoiceId"])
-    search_params: dict[str, Any] = {"count": 1}
+    from datetime import timedelta
+
+    search_params: dict[str, Any] = {
+        "count": 10,
+        "invoiceDateFrom": "2020-01-01",
+        "invoiceDateTo": (_dt.today() + timedelta(days=365)).isoformat(),
+    }
     if "invoiceNumber" in params:
         search_params["invoiceNumber"] = params["invoiceNumber"]
     elif "customer" in params:
@@ -184,7 +177,42 @@ def find_invoice_id(api_client: TripletexClient, params: dict[str, Any]) -> int 
             if "id" in cust:
                 search_params["customerId"] = int(cust["id"])
             else:
-                return None
+                # Resolve customer by name to get ID
+                cust_name = cust.get("name", "")
+                if cust_name:
+                    try:
+                        cust_resp = api_client.get(
+                            "/customer",
+                            params={"name": cust_name, "count": 5},
+                            fields="id,name",
+                        )
+                        for cv in cust_resp.get("values", []):
+                            if cv.get("name", "").strip().lower() == cust_name.strip().lower():
+                                search_params["customerId"] = cv["id"]
+                                break
+                    except TripletexApiError:
+                        pass
+                if "customerId" not in search_params:
+                    return None
+        elif isinstance(cust, str):
+            # Try as int first, then search by name
+            try:
+                search_params["customerId"] = int(cust)
+            except (TypeError, ValueError):
+                try:
+                    cust_resp = api_client.get(
+                        "/customer",
+                        params={"name": cust, "count": 5},
+                        fields="id,name",
+                    )
+                    for cv in cust_resp.get("values", []):
+                        if cv.get("name", "").strip().lower() == cust.strip().lower():
+                            search_params["customerId"] = cv["id"]
+                            break
+                except TripletexApiError:
+                    pass
+                if "customerId" not in search_params:
+                    return None
         else:
             try:
                 search_params["customerId"] = int(cust)
@@ -198,46 +226,3 @@ def find_invoice_id(api_client: TripletexClient, params: dict[str, Any]) -> int 
         return values[0].get("id") if values else None
     except TripletexApiError:
         return None
-
-
-def resolve_vat_type(api_client: TripletexClient, vat_value: Any) -> dict[str, int] | None:
-    """Resolve vatType to {"id": N}. Handles rate strings like "25", "25%", "15% food"."""
-    if isinstance(vat_value, dict) and "id" in vat_value:
-        return {"id": int(vat_value["id"])}
-    vat_str = str(vat_value).strip().rstrip("%").split("%")[0].strip()
-    # Normalize names to rates
-    name_map = {"standard": "25", "high": "25", "høy": "25", "medium": "15",
-                "food": "15", "mat": "15", "low": "12", "lav": "12",
-                "none": "0", "zero": "0", "exempt": "0", "isento": "0",
-                "fritatt": "0", "avgiftsfri": "0", "exento": "0"}
-    for name, rate in name_map.items():
-        if name in vat_str.lower():
-            vat_str = rate
-            break
-    try:
-        resp = api_client.get_cached(
-            f"vatType_{vat_str}", "/ledger/vatType",
-            params={"count": 100}, fields="id,name,percentage",
-        )
-        for vt in resp.get("values", []):
-            pct = str(int(vt.get("percentage", -1)))
-            if pct == vat_str:
-                return {"id": vt["id"]}
-    except Exception:
-        pass
-    return None
-
-
-# Re-export everything needed by other modules
-__all__ = [
-    "COST_CATEGORY_MAP",
-    "ensure_bank_account",
-    "find_cost_category",
-    "find_invoice_id",
-    "find_travel_expense",
-    "get_travel_payment_type",
-    "resolve",
-    "resolve_customer",
-    "resolve_employee",
-    "resolve_product",
-]

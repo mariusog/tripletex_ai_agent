@@ -1,0 +1,48 @@
+{
+  "timestamp": "2026-03-20 22:08:31",
+  "prompt": "Create a custom accounting dimension \"Region\" with the values \"Nord-Norge\" and \"Vestlandet\". Then post a voucher on account 6540 for 19550 NOK, linked to the dimension value \"Vestlandet\".",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2",
+  "api_calls": [
+    {
+      "method": "GET",
+      "endpoint": "/ledger/account",
+      "status": 200,
+      "duration_s": 0.23
+    },
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 201,
+      "duration_s": 0.46
+    }
+  ],
+  "errors": [],
+  "task_type": "create_voucher",
+  "params": {
+    "description": "Voucher linked to custom dimension Region - Vestlandet",
+    "customDimension": {
+      "name": "Region",
+      "values": [
+        "Nord-Norge",
+        "Vestlandet"
+      ],
+      "linkedValue": "Vestlandet"
+    },
+    "postings": [
+      {
+        "account": 6540,
+        "amount": 19550,
+        "currency": "NOK",
+        "dimensionValue": "Vestlandet"
+      }
+    ]
+  },
+  "handler": "CreateVoucherHandler",
+  "total_api_calls": 2,
+  "total_duration_s": 4.64,
+  "result": {
+    "id": 608862631,
+    "action": "created"
+  },
+  "service": "tripletex-agent-magnus"
+}

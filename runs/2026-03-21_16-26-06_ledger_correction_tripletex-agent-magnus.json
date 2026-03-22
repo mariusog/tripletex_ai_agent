@@ -1,0 +1,50 @@
+{
+  "timestamp": "2026-03-21 16:26:06",
+  "prompt": "Totalkostnadene auka monaleg frå januar til februar 2026. Analyser hovudboka og finn dei tre kostnadskontoane med størst auke i beløp. Opprett eit internt prosjekt for kvar av dei tre kontoane med kontoens namn. Opprett også ein aktivitet for kvart prosjekt.",
+  "base_url": "https://tx-proxy-jwanbnu3pq-lz.a.run.app/v2 git=unknown",
+  "api_calls": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 422,
+      "duration_s": 1.01
+    }
+  ],
+  "errors": [
+    {
+      "method": "POST",
+      "endpoint": "/ledger/voucher",
+      "status": 422,
+      "duration_s": 1.01
+    }
+  ],
+  "task_type": "ledger_correction",
+  "params": {
+    "date": "2026-02-28",
+    "description": "Analyser hovudboka for å finne dei tre kostnadskontoane med størst auke i beløp frå januar til februar 2026",
+    "analysis": {
+      "period1": {
+        "dateFrom": "2026-01-01",
+        "dateTo": "2026-01-31"
+      },
+      "period2": {
+        "dateFrom": "2026-02-01",
+        "dateTo": "2026-02-28"
+      },
+      "task": "Identifiser dei tre kostnadskontoane (typisk 4000-7999) med størst auke i totalbeløp frå januar til februar 2026",
+      "followUpActions": [
+        "Opprett eit internt prosjekt for kvar av dei tre kontoane, med kontoens namn som prosjektnamn",
+        "Opprett ein aktivitet for kvart prosjekt"
+      ]
+    }
+  },
+  "error_details": [
+    {
+      "status": 422,
+      "endpoint": "POST /ledger/voucher",
+      "message": "Validering feilet. | validation: [{'field': 'postings', 'message': 'Kan ikke være null.', 'path': 'null.postings', 'rootId': None}]"
+    }
+  ],
+  "status": "error",
+  "service": "tripletex-agent-magnus"
+}
