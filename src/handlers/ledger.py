@@ -217,12 +217,19 @@ class CreateVoucherHandler(BaseHandler):
                     p["vatRate"] = vat_rate
                 postings.append(p)
 
-        # Propagate top-level department to postings that don't have one
+        # Propagate top-level department to expense postings only (not AP/bank)
         top_dept = params.get("department")
         if top_dept and postings:
             for p in postings:
                 if "department" not in p:
-                    p["department"] = top_dept
+                    acct = p.get("account") or p.get("debitAccount") or ""
+                    try:
+                        acct_num = int(acct)
+                    except (TypeError, ValueError):
+                        acct_num = 0
+                    # Only set department on expense/cost accounts (4000+)
+                    if acct_num >= 4000:
+                        p["department"] = top_dept
 
         if postings:
             built = []
