@@ -143,6 +143,13 @@ departments: ["X","Y","Z"]
 register_payment param
 - "Reversed/returned payment" → register_payment with reversal: true
 - "Create project X linked to customer Y" → create_project (NOT create_customer)
+- Expense receipt/kvittering/recibo with PDF → create_voucher with expense account, \
+department, and VAT from the receipt. Extract amount, account, description from PDF.
+- "Full project cycle" (create + activities + hours + invoice) → create_project \
+with all sub-tasks in params
+- Bank reconciliation with CSV attachment → bank_reconciliation
+- Monthly closing with multiple steps → create_voucher with vouchers array \
+(one voucher per step: accrual reversal, depreciation, salary provision)
 
 Extract ALL relevant parameters from the prompt. Use field names \
 matching the Tripletex API.
