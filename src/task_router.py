@@ -248,9 +248,78 @@ class TaskRouter:
             elapsed = time.monotonic() - start
             logger.exception("Router error after %.2fs", elapsed)
         finally:
+            # Post-run verification (GETs are free)
+            import contextlib
+
+            with contextlib.suppress(UnboundLocalError):
+                self._verify_run(api_client, context, step_results)
             api_client.close()
 
         return SolveResponse(status="completed")
+
+    @staticmethod
+    def _verify_run(
+        api_client: TripletexClient,
+        context: dict[str, Any],
+        step_results: list[dict[str, Any]],
+    ) -> None:
+        """Post-run verification via free GETs to see what competition sees."""
+        try:
+            # Verify created invoice
+            inv_id = context.get("invoiceId")
+            if inv_id:
+                inv = api_client.get(
+                    f"/invoice/{inv_id}",
+                    fields="id,invoiceNumber,amount,amountOutstanding,"
+                    "customer(id,name),invoiceDate",
+                )
+                logger.info("VERIFY invoice: %s", inv.get("value", {}))
+
+            # Verify created voucher
+            v_id = context.get("voucherId")
+            if v_id:
+                v = api_client.get(
+                    f"/ledger/voucher/{v_id}",
+                    fields="id,number,date,voucherType(id,name),"
+                    "postings(account(number),amountGross,supplier(id),"
+                    "customer(id),department(id))",
+                )
+                logger.info("VERIFY voucher: %s", v.get("value", {}))
+
+            # Verify created project
+            p_id = context.get("projectId")
+            if p_id:
+                p = api_client.get(
+                    f"/project/{p_id}",
+                    fields="id,name,isInternal,isFixedPrice,fixedprice,"
+                    "customer(id,name),projectManager(id,firstName,lastName)",
+                )
+                logger.info("VERIFY project: %s", p.get("value", {}))
+
+            # Verify created employee
+            e_id = (
+                context.get("employee", {}).get("id")
+                if isinstance(context.get("employee"), dict)
+                else None
+            )
+            if e_id:
+                e = api_client.get(
+                    f"/employee/{e_id}",
+                    fields="id,firstName,lastName,email,nationalIdentityNumber,department(id,name)",
+                )
+                logger.info("VERIFY employee: %s", e.get("value", {}))
+                # Also check employment
+                emp = api_client.get(
+                    "/employee/employment",
+                    params={"employeeId": e_id, "count": 1},
+                    fields="id,division(id,name),employmentDetails("
+                    "occupationCode(id,code),annualSalary,"
+                    "percentageOfFullTimeEquivalent,shiftDurationHours,"
+                    "remunerationType)",
+                )
+                logger.info("VERIFY employment: %s", emp.get("values", []))
+        except Exception:
+            logger.debug("Verification failed")
 
     def _classify(self, request: SolveRequest) -> list[TaskClassification]:
         """Classify via LLM with one retry on failure."""
