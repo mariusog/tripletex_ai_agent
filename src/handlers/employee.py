@@ -149,7 +149,7 @@ class CreateEmployeeHandler(BaseHandler):
                 occ_resp = api_client.get(
                     "/employee/employment/occupationCode",
                     params={"code": code_str, "count": 20},
-                    fields="id,code,name",
+                    fields="id,code",
                 )
                 # Try exact prefix match first, then any match
                 best = None
@@ -190,7 +190,11 @@ class CreateEmployeeHandler(BaseHandler):
             )
             div_vals = div_resp.get("values", [])
             if div_vals:
-                employment["division"] = {"id": div_vals[0]["id"]}
+                div_ref = {"id": div_vals[0]["id"]}
+                employment["division"] = div_ref
+                logger.info("Division set to id=%s", div_vals[0]["id"])
+            else:
+                logger.warning("No company divisions found")
         except TripletexApiError:
             pass
 
