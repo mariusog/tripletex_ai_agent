@@ -108,6 +108,12 @@ class CreateVoucherHandler(BaseHandler):
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         from datetime import date as dt_date
 
+        # Pre-flight: check for existing supplier invoices on sandbox
+        if params.get("supplier") or params.get("has_attachments"):
+            si_result = self._try_supplier_invoice_flow(api_client, params)
+            if si_result:
+                return si_result
+
         date_val = self.validate_date(params.get("date"), "date")
         if not date_val:
             date_val = dt_date.today().isoformat()
@@ -336,6 +342,27 @@ class CreateVoucherHandler(BaseHandler):
                 logger.info("SupplierInvoice endpoint: %s", e)
 
         return {"id": voucher_id, "action": "created"}
+
+    @staticmethod
+    def _try_supplier_invoice_flow(
+        api_client: TripletexClient, params: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """Check for pre-existing supplier invoices and try to work with them."""
+        try:
+            # Check for unapproved supplier invoices
+            si_resp = api_client.get(
+                "/supplierInvoice/forApproval",
+                params={"count": 20},
+                fields="id,invoiceNumber,supplier(id,name),voucher(id),amount",
+            )
+            pending = si_resp.get("values", [])
+            logger.info("Pre-flight: %d pending supplier invoices found", len(pending))
+            if pending:
+                for si in pending:
+                    logger.info("Pending SI: %s", si)
+        except TripletexApiError as e:
+            logger.info("No supplier invoice pre-flight: %s", e)
+        return None  # Fall through to normal voucher creation for now
 
     @staticmethod
     def _fix_tax_amounts(
