@@ -243,7 +243,7 @@ class RegisterPaymentHandler(BaseHandler):
 
 @register_handler
 class CreateCreditNoteHandler(BaseHandler):
-    """Create invoice if needed, then PUT /invoice/{id}/:createCreditNote."""
+    """Find existing invoice, then PUT /invoice/{id}/:createCreditNote."""
 
     tier = 2
     description = "Create a credit note for an invoice"
@@ -259,6 +259,26 @@ class CreateCreditNoteHandler(BaseHandler):
 
     def execute(self, api_client: TripletexClient, params: dict[str, Any]) -> dict[str, Any]:
         invoice_id = _find_invoice_id(api_client, params)
+
+        # If not found by customer, search ALL invoices on sandbox
+        if not invoice_id:
+            try:
+                all_inv = api_client.get(
+                    "/invoice",
+                    params={
+                        "count": 20,
+                        "invoiceDateFrom": "2020-01-01",
+                        "invoiceDateTo": "2030-01-01",
+                    },
+                    fields="id,amount,customer(id,name),isCreditNote",
+                )
+                for inv in all_inv.get("values", []):
+                    if not inv.get("isCreditNote"):
+                        invoice_id = inv["id"]
+                        logger.info("Found existing invoice %s for credit note", invoice_id)
+                        break
+            except TripletexApiError:
+                pass
 
         if not invoice_id and params.get("customer"):
             result = create_full_invoice(api_client, params)
