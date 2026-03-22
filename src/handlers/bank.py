@@ -213,7 +213,8 @@ class BankReconciliationHandler(BaseHandler):
             bank_acct, _ = resolve_account(api_client, 1920)
             fee_acct, _ = resolve_account(api_client, 7770)
 
-            # Positive fee = income, negative fee = expense
+            # Bank fee = expense: debit fee account, credit bank
+            fee_abs = abs(amount)
             body: dict[str, Any] = {
                 "date": date,
                 "description": desc,
@@ -221,14 +222,14 @@ class BankReconciliationHandler(BaseHandler):
                     {
                         "row": 1,
                         "account": fee_acct,
-                        "amountGross": -amount,
-                        "amountGrossCurrency": -amount,
+                        "amountGross": fee_abs,
+                        "amountGrossCurrency": fee_abs,
                     },
                     {
                         "row": 2,
                         "account": bank_acct,
-                        "amountGross": amount,
-                        "amountGrossCurrency": amount,
+                        "amountGross": -fee_abs,
+                        "amountGrossCurrency": -fee_abs,
                     },
                 ],
             }

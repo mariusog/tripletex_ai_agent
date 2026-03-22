@@ -22,6 +22,14 @@ class LedgerCorrectionHandler(BaseHandler):
 
     tier = 3
     description = "Create a ledger correction voucher"
+    param_schema = {
+        "corrections": ParamSpec(
+            type="list",
+            description="Array of corrections with type, account, amount. "
+            "Types: wrong_account, duplicate_entry, missing_vat, incorrect_amount",
+        ),
+        "date": ParamSpec(required=False, type="date"),
+    }
 
     def get_task_type(self) -> str:
         return "ledger_correction"

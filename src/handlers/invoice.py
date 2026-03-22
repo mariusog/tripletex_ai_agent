@@ -233,6 +233,12 @@ class CreateCreditNoteHandler(BaseHandler):
 
     tier = 2
     description = "Create a credit note for an invoice"
+    param_schema = {
+        "customer": ParamSpec(description="Customer name or ref"),
+        "orderLines": ParamSpec(required=False, type="list"),
+        "comment": ParamSpec(required=False, description="Reason for credit note"),
+        "creditNoteDate": ParamSpec(required=False, type="date"),
+    }
 
     def get_task_type(self) -> str:
         return "create_credit_note"
