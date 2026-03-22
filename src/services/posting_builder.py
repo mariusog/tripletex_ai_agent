@@ -151,9 +151,7 @@ def resolve_account(
         fvals = fresh.get("values", [])
         if fvals:
             vat = fvals[0].get("vatType")
-            vat_ref = (
-                {"id": vat["id"]} if vat and vat.get("id") else None
-            )
+            vat_ref = {"id": vat["id"]} if vat and vat.get("id") else None
             return {"id": fvals[0]["id"]}, vat_ref
     except TripletexApiError:
         pass
@@ -167,9 +165,7 @@ def resolve_account(
         created = create_resp.get("value", {})
         if created.get("id"):
             vat = created.get("vatType")
-            vat_ref = (
-                {"id": vat["id"]} if vat and vat.get("id") else None
-            )
+            vat_ref = {"id": vat["id"]} if vat and vat.get("id") else None
             logger.info("Created missing account %d (%s)", number, name)
             return {"id": created["id"]}, vat_ref
     except TripletexApiError as e:
@@ -183,9 +179,7 @@ def resolve_account(
             fvals2 = fresh2.get("values", [])
             if fvals2:
                 vat = fvals2[0].get("vatType")
-                vat_ref = (
-                    {"id": vat["id"]} if vat and vat.get("id") else None
-                )
+                vat_ref = {"id": vat["id"]} if vat and vat.get("id") else None
                 return {"id": fvals2[0]["id"]}, vat_ref
         except TripletexApiError:
             pass
