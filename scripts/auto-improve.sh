@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd /workspaces/tripletex_ai_agent
+cd .
 echo "=== $(date '+%H:%M:%S') Auto-improve cycle ==="
 python3 -c "
 import google.auth, google.auth.transport.requests
@@ -10,7 +10,7 @@ with open('/tmp/gcloud_token', 'w') as f: f.write(creds.token)
 " 2>/dev/null
 gcloud config set auth/access_token_file /tmp/gcloud_token 2>/dev/null
 echo "--- Capturing runs ---"
-for svc in tripletex-agent-stian tripletex-agent-magnus tripletex-agent-2; do
+for svc in tripletex-agent tripletex-agent-2; do
   python scripts/capture_runs.py --service "$svc" --limit 2000 2>&1 | grep "Saved" || true
 done
 echo "--- Analyzing ---"

@@ -1,5 +1,5 @@
 ---
-name: tripletex-master-stian
+name: tripletex-master
 description: "Tripletex API competition expert. ALWAYS use this skill when: fixing handler bugs, improving competition scoring, analyzing run failures, writing or modifying handler code in src/handlers/, working with Tripletex API endpoints, optimizing API call counts, handling Norwegian accounting tasks, classifying multilingual prompts, predicting task types, debugging 422/404/500 errors from Tripletex, working with vouchers/invoices/payments/travel expenses/payroll/ledger corrections, or any task mentioning Tripletex, NM AI, competition, or scoring. This skill contains hard-won knowledge from 196+ real competition runs — use it before writing any handler code."
 ---
 
@@ -287,7 +287,7 @@ Prompt mentions overdue invoice + fee -> create_voucher (late fee posting)
 | `runs/*.json` | Competition run logs (196+) |
 | `scripts/capture_runs.py` | Capture from Cloud Run logs |
 | `scripts/summarize_runs.py` | Summarize run performance |
-| `scripts/auto-improve-stian.sh` | Capture + analyze cycle |
+| `scripts/auto-improve.sh` | Capture + analyze cycle |
 
 ## Workflow: Fix a Failing Task
 
@@ -298,7 +298,7 @@ Prompt mentions overdue invoice + fee -> create_voucher (late fee posting)
 5. Check if the service layer handles it: `cat src/services/<service>.py`
 6. Apply the known fix pattern
 7. Run tests: `python -m pytest tests/ -q --tb=short -m "not slow" 2>&1 | tail -20`
-8. Capture new runs: `bash scripts/auto-improve-stian.sh`
+8. Capture new runs: `bash scripts/auto-improve.sh`
 9. Verify improvement in new run data
 
 ## Multi-Step Task Decomposition
