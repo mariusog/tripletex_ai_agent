@@ -45,6 +45,9 @@ htmlcov/
 # Logs and debug data (generated, not source)
 logs/
 
+# Competition run data (contains internal info)
+runs/
+
 # Environment and secrets
 .env
 .env.*
