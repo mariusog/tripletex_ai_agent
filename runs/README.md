@@ -20,9 +20,9 @@ git push
 ### Service names per teammate
 | Person | Service | Command |
 |--------|---------|---------|
-| Magnus | `tripletex-agent-magnus` | `python scripts/capture_runs.py` (default) |
+| Team Member 1 | `tripletex-agent` | `python scripts/capture_runs.py` (default) |
 | Team shared | `tripletex-agent-2` | `python scripts/capture_runs.py --service tripletex-agent-2` |
-| Stian | `tripletex-agent-stian` | `python scripts/capture_runs.py --service tripletex-agent-stian` |
+| Team Member 2 | `tripletex-agent` | `python scripts/capture_runs.py --service tripletex-agent` |
 
 **Add your service name here when you set one up!**
 
@@ -30,10 +30,10 @@ git push
 
 `tripletex-agent-2` automatically saves run data to GCS after each competition submission:
 ```
-gs://ai-nm26osl-1792-nmiai/tripletex-runs/
+gs://YOUR_GCS_BUCKET/tripletex-runs/
 ```
 
-Check runs: `gsutil ls gs://ai-nm26osl-1792-nmiai/tripletex-runs/`
+Check runs: `gsutil ls gs://YOUR_GCS_BUCKET/tripletex-runs/`
 
 ## Enable run capture on your service
 
@@ -69,7 +69,7 @@ Each competition submission is saved as a JSON file: `YYYY-MM-DD_HH-MM-SS_{task_
   "total_api_calls": 9,
   "total_duration_s": 55.79,
   "errors": [],
-  "service": "tripletex-agent-magnus"
+  "service": "tripletex-agent"
 }
 ```
 
@@ -85,4 +85,4 @@ Each competition submission is saved as a JSON file: `YYYY-MM-DD_HH-MM-SS_{task_
 
 ## Requirements for capture
 
-Your service needs the `COMPETITION_RUN` log line in `src/server.py`. If you're running the latest code from `Marius-attempt` branch, this is already included.
+Your service needs the `COMPETITION_RUN` log line in `src/server.py`. If you're running the latest code from `main` branch, this is already included.

@@ -65,7 +65,7 @@ Note: Actual checks may vary. Use this as a starting point for inference when th
 
 ```bash
 gcloud run services logs read tripletex-agent-2 \
-    --project ai-nm26osl-1792 \
+    --project YOUR_GCP_PROJECT_ID \
     --region europe-west1 \
     --limit 60
 ```
@@ -198,12 +198,12 @@ Tell the user:
 ## Deploy command
 
 ```bash
-gcloud builds submit --project ai-nm26osl-1792 --region europe-west1 \
-  --tag europe-west1-docker.pkg.dev/ai-nm26osl-1792/cloud-run-source-deploy/tripletex-agent-2:latest \
+gcloud builds submit --project YOUR_GCP_PROJECT_ID --region europe-west1 \
+  --tag YOUR_DOCKER_REGISTRY/tripletex-agent:latest \
   --timeout=600 && \
-gcloud run deploy tripletex-agent-2 --project ai-nm26osl-1792 --region europe-west1 \
-  --image europe-west1-docker.pkg.dev/ai-nm26osl-1792/cloud-run-source-deploy/tripletex-agent-2:latest \
+gcloud run deploy tripletex-agent-2 --project YOUR_GCP_PROJECT_ID --region europe-west1 \
+  --image YOUR_DOCKER_REGISTRY/tripletex-agent:latest \
   --platform managed --allow-unauthenticated --port 8080 --timeout 300 \
   --memory 512Mi --cpu 1 --min-instances 1 --max-instances 10 --concurrency 1 \
-  --set-env-vars "ANTHROPIC_VERTEX_PROJECT_ID=ai-nm26osl-1792,CLOUD_ML_REGION=us-east5"
+  --set-env-vars "ANTHROPIC_VERTEX_PROJECT_ID=YOUR_GCP_PROJECT_ID,CLOUD_ML_REGION=us-east5"
 ```

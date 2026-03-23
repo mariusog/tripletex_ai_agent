@@ -97,7 +97,7 @@ Invoke this agent when:
 ```bash
 # Get recent submissions
 gcloud run services logs read tripletex-agent-2 \
-  --project ai-nm26osl-1792 --region europe-west1 --limit 100
+  --project YOUR_GCP_PROJECT_ID --region europe-west1 --limit 100
 
 # Find all task types we've seen
 grep "Classified as task_type=" logs | sort | uniq -c | sort -rn

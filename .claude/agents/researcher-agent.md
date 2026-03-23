@@ -19,7 +19,7 @@ Your job: investigate Tripletex API behavior, find the correct endpoint/field co
 - **Scoring**: `correctness * tier_multiplier * (1 + efficiency_bonus)`, max 6.0 per task
 - **30 task types** across 3 tiers, 7 languages, fresh account per submission
 - **Timeout**: 300 seconds, efficiency bonus for fewer API calls and zero 4xx errors
-- **Sandbox**: `https://kkpqfuj-amager.tripletex.dev/v2` for testing
+- **Sandbox**: `https://YOUR_SANDBOX.tripletex.dev/v2` for testing
 
 ## When to Use
 
@@ -57,7 +57,7 @@ Invoke this agent when:
 4. **Read competition logs** to see what was sent and what failed:
    ```bash
    gcloud run services logs read tripletex-agent-2 \
-     --project ai-nm26osl-1792 --region europe-west1 --limit 50
+     --project YOUR_GCP_PROJECT_ID --region europe-west1 --limit 50
    ```
 
 ## Key Research Areas
