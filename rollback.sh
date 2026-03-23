@@ -2,7 +2,7 @@
 # Quick rollback to previous Cloud Run revision
 set -euo pipefail
 
-PROJECT_ID="ai-nm26osl-1792"
+PROJECT_ID="YOUR_GCP_PROJECT_ID"
 REGION="europe-west1"
 SERVICE_NAME="tripletex-agent-2"
 

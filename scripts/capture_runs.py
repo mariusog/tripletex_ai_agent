@@ -19,7 +19,7 @@ import subprocess
 from pathlib import Path
 
 RUNS_DIR = Path(__file__).parent.parent / "runs"
-PROJECT_ID = "ai-nm26osl-1792"
+PROJECT_ID = "YOUR_GCP_PROJECT_ID"
 REGION = "europe-west1"
 
 
@@ -207,7 +207,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Capture competition runs from Cloud Run logs")
     parser.add_argument(
         "--service",
-        default="tripletex-agent-magnus",
+        default="tripletex-agent",
         help="Cloud Run service name",
     )
     parser.add_argument("--limit", type=int, default=500, help="Number of log lines to fetch")

@@ -82,7 +82,7 @@ LLM_TEMPERATURE = 0.0
 
 # Vertex AI configuration (Claude via GCP)
 LLM_VERTEX_MODEL = "claude-opus-4-6"
-LLM_VERTEX_PROJECT_ID = "ai-nm26osl-1792"
+LLM_VERTEX_PROJECT_ID = "YOUR_GCP_PROJECT_ID"
 LLM_VERTEX_REGION = "us-east5"
 
 # ---------------------------------------------------------------------------

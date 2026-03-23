@@ -2,7 +2,7 @@
 # Safe deploy: validates code before deploying to tripletex-agent-2
 set -euo pipefail
 
-PROJECT_ID="ai-nm26osl-1792"
+PROJECT_ID="YOUR_GCP_PROJECT_ID"
 REGION="europe-west1"
 SERVICE_NAME="tripletex-agent-2"
 
@@ -43,7 +43,7 @@ with open('/tmp/gcloud_token', 'w') as f:
 gcloud run deploy "$SERVICE_NAME" \
     --project "$PROJECT_ID" \
     --region "$REGION" \
-    --source /workspaces/tripletex_ai_agent \
+    --source . \
     --allow-unauthenticated \
     --port 8080 \
     --timeout 300 \

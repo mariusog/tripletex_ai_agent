@@ -104,7 +104,7 @@ def _save_run_to_gcs(
         }
         if run_meta:
             run_data.update(run_meta)
-        bucket_name = "ai-nm26osl-1792-nmiai"
+        bucket_name = "YOUR_GCS_BUCKET"
         blob_path = f"tripletex-runs/{ts}_{service}.json"
         client = storage.Client()
         bucket = client.bucket(bucket_name)
