@@ -30,7 +30,9 @@ class CostAnalysisHandler(BaseHandler):
     param_schema = {
         "dateFrom": ParamSpec(type="date", description="Start of first period (e.g. 2026-01-01)"),
         "dateTo": ParamSpec(type="date", description="End of second period (e.g. 2026-02-28)"),
-        "topN": ParamSpec(type="number", required=False, description="Number of top accounts (default 3)"),
+        "topN": ParamSpec(
+            type="number", required=False, description="Number of top accounts (default 3)"
+        ),
     }
 
     def get_task_type(self) -> str:
@@ -88,13 +90,15 @@ class CostAnalysisHandler(BaseHandler):
             jan_change = jan_changes.get(acct_num, 0)
             diff = feb_change - jan_change
             if diff > 0:
-                increases.append({
-                    "account_number": acct_num,
-                    "account_name": acct_name,
-                    "jan": jan_change,
-                    "feb": feb_change,
-                    "change": diff,
-                })
+                increases.append(
+                    {
+                        "account_number": acct_num,
+                        "account_name": acct_name,
+                        "jan": jan_change,
+                        "feb": feb_change,
+                        "change": diff,
+                    }
+                )
 
         increases.sort(key=lambda x: x["change"], reverse=True)
         top = increases[:top_n]
@@ -145,16 +149,20 @@ class CostAnalysisHandler(BaseHandler):
                     except TripletexApiError:
                         logger.warning("Could not link activity %s to project %s", act_id, proj_id)
 
-                created.append({
-                    "project_id": proj_id,
-                    "activity_id": act_id,
-                    "account": change["account_number"],
-                    "name": proj_name,
-                    "change": change["change"],
-                })
+                created.append(
+                    {
+                        "project_id": proj_id,
+                        "activity_id": act_id,
+                        "account": change["account_number"],
+                        "name": proj_name,
+                        "change": change["change"],
+                    }
+                )
                 logger.info(
                     "Created project '%s' id=%s, activity id=%s",
-                    proj_name, proj_id, act_id,
+                    proj_name,
+                    proj_id,
+                    act_id,
                 )
             except TripletexApiError as e:
                 logger.warning("Failed to create project for %s: %s", proj_name, e)

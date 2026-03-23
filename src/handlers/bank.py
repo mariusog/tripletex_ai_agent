@@ -258,12 +258,14 @@ class BankReconciliationHandler(BaseHandler):
         except Exception as e:
             logger.exception("Customer payment failed for %s: %s", cp.get("customer"), e)
             # Still record the attempt so we don't lose data
-            results["payments"].append({
-                "customer": cp.get("customer", ""),
-                "amount": cp.get("amount", 0),
-                "status": "error",
-                "error": str(e)[:80],
-            })
+            results["payments"].append(
+                {
+                    "customer": cp.get("customer", ""),
+                    "amount": cp.get("amount", 0),
+                    "status": "error",
+                    "error": str(e)[:80],
+                }
+            )
 
     def _process_supplier_payment(
         self, api_client: TripletexClient, sp: dict[str, Any], results: dict
@@ -334,9 +336,9 @@ class BankReconciliationHandler(BaseHandler):
             fee_abs = abs(amount)
             if is_refund:
                 fee_amount = -fee_abs  # Credit fee account
-                bank_amount = fee_abs   # Debit bank
+                bank_amount = fee_abs  # Debit bank
             else:
-                fee_amount = fee_abs    # Debit fee account
+                fee_amount = fee_abs  # Debit fee account
                 bank_amount = -fee_abs  # Credit bank
             body: dict[str, Any] = {
                 "date": date,

@@ -89,7 +89,9 @@ class RegisterPaymentHandler(BaseHandler):
     )
     param_schema = {
         "customer": ParamSpec(required=False),
-        "amount": ParamSpec(type="number", description="Payment amount in NOK (negative for reversals)"),
+        "amount": ParamSpec(
+            type="number", description="Payment amount in NOK (negative for reversals)"
+        ),
         "paymentDate": ParamSpec(required=False, type="date"),
         "reversal": ParamSpec(
             required=False,

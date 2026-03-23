@@ -104,7 +104,7 @@ def main() -> None:
 
     tasks = args.tasks or list(TASK_PROMPTS.keys())
     print(f"Simulating {len(tasks)} tasks against {args.service_url}")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
 
     results = []
     for task_type in tasks:
@@ -120,7 +120,7 @@ def main() -> None:
 
     # Summary
     ok = sum(1 for r in results if r["status_code"] == 200)
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"Results: {ok}/{len(results)} succeeded")
     fails = [r for r in results if r["status_code"] != 200]
     if fails:
