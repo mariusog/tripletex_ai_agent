@@ -2,9 +2,9 @@
 
 ## Current State
 
-**Branch:** `Marius-attempt`
-**Deployed:** `https://tripletex-agent-2-1084086839157.europe-west1.run.app`
-**GCP Project:** `ai-nm26osl-1792` | **Region:** `europe-west1`
+**Branch:** `main`
+**Deployed:** `https://YOUR_CLOUD_RUN_URL`
+**GCP Project:** `YOUR_GCP_PROJECT_ID` | **Region:** `europe-west1`
 **LLM:** Claude Opus 4.6 via Vertex AI (`claude-opus-4-6`, region `us-east5`)
 
 The agent is live and scoring on the competition leaderboard. Best results so far: 7/7 and 8/8 on some tasks, typically 5-7/8 on complex ones.
@@ -66,9 +66,9 @@ These functions search-or-create entities by name. All do **exact name matching*
 
 ```bash
 gcloud run deploy tripletex-agent-2 \
-  --project ai-nm26osl-1792 \
+  --project YOUR_GCP_PROJECT_ID \
   --region europe-west1 \
-  --source /workspaces/tripletex_ai_agent \
+  --source . \
   --allow-unauthenticated \
   --port 8080 \
   --timeout 300 \
@@ -77,7 +77,7 @@ gcloud run deploy tripletex-agent-2 \
   --min-instances 1 \
   --max-instances 10 \
   --concurrency 1 \
-  --set-env-vars "ANTHROPIC_VERTEX_PROJECT_ID=ai-nm26osl-1792,CLOUD_ML_REGION=us-east5"
+  --set-env-vars "ANTHROPIC_VERTEX_PROJECT_ID=YOUR_GCP_PROJECT_ID,CLOUD_ML_REGION=us-east5"
 ```
 
 ## How to Test
@@ -89,8 +89,8 @@ python -m pytest tests/ -q --tb=short -m "not slow" 2>&1 | tail -20
 
 ### Integration tests against sandbox (comprehensive)
 ```bash
-export SANDBOX_URL="https://kkpqfuj-amager.tripletex.dev/v2"
-export SANDBOX_TOKEN="eyJ0b2tlbklkIjoyMTQ3NjI5NjQ5LCJ0b2tlbiI6IjYzZWU1MTFlLTg2ZDAtNDk4Mi04NDY1LTFmZDIwNjBlNGE1ZSJ9"
+export SANDBOX_URL="https://YOUR_SANDBOX.tripletex.dev/v2"
+export SANDBOX_TOKEN="YOUR_SANDBOX_TOKEN"
 python -m pytest tests/test_all_handlers_sandbox.py -v --tb=short -m slow
 ```
 
@@ -103,7 +103,7 @@ python3 /tmp/test_all_tasks.py  # or write your own prompts
 ### Check competition logs
 ```bash
 gcloud run services logs read tripletex-agent-2 \
-  --project ai-nm26osl-1792 --region europe-west1 --limit 50
+  --project YOUR_GCP_PROJECT_ID --region europe-west1 --limit 50
 ```
 
 ## Hard-Won Lessons (Gotchas)
@@ -180,9 +180,9 @@ gcloud run services logs read tripletex-agent-2 \
 
 ## Sandbox Credentials
 
-- **URL:** `https://kkpqfuj-amager.tripletex.dev/v2`
-- **Token:** `eyJ0b2tlbklkIjoyMTQ3NjI5NjQ5LCJ0b2tlbiI6IjYzZWU1MTFlLTg2ZDAtNDk4Mi04NDY1LTFmZDIwNjBlNGE1ZSJ9`
-- **Web UI:** `https://kkpqfuj-amager.tripletex.dev` (login: stianjp@hotmail.com)
+- **URL:** `https://YOUR_SANDBOX.tripletex.dev/v2`
+- **Token:** `YOUR_SANDBOX_TOKEN`
+- **Web UI:** `https://YOUR_SANDBOX.tripletex.dev` (login: user@example.com)
 - **Token expires:** March 31, 2026
 
 ## Quick Reference: Adding a New Handler

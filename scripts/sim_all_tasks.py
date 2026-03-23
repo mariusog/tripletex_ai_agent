@@ -61,8 +61,8 @@ TASK_PROMPTS = {
 }
 
 SANDBOX_CREDS = {
-    "base_url": "https://kkpqfuj-amager.tripletex.dev/v2",
-    "session_token": "eyJ0b2tlbklkIjoyMTQ3NjI5NjQ5LCJ0b2tlbiI6IjYzZWU1MTFlLTg2ZDAtNDk4Mi04NDY1LTFmZDIwNjBlNGE1ZSJ9",
+    "base_url": "https://YOUR_SANDBOX.tripletex.dev/v2",
+    "session_token": "YOUR_SANDBOX_TOKEN",
 }
 
 
@@ -97,7 +97,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--service-url",
-        default="https://tripletex-agent-2-1084086839157.europe-west1.run.app",
+        default="https://YOUR_CLOUD_RUN_URL",
     )
     parser.add_argument("--tasks", nargs="*", help="Specific task types to test (default: all)")
     args = parser.parse_args()
