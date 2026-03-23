@@ -2,7 +2,7 @@
 
 ## Base URL & Authentication
 
-- **Base URL:** Use the `base_url` from `tripletex_credentials` (in competition) or `https://kkpqfuj-amager.tripletex.dev/v2` (sandbox)
+- **Base URL:** Use the `base_url` from `tripletex_credentials` (in competition) or `https://YOUR_SANDBOX.tripletex.dev/v2` (sandbox)
 - **Auth:** Basic Auth with username `0`, password = session token
 - **OpenAPI spec:** Available at `/v2/openapi.json`
 

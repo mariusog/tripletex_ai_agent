@@ -5,8 +5,8 @@
 1. Navigate to the Tripletex submission page on `app.ainm.no`
 2. Click "Get Sandbox Account"
 3. Receive:
-   - **Tripletex UI URL:** `https://kkpqfuj-amager.tripletex.dev`
-   - **API base URL:** `https://kkpqfuj-amager.tripletex.dev/v2`
+   - **Tripletex UI URL:** `https://YOUR_SANDBOX.tripletex.dev`
+   - **API base URL:** `https://YOUR_SANDBOX.tripletex.dev/v2`
    - **Session token** for API authentication
 
 ## Web UI Access
@@ -20,7 +20,7 @@
 ```python
 import requests
 
-BASE_URL = "https://kkpqfuj-amager.tripletex.dev/v2"
+BASE_URL = "https://YOUR_SANDBOX.tripletex.dev/v2"
 SESSION_TOKEN = "your-token"
 
 response = requests.get(
@@ -33,7 +33,7 @@ print(response.json())
 
 ```bash
 curl -u "0:your-session-token-here" \
-  "https://kkpqfuj-amager.tripletex.dev/v2/employee?fields=id,firstName,lastName"
+  "https://YOUR_SANDBOX.tripletex.dev/v2/employee?fields=id,firstName,lastName"
 ```
 
 ## Sandbox vs Competition

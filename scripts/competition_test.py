@@ -15,7 +15,7 @@ Usage:
     python scripts/competition_test.py --list
 
 Requires sandbox credentials:
-    export SANDBOX_URL="https://kkpqfuj-amager.tripletex.dev/v2"
+    export SANDBOX_URL="https://YOUR_SANDBOX.tripletex.dev/v2"
     export SANDBOX_TOKEN="..."
 """
 
@@ -343,7 +343,7 @@ def main() -> None:
     sandbox_token = os.environ.get("SANDBOX_TOKEN", "")
     if not sandbox_url or not sandbox_token:
         print("ERROR: Set SANDBOX_URL and SANDBOX_TOKEN environment variables")
-        print("  export SANDBOX_URL='https://kkpqfuj-amager.tripletex.dev/v2'")
+        print("  export SANDBOX_URL='https://YOUR_SANDBOX.tripletex.dev/v2'")
         print("  export SANDBOX_TOKEN='...'")
         sys.exit(1)
 

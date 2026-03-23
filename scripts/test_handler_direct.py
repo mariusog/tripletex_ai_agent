@@ -6,7 +6,7 @@ known-good params from captured competition runs. Much faster than
 going through the full server flow.
 
 Usage:
-    export SANDBOX_URL="https://kkpqfuj-amager.tripletex.dev/v2"
+    export SANDBOX_URL="https://YOUR_SANDBOX.tripletex.dev/v2"
     export SANDBOX_TOKEN="..."
 
     # Test a specific handler
