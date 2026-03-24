@@ -52,16 +52,20 @@ The agent handles 28 task types across the full Tripletex accounting domain:
 
 **Efficiency through pre-planned sequences** -- Each handler has a known-optimal API call sequence. No trial-and-error, no exploratory GETs. Bank account lookups are cached, batch endpoints are used where possible, and unnecessary verification calls are eliminated.
 
-### What Worked and What Didn't
+### What Worked
 
-| Decision | Outcome |
-|----------|---------|
-| LLM classification + deterministic handlers | Clean separation, independently testable, scales to 28+ types |
-| Dynamic system prompt from handler metadata | New task types integrate without touching LLM code |
-| Multi-step context injection | Essential for order -> invoice -> payment flows |
-| Exact name matching over Tripletex fuzzy search | Prevented wrong entity lookups (API returns fuzzy matches by default) |
-| Correctness-first strategy (ignore efficiency until 100%) | Right call -- efficiency bonus is gated on perfect correctness |
-| Per-handler sandbox testing | Caught non-obvious API quirks (bank account required on account 1920, dateOfBirth required on updates, VAT on voucher postings) |
+- **LLM classification + deterministic handlers** -- Clean separation of concerns. The LLM handles language ambiguity; handlers are independently testable and scale to 28+ types.
+- **Dynamic system prompt from handler metadata** -- Adding a new task type means creating one handler file. No routing or prompt changes needed.
+- **Multi-step context injection** -- Essential for compound prompts like "create an invoice and register payment". Context flows between steps automatically.
+- **Exact name matching over Tripletex fuzzy search** -- The API returns fuzzy matches by default, causing wrong entity lookups. Exact matching in code fixed this.
+- **Correctness-first strategy** -- Ignoring efficiency until 100% correctness was the right call. The efficiency bonus is gated on perfect field values.
+- **Per-handler sandbox testing** -- Caught non-obvious API quirks: bank account required on account 1920, `dateOfBirth` required on updates, VAT codes on voucher postings, supplier reference needed on every posting line.
+
+### What Didn't Work
+
+- **Relying on Tripletex search API alone** -- Fuzzy matching returned wrong entities silently. Had to add exact name verification in code.
+- **Skipping entity prerequisites** -- Fresh competition accounts have no customers, products, or employees. Handlers that assumed entities existed failed until find-or-create resolvers were added.
+- **Optimizing efficiency before correctness** -- Early attempts to minimize API calls introduced bugs. Correctness had to come first.
 
 ## Quick Start
 
